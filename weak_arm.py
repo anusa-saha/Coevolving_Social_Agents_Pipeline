@@ -1,24 +1,19 @@
 """
-Weak arm: the lone decision-maker, one API call, no conversation.
-
-Model: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B (config.weak_arm_*), per constraint #2.
-Graded by content checks only -- there is no transcript, so provenance can't apply.
+Weak arm: the lone decision-maker, one generation call, no conversation.
+Runs on the GPU via weak_arm_model.generate() -- no API, no server.
+Graded by content checks only (no transcript exists, so provenance doesn't apply).
 """
-from config import CONFIG
-from llm_clients import weak_arm_client, chat_completion, extract_json
+import config
+import weak_arm_model
+from llm_clients import extract_json
 from prompt_builder import build_weak_arm_prompt
 from grader import grade_content
 
 
 def run_weak_arm_rollout(scenario: dict) -> dict:
     messages = build_weak_arm_prompt(scenario)
-    raw = chat_completion(
-        weak_arm_client,
-        model=CONFIG.weak_arm_model,
-        messages=messages,
-        temperature=CONFIG.weak_arm_temperature,
-        max_tokens=CONFIG.weak_arm_max_tokens,
-    )
+    raw = weak_arm_model.generate(messages)
+
     try:
         settlement = extract_json(raw)
         content_results = grade_content(scenario, settlement)
@@ -37,7 +32,7 @@ def run_weak_arm_rollout(scenario: dict) -> dict:
 
 
 def run_weak_arm(scenario: dict) -> dict:
-    rollouts = [run_weak_arm_rollout(scenario) for _ in range(CONFIG.weak_arm_rollouts)]
+    rollouts = [run_weak_arm_rollout(scenario) for _ in range(config.WEAK_ARM_ROLLOUTS)]
     pass_count = sum(r["passed"] for r in rollouts)
-    gate_passed = pass_count <= CONFIG.weak_arm_max_pass
+    gate_passed = pass_count <= config.WEAK_ARM_MAX_PASS
     return {"rollouts": rollouts, "pass_count": pass_count, "gate_passed": gate_passed}

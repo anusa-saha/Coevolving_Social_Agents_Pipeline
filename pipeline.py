@@ -5,7 +5,7 @@ expensive ones, exactly as in the source pipeline.
 """
 import uuid
 
-from config import CONFIG
+import config
 from challenger import generate_scenario, revise_scenario
 from verifier import run_verifier
 from weak_arm import run_weak_arm
@@ -23,7 +23,7 @@ def run_pipeline(scenario_type: str = None) -> dict:
     scenario.setdefault("scenario_id", f"seed_{uuid.uuid4().hex[:8]}")
     scenario_id = scenario["scenario_id"]
 
-    for round_num in range(1, CONFIG.max_refinement_rounds + 1):
+    for round_num in range(1, config.MAX_REFINEMENT_ROUNDS + 1):
 
         # ---------------- Gate 1: Verifier (cheapest) ----------------
         verdict = run_verifier(scenario)
@@ -57,7 +57,7 @@ def run_pipeline(scenario_type: str = None) -> dict:
         if not weak_result["gate_passed"]:
             diagnosis = (
                 f"The lone decision-maker passed {weak_result['pass_count']}/"
-                f"{CONFIG.weak_arm_rollouts} runs (at most {CONFIG.weak_arm_max_pass} allowed). "
+                f"{config.WEAK_ARM_ROLLOUTS} runs (at most {config.WEAK_ARM_MAX_PASS} allowed). "
                 f"The hidden information was not actually necessary to reach a passing decision."
             )
             entry = {
@@ -74,7 +74,7 @@ def run_pipeline(scenario_type: str = None) -> dict:
 
             scenario = revise_scenario(
                 scenario, "LEAKED", diagnosis,
-                evidence=f"{weak_result['pass_count']} of {CONFIG.weak_arm_rollouts} lone rollouts "
+                evidence=f"{weak_result['pass_count']} of {config.WEAK_ARM_ROLLOUTS} lone rollouts "
                          f"passed all content checks.",
                 fix_instructions=(
                     "Tighten checks back to exactly what the private facts imply. Remove any threshold "
@@ -91,8 +91,8 @@ def run_pipeline(scenario_type: str = None) -> dict:
 
         if not strong_result["gate_passed"]:
             diagnosis = (
-                f"The group only passed {strong_result['pass_count']}/{CONFIG.strong_arm_rollouts} runs "
-                f"(at least {CONFIG.strong_arm_min_pass} needed). The information gap is real, but the "
+                f"The group only passed {strong_result['pass_count']}/{config.STRONG_ARM_ROLLOUTS} runs "
+                f"(at least {config.STRONG_ARM_MIN_PASS} needed). The information gap is real, but the "
                 f"group could not reliably surface and use the hidden facts."
             )
             entry = {
@@ -109,7 +109,7 @@ def run_pipeline(scenario_type: str = None) -> dict:
 
             scenario = revise_scenario(
                 scenario, "UNCOORDINATED", diagnosis,
-                evidence=f"{strong_result['pass_count']} of {CONFIG.strong_arm_rollouts} group rollouts passed.",
+                evidence=f"{strong_result['pass_count']} of {config.STRONG_ARM_ROLLOUTS} group rollouts passed.",
                 fix_instructions=(
                     "Add or strengthen a shared consultation norm in shared_context so every fact-holder "
                     "gets a natural, unmistakable opening to speak before the decision is finalized. "
@@ -133,4 +133,4 @@ def run_pipeline(scenario_type: str = None) -> dict:
         record_accepted(entry)
         return {"status": "accepted", "scenario": scenario, "rounds_taken": round_num}
 
-    return {"status": "exhausted", "scenario": scenario, "rounds_taken": CONFIG.max_refinement_rounds}
+    return {"status": "exhausted", "scenario": scenario, "rounds_taken": config.MAX_REFINEMENT_ROUNDS}
