@@ -20,11 +20,11 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import CONFIG
+import config
 
 
 def _path(filename: str) -> Path:
-    p = Path(CONFIG.output_dir)
+    p = Path(config.OUTPUT_DIR)
     p.mkdir(parents=True, exist_ok=True)
     return p / filename
 
@@ -73,7 +73,7 @@ def record_accepted(entry: dict) -> Path:
 
 def save_transcript(scenario_id: str, round_num: int, arm: str, rollout_idx: int, data: dict) -> Path:
     """Persist one rollout's full transcript/output (constraint #5)."""
-    scenario_dir = Path(CONFIG.output_dir, "transcripts", scenario_id)
+    scenario_dir = Path(config.OUTPUT_DIR, "transcripts", scenario_id)
     scenario_dir.mkdir(parents=True, exist_ok=True)
     path = scenario_dir / f"round_{round_num}_{arm}_rollout_{rollout_idx}.json"
     with open(path, "w") as f:
