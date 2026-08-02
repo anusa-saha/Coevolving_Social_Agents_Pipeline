@@ -7,6 +7,9 @@ import ast
 
 ALLOWED_NAMES = {"decisions", "credited_facts", "commitments", "justification_fact_ids", "revealed"}
 ALLOWED_BUILTINS = {"any": any, "all": all, "len": len, "sum": sum}
+# Safe read-only dict methods checks are allowed to call (e.g. decisions['x'].values()).
+# Nothing else may be called as a method -- this blocks things like .__class__, .append(), etc.
+ALLOWED_METHODS = {"values", "keys", "items", "get"}
 
 
 def validate_check(check_str: str) -> ast.AST:
@@ -26,15 +29,28 @@ def validate_check(check_str: str) -> ast.AST:
 
     allowed = ALLOWED_NAMES | bound_names
 
+    # An Attribute node is only OK when it's a whitelisted method name AND it's being
+    # called (e.g. `.values()`) -- never bare attribute access, and never any other
+    # method (this is what blocks things like .__class__, .__globals__, .append()).
+    allowed_attribute_nodes = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr in ALLOWED_METHODS:
+                allowed_attribute_nodes.add(node.func)
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Name) and node.id not in allowed and node.id not in ALLOWED_BUILTINS:
             raise ValueError(f"Check uses disallowed name: {node.id!r} in {check_str!r}")
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-            if node.func.id not in ALLOWED_BUILTINS:
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id not in ALLOWED_BUILTINS:
                 raise ValueError(f"Check calls disallowed function: {node.func.id!r} in {check_str!r}")
+            if isinstance(node.func, ast.Attribute) and node.func not in allowed_attribute_nodes:
+                raise ValueError(f"Check calls disallowed method: .{node.func.attr}() in {check_str!r}")
+        if isinstance(node, ast.Attribute) and node not in allowed_attribute_nodes:
+            raise ValueError(f"Disallowed attribute access: .{node.attr} in {check_str!r}")
         if isinstance(node, ast.IfExp):
             raise ValueError(f"Ternary expressions are not allowed: {check_str!r}")
-        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Attribute, ast.Lambda)):
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Lambda)):
             raise ValueError(f"Disallowed construct in check: {check_str!r}")
     return tree
 

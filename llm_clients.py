@@ -20,7 +20,7 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
         model=model,
         messages=messages,
         temperature=temperature,
-        max_tokens=max_tokens,
+        max_completion_tokens=max_tokens,  # newer models (incl. gpt-5.4) reject the old `max_tokens` name
         **kwargs,
     )
     return resp.choices[0].message.content
