@@ -58,7 +58,7 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
     raw = gpt_chat(
         model=config.CHALLENGER_MODEL,
         messages=messages,
-        temperature=0.5,
+        temperature=1.0,
         max_tokens=4000,
         json_mode=True,
     )

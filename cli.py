@@ -1,13 +1,24 @@
 """
 Per-stage CLI. Each stage is its own subcommand, reads scenarios from a file,
-runs that stage (with its own revise-and-retry feedback loop against the
-Challenger), and writes out two files: everything that passed, and everything
-that was rejected along the way -- so you can inspect each stage in isolation
-and manually chain one stage's output into the next stage's input.
+and writes out two files: everything that passed, and everything that was
+rejected along the way -- so you can inspect each stage in isolation and
+manually chain one stage's output into the next stage's input.
 
-Every single attempt, at every round, is also appended one-at-a-time into the
-shared output/all_iterations.json (and output/accepted.json / rejected.json),
-via storage.py -- exactly like the full pipeline does.
+Retries always restart from the top of the chain. All of that logic lives in
+cascade.py's run_cascade() -- this file just wires the CLI around it:
+  - `verifier` runs: Verifier only. A rejection revises and retries Verifier.
+  - `weak-arm` runs: Verifier -> Weak arm. A rejection at EITHER stage revises
+    and restarts from the Verifier -- a weak-arm failure never skips straight
+    back to weak-arm alone.
+  - `strong-arm` runs: Verifier -> Weak arm -> Strong arm. A rejection at ANY
+    of the three restarts the whole chain from the Verifier again.
+
+So `python cli.py strong-arm` fully re-earns every earlier stage's pass on
+every single retry, exactly like the full end-to-end pipeline does.
+
+Every single attempt, at every round, at every stage, is also appended
+one-at-a-time into the shared output/all_iterations.json (and
+output/accepted.json / rejected.json), via storage.py.
 
 Usage:
     python cli.py challenger --n 5 --out output/challenger_scenarios.json
@@ -27,12 +38,9 @@ import uuid
 from pathlib import Path
 
 import config
-from challenger import generate_scenario, revise_scenario
-from verifier import run_verifier
-from weak_arm import run_weak_arm
-from strong_arm import run_strong_arm
-from storage import record_iteration, record_rejected, record_accepted, save_transcript
-from feedback import build_feedback
+from challenger import generate_scenario
+from cascade import run_cascade
+from storage import record_iteration
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +76,7 @@ def ensure_scenario_id(scenario: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Stage: challenger
+# Stage: challenger (no gate -- just generation, no cascade involved)
 # ---------------------------------------------------------------------------
 
 def cmd_challenger(args):
@@ -87,205 +95,49 @@ def cmd_challenger(args):
 
 
 # ---------------------------------------------------------------------------
-# Stage: verifier
+# Stages: verifier / weak-arm / strong-arm -- all thin wrappers over the
+# shared cascade, which is what actually restarts from the top on failure.
 # ---------------------------------------------------------------------------
+
+def _run_gated_stage(args, target_stage: str, stage_label: str):
+    scenarios = load_scenarios(args.input)
+    accepted, rejected = [], []
+
+    for scenario in scenarios:
+        ensure_scenario_id(scenario)
+        result = run_cascade(scenario, target_stage=target_stage, max_rounds=args.max_rounds)
+
+        # Every attempt at every stage in the chain, across every round, is in
+        # result["history"] -- separate the final pass from every failure along
+        # the way so both are visible in the output files.
+        for entry in result["history"]:
+            if entry["passed"] and entry["stage"] == target_stage:
+                accepted.append(entry)
+            elif not entry["passed"]:
+                rejected.append(entry)
+
+        if result["status"] == "exhausted":
+            print(f"scenario_id={scenario.get('scenario_id')}: EXHAUSTED after "
+                  f"{result['rounds_taken']} round(s), giving up")
+
+    write_json(args.out_accepted, accepted)
+    write_json(args.out_rejected, rejected)
+    print(f"\n{stage_label} stage done: {len(accepted)} accepted, "
+          f"{len(rejected)} rejected attempt(s) logged across the whole chain.")
+    print(f"  Accepted -> {args.out_accepted}")
+    print(f"  Rejected -> {args.out_rejected}")
+
 
 def cmd_verifier(args):
-    scenarios = load_scenarios(args.input)
-    accepted, rejected = [], []
+    _run_gated_stage(args, target_stage="verifier", stage_label="Verifier")
 
-    for scenario in scenarios:
-        scenario_id = ensure_scenario_id(scenario)
-        current = scenario
-
-        for round_num in range(1, args.max_rounds + 1):
-            verdict = run_verifier(current)
-            passed = verdict.get("verdict") == "PASS"
-            fb = build_feedback("verifier", current, verdict)
-
-            entry = {
-                "scenario_id": scenario_id,
-                "round": round_num,
-                "stage": "verifier",
-                "passed": passed,
-                "diagnosis": fb["diagnosis"],
-                "evidence": fb["evidence"],
-                "evidence_data": fb["evidence_data"],
-                "raw_verdict": verdict,
-                "scenario": current,
-            }
-            record_iteration(entry)
-
-            if passed:
-                record_accepted(entry)
-                accepted.append(entry)
-                print(f"scenario_id={scenario_id}: ACCEPTED by verifier after {round_num} round(s)")
-                break
-
-            entry["reject_tag"] = fb["reject_tag"]
-            record_rejected(entry)
-            rejected.append(entry)
-            print(f"scenario_id={scenario_id} round {round_num}: REJECTED ({fb['reject_tag']})")
-
-            if round_num == args.max_rounds:
-                print(f"scenario_id={scenario_id}: EXHAUSTED after {args.max_rounds} round(s), giving up")
-                break
-
-            current = revise_scenario(
-                current, fb["reject_tag"], fb["diagnosis"], fb["evidence"], fb["fix_instructions"],
-            )
-            current["scenario_id"] = scenario_id
-
-    write_json(args.out_accepted, accepted)
-    write_json(args.out_rejected, rejected)
-    print(f"\nVerifier stage done: {len(accepted)} accepted, {len(rejected)} rejected attempt(s) logged.")
-    print(f"  Accepted -> {args.out_accepted}")
-    print(f"  Rejected -> {args.out_rejected}")
-
-
-# ---------------------------------------------------------------------------
-# Stage: weak arm
-# ---------------------------------------------------------------------------
 
 def cmd_weak_arm(args):
-    scenarios = load_scenarios(args.input)
-    accepted, rejected = [], []
+    _run_gated_stage(args, target_stage="weak_arm", stage_label="Weak-arm")
 
-    for scenario in scenarios:
-        scenario_id = ensure_scenario_id(scenario)
-        current = scenario
-
-        for round_num in range(1, args.max_rounds + 1):
-            result = run_weak_arm(current)
-            for i, rollout in enumerate(result["rollouts"]):
-                save_transcript(scenario_id, round_num, "weak_arm", i, rollout)
-
-            fb = build_feedback("weak_arm", current, result)
-            entry = {
-                "scenario_id": scenario_id,
-                "round": round_num,
-                "stage": "weak_arm",
-                "passed": result["gate_passed"],
-                "pass_count": result["pass_count"],
-                "diagnosis": fb["diagnosis"],
-                "evidence": fb["evidence"],
-                "evidence_data": fb["evidence_data"],
-                "rollouts": [
-                    {
-                        "passed": r.get("passed"),
-                        "settlement": r.get("settlement"),
-                        "content_results": r.get("content_results"),
-                        "raw_output": r.get("raw_output"),
-                    }
-                    for r in result["rollouts"]
-                ],
-                "scenario": current,
-            }
-            record_iteration(entry)
-
-            if result["gate_passed"]:
-                record_accepted(entry)
-                accepted.append(entry)
-                print(
-                    f"scenario_id={scenario_id}: PASSED weak-arm gate after {round_num} round(s) "
-                    f"({result['pass_count']}/{config.WEAK_ARM_ROLLOUTS} lone rollouts passed)"
-                )
-                break
-
-            entry["reject_tag"] = fb["reject_tag"]
-            record_rejected(entry)
-            rejected.append(entry)
-            print(f"scenario_id={scenario_id} round {round_num}: REJECTED ({fb['reject_tag']}, "
-                  f"{result['pass_count']}/{config.WEAK_ARM_ROLLOUTS} passed)")
-
-            if round_num == args.max_rounds:
-                print(f"scenario_id={scenario_id}: EXHAUSTED after {args.max_rounds} round(s), giving up")
-                break
-
-            current = revise_scenario(
-                current, fb["reject_tag"], fb["diagnosis"], fb["evidence"], fb["fix_instructions"],
-            )
-            current["scenario_id"] = scenario_id
-
-    write_json(args.out_accepted, accepted)
-    write_json(args.out_rejected, rejected)
-    print(f"\nWeak-arm stage done: {len(accepted)} accepted, {len(rejected)} rejected attempt(s) logged.")
-    print(f"  Accepted -> {args.out_accepted}")
-    print(f"  Rejected -> {args.out_rejected}")
-
-
-# ---------------------------------------------------------------------------
-# Stage: strong arm
-# ---------------------------------------------------------------------------
 
 def cmd_strong_arm(args):
-    scenarios = load_scenarios(args.input)
-    accepted, rejected = [], []
-
-    for scenario in scenarios:
-        scenario_id = ensure_scenario_id(scenario)
-        current = scenario
-
-        for round_num in range(1, args.max_rounds + 1):
-            result = run_strong_arm(current)
-            for i, rollout in enumerate(result["rollouts"]):
-                save_transcript(scenario_id, round_num, "strong_arm", i, rollout)
-
-            fb = build_feedback("strong_arm", current, result)
-            entry = {
-                "scenario_id": scenario_id,
-                "round": round_num,
-                "stage": "strong_arm",
-                "passed": result["gate_passed"],
-                "pass_count": result["pass_count"],
-                "diagnosis": fb["diagnosis"],
-                "evidence": fb["evidence"],
-                "evidence_data": fb["evidence_data"],
-                "rollouts": [
-                    {
-                        "passed": r.get("passed"),
-                        "settled": r.get("settled"),
-                        "settlement": r.get("settlement"),
-                        "revealed": r.get("revealed"),
-                        "content_results": r.get("content_results"),
-                        "provenance_results": r.get("provenance_results"),
-                        "transcript": r.get("transcript"),
-                    }
-                    for r in result["rollouts"]
-                ],
-                "scenario": current,
-            }
-            record_iteration(entry)
-
-            if result["gate_passed"]:
-                record_accepted(entry)
-                accepted.append(entry)
-                print(
-                    f"scenario_id={scenario_id}: ACCEPTED into dataset after {round_num} round(s) "
-                    f"({result['pass_count']}/{config.STRONG_ARM_ROLLOUTS} group rollouts passed)"
-                )
-                break
-
-            entry["reject_tag"] = fb["reject_tag"]
-            record_rejected(entry)
-            rejected.append(entry)
-            print(f"scenario_id={scenario_id} round {round_num}: REJECTED ({fb['reject_tag']}, "
-                  f"{result['pass_count']}/{config.STRONG_ARM_ROLLOUTS} passed)")
-
-            if round_num == args.max_rounds:
-                print(f"scenario_id={scenario_id}: EXHAUSTED after {args.max_rounds} round(s), giving up")
-                break
-
-            current = revise_scenario(
-                current, fb["reject_tag"], fb["diagnosis"], fb["evidence"], fb["fix_instructions"],
-            )
-            current["scenario_id"] = scenario_id
-
-    write_json(args.out_accepted, accepted)
-    write_json(args.out_rejected, rejected)
-    print(f"\nStrong-arm stage done: {len(accepted)} accepted, {len(rejected)} rejected attempt(s) logged.")
-    print(f"  Accepted -> {args.out_accepted}")
-    print(f"  Rejected -> {args.out_rejected}")
+    _run_gated_stage(args, target_stage="strong_arm", stage_label="Strong-arm")
 
 
 # ---------------------------------------------------------------------------
@@ -302,21 +154,32 @@ def main():
     p.add_argument("--out", type=str, default="output/challenger_scenarios.json")
     p.set_defaults(func=cmd_challenger)
 
-    p = sub.add_parser("verifier", help="Run the verifier gate, with revise-and-retry feedback to the Challenger.")
+    p = sub.add_parser(
+        "verifier",
+        help="Run the verifier gate. A rejection revises via the Challenger and retries the verifier.",
+    )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--out-accepted", type=str, default="output/verifier_accepted.json")
     p.add_argument("--out-rejected", type=str, default="output/verifier_rejected.json")
     p.set_defaults(func=cmd_verifier)
 
-    p = sub.add_parser("weak-arm", help="Run the weak-arm gate, with revise-and-retry feedback to the Challenger.")
+    p = sub.add_parser(
+        "weak-arm",
+        help="Run Verifier -> Weak arm. A rejection at either stage revises via the Challenger and "
+             "restarts from the Verifier -- never resumes partway through.",
+    )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--out-accepted", type=str, default="output/weak_arm_accepted.json")
     p.add_argument("--out-rejected", type=str, default="output/weak_arm_rejected.json")
     p.set_defaults(func=cmd_weak_arm)
 
-    p = sub.add_parser("strong-arm", help="Run the strong-arm gate, with revise-and-retry feedback to the Challenger.")
+    p = sub.add_parser(
+        "strong-arm",
+        help="Run Verifier -> Weak arm -> Strong arm. A rejection at any of the three revises via the "
+             "Challenger and restarts the whole chain from the Verifier.",
+    )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--out-accepted", type=str, default="output/strong_arm_accepted.json")

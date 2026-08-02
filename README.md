@@ -28,42 +28,66 @@ python main.py --n 1 --scenario-type staffing
 **Option B: run each stage yourself, one command at a time.**
 
 Each stage is its own subcommand in `cli.py`. Each one reads scenarios from a
-file, runs its own revise-and-retry feedback loop against the Challenger, and
-writes out two files: one for everything that passed, one for everything that
-was rejected along the way. Feed one stage's "accepted" file into the next
-stage's `--in`:
+file and writes out two files: one for everything that passed, one for
+everything that was rejected along the way. Feed one stage's "accepted" file
+into the next stage's `--in`:
 
 ```bash
 # 1. Generate candidate scenarios
 python cli.py challenger --n 5 --out output/challenger_scenarios.json
 
-# 2. Verify them (revises + retries on MALFORMED automatically)
+# 2. Verify them
 python cli.py verifier \
   --in output/challenger_scenarios.json \
   --out-accepted output/verifier_accepted.json \
   --out-rejected output/verifier_rejected.json
 
-# 3. Run the weak (lone) arm (revises + retries on LEAKED automatically)
+# 3. Run the weak (lone) arm
 python cli.py weak-arm \
   --in output/verifier_accepted.json \
   --out-accepted output/weak_arm_accepted.json \
   --out-rejected output/weak_arm_rejected.json
 
-# 4. Run the strong arm (revises + retries on UNCOORDINATED automatically)
+# 4. Run the strong arm
 python cli.py strong-arm \
   --in output/weak_arm_accepted.json \
   --out-accepted output/strong_arm_accepted.json \
   --out-rejected output/strong_arm_rejected.json
 ```
 
+**Retries always restart from the top of the chain -- never just the failing
+stage.** This is the important part, and it's the same logic the full
+pipeline uses:
+
+- `python cli.py verifier` -- a rejection revises via the Challenger and
+  retries the Verifier.
+- `python cli.py weak-arm` runs Verifier -> Weak arm. If the **weak arm**
+  rejects, the scenario goes back to the Challenger, then through the
+  **Verifier again**, then the Weak arm again -- it never skips straight back
+  to a bare weak-arm retry.
+- `python cli.py strong-arm` runs Verifier -> Weak arm -> Strong arm. If the
+  **strong arm** rejects, the scenario goes all the way back to the
+  Challenger, then the **Verifier**, then the **Weak arm**, then the Strong
+  arm again -- every earlier gate has to be re-earned on every retry, not just
+  the one that failed.
+
+All of this retry logic lives in one place, `cascade.py`'s `run_cascade()` --
+both `cli.py` and `pipeline.py` (the full end-to-end runner) call the exact
+same function, so the two entry points behave identically.
+
 `output/strong_arm_accepted.json` at the end of that chain is your final
-dataset. Every intermediate attempt -- passed or rejected, at every stage, at
-every round -- is also logged into `output/all_iterations.json`,
+dataset. Every intermediate attempt -- passed or rejected, at every stage in
+the chain, at every round -- is logged into `output/all_iterations.json`,
 `output/accepted.json`, and `output/rejected.json`, and every rollout's full
-transcript is saved under `output/transcripts/<scenario_id>/`.
+transcript is saved under `output/transcripts/<scenario_id>/`. The
+`--out-accepted`/`--out-rejected` files for `weak-arm` and `strong-arm` also
+include the earlier stages' attempts within the same chain (e.g. a verifier
+rejection that happened while chasing a strong-arm pass still shows up in
+`strong_arm_rejected.json`), so you can see every iterative enhancement, not
+just the final stage's pass/fail.
 
 Useful flags on every stage subcommand (`verifier` / `weak-arm` / `strong-arm`):
-- `--max-rounds N` -- how many times that stage will revise-and-retry a single
+- `--max-rounds N` -- how many times the chain will revise-and-retry a single
   scenario before giving up on it (default: `config.MAX_REFINEMENT_ROUNDS`).
 - A scenario that runs out of rounds without passing is **not** included in
   `--out-accepted` -- but every attempt it made is still in `--out-rejected`
@@ -195,6 +219,7 @@ weak_arm_model.py          # loads DeepSeek-R1-Distill-Qwen-7B on the GPU, plain
 prompt_builder.py            # automated per-agent prompt construction
 grader.py                      # safe eval() of content_checks / provenance_checks
 feedback.py                      # generalized, data-driven feedback for revise_scenario()
+cascade.py                        # the shared restart-from-the-top retry loop (used by cli.py AND pipeline.py)
 weak_arm.py                     # lone-agent rollouts (calls weak_arm_model.generate)
 strong_arm.py                    # gpt-5.4 multi-agent turn loop
 verifier.py                       # Gate 1
