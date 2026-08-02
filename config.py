@@ -12,9 +12,16 @@ STRONG_ARM_MODEL = "gpt-5.4"
 STRONG_ARM_TEMPERATURE = 0.9
 
 # --- Weak / lone arm: loaded directly on your GPU, no server ---
-WEAK_ARM_MODEL_NAME = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-WEAK_ARM_TEMPERATURE = 0.8
+WEAK_ARM_MODEL_NAME = "Qwen/Qwen3.5-9B"
 WEAK_ARM_MAX_NEW_TOKENS = 4000  # generous: this model reasons in <think> before answering
+
+# Sampling parameters, as specified:
+WEAK_ARM_TEMPERATURE = 0.7
+WEAK_ARM_TOP_P = 0.8
+WEAK_ARM_TOP_K = 20
+WEAK_ARM_MIN_P = 0.0
+WEAK_ARM_PRESENCE_PENALTY = 1.5
+WEAK_ARM_REPETITION_PENALTY = 1.0
 
 # --- Rollout counts + exact-count gates ---
 WEAK_ARM_ROLLOUTS = 4
