@@ -110,6 +110,8 @@ def cmd_verifier(args):
                 "passed": passed,
                 "diagnosis": fb["diagnosis"],
                 "evidence": fb["evidence"],
+                "evidence_data": fb["evidence_data"],
+                "raw_verdict": verdict,
                 "scenario": current,
             }
             record_iteration(entry)
@@ -167,6 +169,16 @@ def cmd_weak_arm(args):
                 "pass_count": result["pass_count"],
                 "diagnosis": fb["diagnosis"],
                 "evidence": fb["evidence"],
+                "evidence_data": fb["evidence_data"],
+                "rollouts": [
+                    {
+                        "passed": r.get("passed"),
+                        "settlement": r.get("settlement"),
+                        "content_results": r.get("content_results"),
+                        "raw_output": r.get("raw_output"),
+                    }
+                    for r in result["rollouts"]
+                ],
                 "scenario": current,
             }
             record_iteration(entry)
@@ -228,6 +240,19 @@ def cmd_strong_arm(args):
                 "pass_count": result["pass_count"],
                 "diagnosis": fb["diagnosis"],
                 "evidence": fb["evidence"],
+                "evidence_data": fb["evidence_data"],
+                "rollouts": [
+                    {
+                        "passed": r.get("passed"),
+                        "settled": r.get("settled"),
+                        "settlement": r.get("settlement"),
+                        "revealed": r.get("revealed"),
+                        "content_results": r.get("content_results"),
+                        "provenance_results": r.get("provenance_results"),
+                        "transcript": r.get("transcript"),
+                    }
+                    for r in result["rollouts"]
+                ],
                 "scenario": current,
             }
             record_iteration(entry)

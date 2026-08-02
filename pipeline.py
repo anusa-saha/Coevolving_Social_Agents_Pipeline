@@ -20,11 +20,25 @@ def _save_rollouts(scenario_id: str, round_num: int, arm: str, result: dict):
         save_transcript(scenario_id, round_num, arm, i, rollout)
 
 
+def _rollout_summaries(stage_name: str, stage_result: dict) -> list:
+    """Extracts exactly what each rollout generated, so it's visible in the saved entry."""
+    fields_by_stage = {
+        "weak_arm": ("passed", "settlement", "content_results", "raw_output"),
+        "strong_arm": ("passed", "settled", "settlement", "revealed", "content_results",
+                       "provenance_results", "transcript"),
+    }
+    fields = fields_by_stage.get(stage_name)
+    if not fields:
+        return []
+    return [{f: r.get(f) for f in fields} for r in stage_result.get("rollouts", [])]
+
+
 def _try_stage(scenario_id, round_num, stage_name, stage_result, passed, scenario):
     """
     Builds the generalized feedback, logs the attempt (iteration + accepted/
-    rejected), and returns the feedback dict so the caller can decide whether
-    to revise and retry.
+    rejected) -- including the actual JSON that stage generated, not just a
+    text summary -- and returns the feedback dict so the caller can decide
+    whether to revise and retry.
     """
     fb = build_feedback(stage_name, scenario, stage_result)
     entry = {
@@ -34,8 +48,15 @@ def _try_stage(scenario_id, round_num, stage_name, stage_result, passed, scenari
         "passed": passed,
         "diagnosis": fb["diagnosis"],
         "evidence": fb["evidence"],
+        "evidence_data": fb["evidence_data"],
         "scenario": scenario,
     }
+    if stage_name == "verifier":
+        entry["raw_verdict"] = stage_result
+    else:
+        entry["pass_count"] = stage_result.get("pass_count")
+        entry["rollouts"] = _rollout_summaries(stage_name, stage_result)
+
     record_iteration(entry)
     if passed:
         record_accepted(entry)

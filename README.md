@@ -133,6 +133,24 @@ Every one of these is written immediately via `storage.append_json_array()`
 right after that stage's result is known -- not batched up at the end of the
 run -- so a crash mid-run doesn't lose anything already processed.
 
+**Every logged entry (accepted, rejected, and every iteration) includes the
+actual JSON that stage generated, not just a text summary:**
+- **Verifier entries** include `raw_verdict` -- the verifier's full JSON
+  response, including the per-sub-check booleans (`leakage_free`,
+  `satisfiable`, `falsifiable`, etc.).
+- **Weak-arm and strong-arm entries** include `rollouts` -- a list with each
+  rollout's actual generated settlement, its per-check pass/fail results, and
+  (for the strong arm) the full transcript and which facts were revealed. If a
+  rollout's output failed to parse as JSON, the raw text and parse error are
+  right there too.
+- All entries also carry `evidence_data` -- the structured numbers behind the
+  text `diagnosis`/`evidence` (per-check pass rates, which decisive facts were
+  never revealed, etc. -- see `feedback.py`).
+
+This means you can open `rejected.json` alone and see exactly what went wrong
+at every round, without needing to cross-reference the separate transcript
+files under `output/transcripts/`.
+
 ## The generalized feedback signal
 
 Every stage's rejection now goes through one function:
