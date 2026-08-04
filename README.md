@@ -2,15 +2,17 @@
 
 Runs the Challenger -> Verifier -> Weak arm -> Strong arm -> accept/reject loop.
 
-No API endpoints or servers to configure. gpt-5.4 is called through the normal
-OpenAI client; DeepSeek-R1-Distill-Qwen-7B is loaded directly into your GPU's
-memory in the same Python process, no server involved.
+No servers to run yourself. gpt-5.4 (Challenger + Verifier) is called through
+the normal OpenAI client; GLM-5.2-FP8 (Strong arm) is called through Vultr
+Inference's OpenAI-compatible endpoint; the weak-arm model is loaded directly
+into your GPU's memory in the same Python process, no server involved.
 
 ## Setup
 
 ```bash
 pip install -r requirements.txt
 export OPENAI_API_KEY=sk-...
+export VULTR_API_KEY=...
 ```
 
 That's the entire setup. The weak-arm model downloads from Hugging Face the
@@ -134,9 +136,18 @@ scenario JSON and the wrapped `{"scenario": {...}, ...}` records from
   `trust_remote_code=True` is already passed as a safety net in case the model
   repo still ships custom modeling code when you pull it.
 
-- **Strong arm -> gpt-5.4 for every agent.** `strong_arm.py` calls the same
-  `gpt_chat()` function each turn, just with a different agent's prompt --
-  one model wearing different hats.
+- **Strong arm -> GLM-5.2-FP8 via Vultr Inference, for every agent.**
+  `strong_arm.py` calls `llm_clients.strong_arm_chat()` each turn, just with a
+  different agent's prompt -- one model wearing different hats. This goes
+  through a *second* OpenAI-compatible client (`llm_clients.strong_arm_client`)
+  pointed at `https://api.vultrinference.com/v1`, reading `VULTR_API_KEY` from
+  the environment -- it is a separate client instance from the one gpt-5.4
+  uses, since it needs a different `base_url`/API key. GLM's chat template
+  supports a "thinking" mode; the strong arm wants one action per turn, not a
+  reasoning trace, so every call passes
+  `extra_body={"chat_template_kwargs": {"enable_thinking": False}}`. Note this
+  endpoint takes the standard `max_tokens` param (not `max_completion_tokens`,
+  which is specific to newer OpenAI models like gpt-5.4).
 
 - **Prompts are automated from the scenario JSON.** `prompt_builder.py`
   contains no scenario-specific text -- it only ever reads `agents`,
@@ -214,14 +225,14 @@ prompts/
   challenger_prompt.md   # Challenger system prompt
   verifier_prompt.md     # Verifier system prompt
 config.py                # model names, rollout counts, gate thresholds
-llm_clients.py            # gpt-5.4 client + JSON/reasoning-block parsing helpers
-weak_arm_model.py          # loads DeepSeek-R1-Distill-Qwen-7B on the GPU, plain generate()
+llm_clients.py            # gpt-5.4 client (Challenger/Verifier) + GLM/Vultr client (Strong arm)
+weak_arm_model.py          # loads the weak-arm model on the GPU, plain generate()
 prompt_builder.py            # automated per-agent prompt construction
 grader.py                      # safe eval() of content_checks / provenance_checks
 feedback.py                      # generalized, data-driven feedback for revise_scenario()
 cascade.py                        # the shared restart-from-the-top retry loop (used by cli.py AND pipeline.py)
 weak_arm.py                     # lone-agent rollouts (calls weak_arm_model.generate)
-strong_arm.py                    # gpt-5.4 multi-agent turn loop
+strong_arm.py                    # GLM-5.2-FP8 (via Vultr) multi-agent turn loop
 verifier.py                       # Gate 1
 challenger.py                      # scenario generation + revision-on-feedback
 storage.py                          # append-one-at-a-time JSON + transcript persistence
