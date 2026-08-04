@@ -78,7 +78,8 @@
         "settlement_schema": {
           "decisions": {
             "icu_bed_assigned_to": "string",
-            "step_down_requested": "boolean"
+            "step_down_requested": "boolean",
+            "step_down_window_hours": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -97,13 +98,14 @@
         "acceptance_conditions": [
           "The ICU bed must go to Bay 7, because of the unrecorded sepsis-risk labs.",
           "A step-down bed request for Bay 3 must be logged as a commitment.",
+          "The step-down window must not exceed the two hours the family actually agreed to.",
           "The sepsis finding must be explicitly cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['icu_bed_assigned_to'] == 'Bay 7'",
           "C2": "decisions['step_down_requested'] == True",
           "C3": "any(c['type'] == 'step_down_request' and c['target'] == 'Bay 3' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['step_down_window_hours'] >= 1 and decisions['step_down_window_hours'] <= 2"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -122,9 +124,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C3"
+              "C3",
+              "C4"
             ],
-            "why": "Nothing public says Bay 3's family would accept a step-down bed; without PF2, there's no reason to log that commitment instead of just losing the ICU bed outright."
+            "why": "Nothing public says Bay 3's family would accept a step-down bed, or on what timeline; without PF2, there's no reason to log that commitment, and no reason to cap the window at two hours rather than leaving it open-ended."
           }
         ]
       },
@@ -152,7 +155,7 @@
         "shared_context": {
           "S1": "The patient is medically cleared for discharge as of today.",
           "S2": "Tom finalizes the discharge date and any required follow-up plan.",
-          "S3": "The patient lives alone in a two-story home.",
+          "S3": "The patient has been cooperative and in good spirits throughout the stay.",
           "S4": "Tom asks the nurse and social worker for any concerns before confirming the discharge."
         },
         "private_facts": {
@@ -162,7 +165,7 @@
           },
           "PF2": {
             "owner": "A3",
-            "text": "A home-health aide is only authorized by insurance if the discharge order explicitly documents a mobility deficit."
+            "text": "A home-health aide is only authorized by insurance if the discharge order explicitly documents a mobility deficit, and the authorization request must be filed the same day as discharge."
           }
         },
         "views": {
@@ -199,7 +202,8 @@
         "settlement_schema": {
           "decisions": {
             "discharge_today": "boolean",
-            "mobility_deficit_documented": "boolean"
+            "mobility_deficit_documented": "boolean",
+            "insurance_auth_filed_same_day": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -218,13 +222,14 @@
         "acceptance_conditions": [
           "The discharge order must document a mobility deficit.",
           "A home-health aide commitment must be logged.",
+          "The insurance authorization must be filed the same day as discharge.",
           "The mobility finding must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['mobility_deficit_documented'] == True",
           "C2": "any(c['type'] == 'home_health_aide' for c in commitments)",
           "C3": "decisions['discharge_today'] == True",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['insurance_auth_filed_same_day'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -237,15 +242,16 @@
               "C1",
               "P1"
             ],
-            "why": "Without the stair-climb difficulty, a routine discharge order has no reason to document a mobility deficit at all."
+            "why": "Nothing public suggests a mobility problem; without the stair-climb difficulty, a routine discharge order has no reason to document a mobility deficit at all."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing the aide requires that specific documentation, Tom has no reason to connect the mobility note to actually ordering the aide."
+            "why": "Without knowing the aide requires that specific documentation and same-day filing, Tom has no reason to connect the mobility note to ordering the aide, or to file the authorization same-day rather than whenever convenient."
           }
         ]
       }
@@ -326,7 +332,8 @@
         "settlement_schema": {
           "decisions": {
             "ship_export_feature": "boolean",
-            "row_limit_fix_scheduled": "boolean"
+            "row_limit_fix_scheduled": "boolean",
+            "row_limit_fix_due_by": "string"
           },
           "credited_facts": [
             "fact_id"
@@ -345,13 +352,14 @@
         "acceptance_conditions": [
           "The row-limit fix must be scheduled before Friday.",
           "The feature must still ship, since a same-week fix is possible.",
+          "The fix must be due by Thursday specifically, not just 'sometime soon'.",
           "The silent data-loss risk must be cited as justification for the fix."
         ],
         "content_checks": {
           "C1": "decisions['row_limit_fix_scheduled'] == True",
           "C2": "decisions['ship_export_feature'] == True",
           "C3": "any(c['type'] == 'hotfix' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['row_limit_fix_due_by'] == 'Thursday'"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -370,9 +378,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing a fix is achievable by Thursday, the safe generic response is to delay the whole feature rather than ship it on schedule."
+            "why": "Without knowing a fix is achievable specifically by Thursday, the safe generic response is to delay the whole feature rather than ship on schedule with a Thursday-dated fix."
           }
         ]
       },
@@ -447,7 +456,7 @@
         "settlement_schema": {
           "decisions": {
             "staging_validation_restored": "boolean",
-            "fix_committed_within_5_days": "boolean"
+            "fix_commit_deadline_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -465,14 +474,15 @@
         },
         "acceptance_conditions": [
           "Staging validation must be restored.",
-          "A committed fix date within 5 business days must exist.",
+          "A committed fix deadline of at most 5 business days must exist.",
+          "The deadline must be a real, near-term commitment, not left open-ended.",
           "The disabled validation step must be cited as the real root cause."
         ],
         "content_checks": {
           "C1": "decisions['staging_validation_restored'] == True",
-          "C2": "decisions['fix_committed_within_5_days'] == True",
+          "C2": "decisions['fix_commit_deadline_days'] <= 5",
           "C3": "any(c['type'] == 'root_cause_fix' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['fix_commit_deadline_days'] >= 1"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -491,9 +501,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without the contract penalty clause, there's no forcing reason to commit to a 5-day fix instead of an open-ended 'we'll look into it'."
+            "why": "Without the contract penalty clause, there's no forcing reason to commit to a specific 1-5 business day fix instead of an open-ended or zero/negative placeholder 'we'll look into it'."
           }
         ]
       }
@@ -574,7 +585,8 @@
         "settlement_schema": {
           "decisions": {
             "route_selected": "string",
-            "split_convoy": "boolean"
+            "split_convoy": "boolean",
+            "estimated_extra_transit_minutes": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -593,13 +605,14 @@
         "acceptance_conditions": [
           "Route Bravo must be selected, given the checkpoint-activity report on Alpha.",
           "The convoy split required by Bravo's bridge restriction must be planned for.",
+          "The extra transit time from splitting must be estimated at roughly 25 minutes, not left unaccounted for.",
           "The checkpoint-activity report must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['route_selected'] == 'Bravo'",
           "C2": "decisions['split_convoy'] == True",
           "C3": "any(c['type'] == 'convoy_split_plan' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['estimated_extra_transit_minutes'] >= 20 and decisions['estimated_extra_transit_minutes'] <= 40"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -618,9 +631,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing Bravo's bridge forces a convoy split, the plan would not account for the split, leaving logistics unprepared."
+            "why": "Without knowing Bravo's bridge forces a convoy split adding roughly 25 minutes, the plan would neither account for the split nor estimate its real time cost."
           }
         ]
       },
@@ -648,7 +662,7 @@
         "shared_context": {
           "S1": "Only 12 new radios arrived, enough to fully equip one company but not both.",
           "S2": "Maj. Kim makes the final allocation.",
-          "S3": "Company A is currently based near the main camp.",
+          "S3": "Both companies are currently within radio range of battalion headquarters.",
           "S4": "Before deciding, Maj. Kim asks both commanders for anything relevant to the allocation."
         },
         "private_facts": {
@@ -695,7 +709,8 @@
         "settlement_schema": {
           "decisions": {
             "radios_assigned_to": "string",
-            "old_radios_repair_requested": "boolean"
+            "old_radios_repair_requested": "boolean",
+            "repair_requested_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -713,14 +728,14 @@
         },
         "acceptance_conditions": [
           "The radios must go to Company A, given its confirmed equipment failures.",
-          "A repair request for Company B's existing radios ahead of the patrol rotation must be logged.",
+          "A repair request for Company B's existing radios must be logged, timed to land before its patrol rotation begins.",
           "The equipment-failure report must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['radios_assigned_to'] == 'Company A'",
           "C2": "decisions['old_radios_repair_requested'] == True",
           "C3": "any(c['type'] == 'equipment_repair' and c['target'] == 'Company B' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['repair_requested_within_days'] >= 1 and decisions['repair_requested_within_days'] <= 3"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -739,9 +754,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing Company B's rotation timing, there is no urgency to request a repair for their existing radios instead of leaving it unaddressed."
+            "why": "Without knowing Company B's rotation starts in three days, there is no urgency to request a repair at all, let alone specifically within that 3-day window."
           }
         ]
       }
@@ -785,7 +801,7 @@
           },
           "PF2": {
             "owner": "A3",
-            "text": "The applicant has agreed, if asked, to pledge additional collateral (a delivery vehicle) that would cover the loan gap."
+            "text": "The applicant has agreed, if asked, to pledge a delivery vehicle worth $20,000 as additional collateral, which would cover the loan gap."
           }
         },
         "views": {
@@ -822,7 +838,7 @@
         "settlement_schema": {
           "decisions": {
             "loan_approved": "boolean",
-            "additional_collateral_required": "boolean"
+            "collateral_value_pledged_usd": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -839,15 +855,16 @@
           ]
         },
         "acceptance_conditions": [
-          "Additional collateral must be required given the credit-score drop.",
+          "Additional collateral of at least $20,000 must be required given the credit-score drop.",
+          "The collateral required must not exceed the $25,000 the applicant can realistically pledge.",
           "The loan must still be approved, since the collateral gap is coverable.",
           "The credit-score drop must be cited as justification for requiring collateral."
         ],
         "content_checks": {
-          "C1": "decisions['additional_collateral_required'] == True",
-          "C2": "decisions['loan_approved'] == True",
-          "C3": "any(c['type'] == 'collateral_pledge' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C1": "decisions['collateral_value_pledged_usd'] >= 20000",
+          "C2": "decisions['collateral_value_pledged_usd'] <= 25000",
+          "C3": "decisions['loan_approved'] == True",
+          "C4": "any(c['type'] == 'collateral_pledge' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -858,15 +875,16 @@
             "owner": "A2",
             "flips": [
               "C1",
+              "C2",
               "P1"
             ],
-            "why": "The file looks clean on steady revenue alone; without PF1, there is no reason to require additional collateral at all."
+            "why": "The file looks clean on steady revenue alone; without PF1, there is no reason to require any collateral at all, so a generic settlement would leave collateral_value_pledged_usd at 0, failing both the floor and the reason for a ceiling."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C3"
             ],
             "why": "Without knowing collateral is actually available, the safe generic response to a credit-score drop is to decline the loan outright rather than approve it conditionally."
           }
@@ -943,7 +961,8 @@
         "settlement_schema": {
           "decisions": {
             "rebalance_position": "boolean",
-            "staged_sell_down": "boolean"
+            "staged_sell_down": "boolean",
+            "sell_down_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -961,14 +980,15 @@
         },
         "acceptance_conditions": [
           "The position must be rebalanced down to comply with the new 15% limit.",
-          "The sell-down must be staged rather than executed in a single trade.",
+          "The sell-down must be staged over at least 3 days rather than executed in a single trade.",
+          "The staging should not drag on unreasonably long either.",
           "The new concentration limit must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['rebalance_position'] == True",
           "C2": "decisions['staged_sell_down'] == True",
           "C3": "any(c['type'] == 'staged_execution' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['sell_down_days'] >= 3 and decisions['sell_down_days'] <= 7"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -987,9 +1007,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing about slippage risk, a generic rebalancing decision would not specify staging the trade, risking a worse execution."
+            "why": "Without knowing about slippage risk and the specific 3-day staging window, a generic rebalancing decision would not specify staging the trade at all, let alone over that particular timeframe."
           }
         ]
       }
@@ -1070,7 +1091,7 @@
         "settlement_schema": {
           "decisions": {
             "placed_in_class": "string",
-            "aide_assigned": "boolean"
+            "aide_coverage": "string"
           },
           "credited_facts": [
             "fact_id"
@@ -1088,14 +1109,15 @@
         },
         "acceptance_conditions": [
           "The student must be placed in the other class, given Mr. Doyle's aide capacity.",
-          "An aide must be assigned given the IEP requirement.",
-          "The IEP requirement must be cited as justification."
+          "Aide coverage must be full-day, not partial, given the IEP requirement that an aide be present at all times.",
+          "A formal aide-assignment commitment must be logged.",
+          "A record confirming IEP compliance must be logged."
         ],
         "content_checks": {
           "C1": "decisions['placed_in_class'] != 'Doyle'",
-          "C2": "decisions['aide_assigned'] == True",
+          "C2": "decisions['aide_coverage'] == 'full_day'",
           "C3": "any(c['type'] == 'aide_assignment' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "any(c['type'] == 'iep_compliance_log' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
@@ -1114,9 +1136,11 @@
             "owner": "A3",
             "flips": [
               "C2",
+              "C3",
+              "C4",
               "P1"
             ],
-            "why": "Without the IEP requirement, there is no reason to assign a dedicated aide at all."
+            "why": "Without the IEP requirement, there is no reason to assign any aide, let alone full-day coverage or a formal compliance log, at all."
           }
         ]
       },
@@ -1191,7 +1215,8 @@
         "settlement_schema": {
           "decisions": {
             "vendor_selected": "string",
-            "additional_budget_approval_needed": "boolean"
+            "additional_budget_approval_needed": "boolean",
+            "wheelchair_lift_confirmed": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -1210,12 +1235,13 @@
         "acceptance_conditions": [
           "Vendor B must be selected, given Vendor A's lack of accessibility.",
           "No additional budget approval should be flagged as needed.",
+          "Wheelchair-lift availability must be explicitly confirmed before approval.",
           "The accessibility gap must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['vendor_selected'] == 'Vendor B'",
           "C2": "decisions['additional_budget_approval_needed'] == False",
-          "C3": "len(justification_fact_ids) >= 1",
+          "C3": "decisions['wheelchair_lift_confirmed'] == True",
           "C4": "any(c['type'] == 'accessibility_confirmation' for c in commitments)"
         },
         "provenance_checks": {
@@ -1227,9 +1253,11 @@
             "owner": "A2",
             "flips": [
               "C1",
+              "C3",
+              "C4",
               "P1"
             ],
-            "why": "Vendor A looks like the obvious cheaper pick; without PF1, there is no reason to pay more for Vendor B."
+            "why": "Vendor A looks like the obvious cheaper pick; without PF1, there is no reason to pay more for Vendor B, confirm a wheelchair lift, or log an accessibility commitment at all."
           },
           {
             "fact_id": "PF2",
@@ -1318,7 +1346,8 @@
         "settlement_schema": {
           "decisions": {
             "closing_act": "string",
-            "curfew_risk_addressed": "boolean"
+            "curfew_risk_addressed": "boolean",
+            "nova_new_slot_buffer_minutes": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1336,14 +1365,14 @@
         },
         "acceptance_conditions": [
           "Ember must close, honoring the rider clause.",
-          "The curfew risk from Nova's changeover must be addressed by scheduling Nova earlier.",
+          "The curfew risk from Nova's changeover must be addressed by scheduling Nova earlier, with at least 45 minutes of buffer before curfew.",
           "The rider clause must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['closing_act'] == 'Ember'",
           "C2": "decisions['curfew_risk_addressed'] == True",
           "C3": "any(c['type'] == 'schedule_change' and c['target'] == 'Nova' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['nova_new_slot_buffer_minutes'] >= 45 and decisions['nova_new_slot_buffer_minutes'] <= 90"
         },
         "provenance_checks": {
           "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
@@ -1353,9 +1382,10 @@
             "fact_id": "PF1",
             "owner": "A2",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing about the changeover/curfew conflict, there is no reason to move Nova's set earlier at all."
+            "why": "Without knowing about the 45-minute changeover/curfew conflict, there is no reason to move Nova's set earlier at all, let alone by that specific margin."
           },
           {
             "fact_id": "PF2",
@@ -1439,7 +1469,8 @@
         "settlement_schema": {
           "decisions": {
             "reshoot_approved": "boolean",
-            "insurance_claim_filed": "boolean"
+            "insurance_claim_filed": "boolean",
+            "claim_filed_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1457,14 +1488,14 @@
         },
         "acceptance_conditions": [
           "The reshoot must be approved, given the unusable audio.",
-          "An insurance claim must be filed to cover the cost.",
+          "An insurance claim must be filed to cover the cost, within the required two-week window.",
           "The unusable-audio finding must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['reshoot_approved'] == True",
           "C2": "decisions['insurance_claim_filed'] == True",
           "C3": "any(c['type'] == 'insurance_claim' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['claim_filed_within_days'] >= 1 and decisions['claim_filed_within_days'] <= 14"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1483,9 +1514,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing insurance would cover it, there is no reason to file a claim rather than eating the cost or skipping the reshoot."
+            "why": "Without knowing insurance would cover it, and only within two weeks, there is no reason to file a claim at all, let alone within that specific deadline."
           }
         ]
       }
@@ -1566,7 +1598,8 @@
         "settlement_schema": {
           "decisions": {
             "offer_amount": "integer",
-            "nondisparagement_clause_included": "boolean"
+            "nondisparagement_clause_included": "boolean",
+            "nondisparagement_clause_public_scope": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -1583,15 +1616,15 @@
           ]
         },
         "acceptance_conditions": [
-          "The offer amount must not exceed $50,000, per the appellate cap.",
-          "A non-disparagement clause must be included.",
+          "The offer amount must be set at exactly the $50,000 appellate cap, not needlessly lower.",
+          "A non-disparagement clause must be included, with public scope specifically.",
           "The appellate ruling must be cited as justification for the offer amount."
         ],
         "content_checks": {
-          "C1": "decisions['offer_amount'] <= 50000",
+          "C1": "decisions['offer_amount'] == 50000",
           "C2": "decisions['nondisparagement_clause_included'] == True",
           "C3": "any(c['type'] == 'nondisparagement' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['nondisparagement_clause_public_scope'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1604,15 +1637,16 @@
               "C1",
               "P1"
             ],
-            "why": "Without the appellate cap, a generic offer near the full $80,000 claim would not be recognized as excessive."
+            "why": "Without the appellate cap, a generic offer would either sit near the full $80,000 claim or be an arbitrary lower guess -- not the precise $50,000 ceiling."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing the client's real priority, a generic settlement focused only on the dollar amount would omit the non-disparagement clause."
+            "why": "Without knowing the client's real priority is public non-disparagement specifically, a generic settlement focused only on the dollar amount would omit the clause, or include a private-only version that doesn't match what the client actually wants."
           }
         ]
       },
@@ -1687,7 +1721,8 @@
         "settlement_schema": {
           "decisions": {
             "certification_remediation_required": "boolean",
-            "price_renegotiation_requested": "boolean"
+            "price_renegotiation_requested": "boolean",
+            "renegotiation_deadline_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1705,13 +1740,13 @@
         },
         "acceptance_conditions": [
           "Certification remediation must be required given the audit finding.",
-          "A price renegotiation must be requested given the competing quote.",
+          "A price renegotiation must be requested given the competing quote, before the 30-day switching window closes.",
           "The audit finding must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['certification_remediation_required'] == True",
           "C2": "any(c['type'] == 'certification_remediation' for c in commitments)",
-          "C3": "len(justification_fact_ids) >= 1",
+          "C3": "decisions['renegotiation_deadline_days'] >= 1 and decisions['renegotiation_deadline_days'] <= 30",
           "C4": "decisions['price_renegotiation_requested'] == True"
         },
         "provenance_checks": {
@@ -1732,9 +1767,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
+              "C3",
               "C4"
             ],
-            "why": "Without the competing 12%-cheaper quote, there is no leverage or reason to request a price renegotiation from the current vendor."
+            "why": "Without the competing 12%-cheaper quote and its 30-day window, there is no leverage or deadline pressure to request a price renegotiation from the current vendor at all."
           }
         ]
       }
@@ -1768,7 +1804,7 @@
         "shared_context": {
           "S1": "Line 2 is currently running Product A and could be switched to Product B.",
           "S2": "Diane makes the final reallocation decision.",
-          "S3": "Product B has higher near-term order demand.",
+          "S3": "Product A and Product B currently have similar per-unit margins.",
           "S4": "Before deciding, Diane asks the quality engineer and maintenance lead for anything relevant."
         },
         "private_facts": {
@@ -1815,7 +1851,8 @@
         "settlement_schema": {
           "decisions": {
             "line_switched_to": "string",
-            "downtime_scheduled": "boolean"
+            "downtime_scheduled": "boolean",
+            "downtime_hours": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1833,14 +1870,14 @@
         },
         "acceptance_conditions": [
           "Line 2 must switch to Product B, given the elevated defect rate on Product A.",
-          "The calibration downtime must be scheduled explicitly.",
+          "The calibration downtime must be scheduled explicitly, for at least 8 hours.",
           "The defect-rate finding must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['line_switched_to'] == 'Product B'",
           "C2": "decisions['downtime_scheduled'] == True",
           "C3": "any(c['type'] == 'calibration_downtime' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['downtime_hours'] >= 8 and decisions['downtime_hours'] <= 10"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1859,9 +1896,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing calibration requires 8 hours of downtime, a generic switch decision would not explicitly schedule that downtime."
+            "why": "Without knowing calibration requires 8 hours of downtime specifically, a generic switch decision would not explicitly schedule that downtime, or might understate it."
           }
         ]
       },
@@ -1936,7 +1974,8 @@
         "settlement_schema": {
           "decisions": {
             "supplier_selected": "string",
-            "order_confirmed_by_friday": "boolean"
+            "order_confirmed_by_friday": "boolean",
+            "guaranteed_lead_time_weeks": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1955,13 +1994,14 @@
         "acceptance_conditions": [
           "Supplier Beta must be selected, given Alpha's lapsed certification.",
           "The order must be confirmed by Friday to lock in the two-week lead time.",
+          "The guaranteed lead time must be recorded as two weeks, not left vague.",
           "The lapsed certification must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['supplier_selected'] == 'Supplier Beta'",
           "C2": "decisions['order_confirmed_by_friday'] == True",
           "C3": "any(c['type'] == 'order_confirmation' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['guaranteed_lead_time_weeks'] >= 1 and decisions['guaranteed_lead_time_weeks'] <= 2"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1980,9 +2020,10 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing the Friday deadline unlocks the two-week lead time, the order confirmation timing has no forcing reason to be set that soon."
+            "why": "Without knowing the Friday deadline unlocks a two-week lead time specifically, the order confirmation timing has no forcing reason to be set that soon, and the recorded lead time has no reason to be that short."
           }
         ]
       }
@@ -2016,7 +2057,7 @@
         "shared_context": {
           "S1": "Felix presented the project results to leadership and received public praise.",
           "S2": "Naomi decides how credit is formally documented.",
-          "S3": "Grace was quieter during the leadership presentation.",
+          "S3": "Felix has presented most of the team's updates to leadership this quarter.",
           "S4": "Before finalizing, Naomi asks both teammates what they believe the record should reflect."
         },
         "private_facts": {
@@ -2062,7 +2103,8 @@
         },
         "settlement_schema": {
           "decisions": {
-            "credit_correction_issued": "boolean"
+            "credit_correction_issued": "boolean",
+            "correction_issued_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -2081,13 +2123,14 @@
         "acceptance_conditions": [
           "A formal credit correction naming Grace's analysis work must be issued.",
           "Grace's contribution must be explicitly acknowledged.",
-          "A commitment to communicate the correction to leadership must exist."
+          "A commitment to communicate the correction to leadership must exist.",
+          "A private conversation with Felix addressing his concern must be logged."
         ],
         "content_checks": {
           "C1": "decisions['credit_correction_issued'] == True",
           "C2": "any(c['type'] == 'leadership_communication' for c in commitments)",
-          "C3": "len(credited_facts) >= 1",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C3": "any(c['type'] == 'peer_conversation' and c['target'] == 'Felix' for c in commitments)",
+          "C4": "decisions['correction_issued_within_days'] >= 1 and decisions['correction_issued_within_days'] <= 7"
         },
         "provenance_checks": {
           "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2098,17 +2141,19 @@
             "owner": "A3",
             "flips": [
               "C1",
+              "C2",
+              "C4",
               "P1"
             ],
-            "why": "Without knowing Grace designed the core method, there is no basis to issue any credit correction at all -- Felix's public presentation stands as the record."
+            "why": "Without knowing Grace designed the core method, there is no basis to issue any credit correction at all -- Felix's public presentation stands as the record, so no correction, communication, or timeline for one would exist."
           },
           {
             "fact_id": "PF2",
             "owner": "A2",
             "flips": [
-              "C2"
+              "C3"
             ],
-            "why": "Without knowing Felix's worry about looking bad, the correction might be issued without a communication plan, leaving the awkwardness unaddressed and the correction likely to be quietly ignored."
+            "why": "Without knowing Felix's specific worry about looking like he took credit deliberately, there is no reason to schedule a private conversation with him rather than only handling the correction publicly."
           }
         ]
       },
@@ -2182,7 +2227,9 @@
         },
         "settlement_schema": {
           "decisions": {
-            "promoted": "string"
+            "promoted": "string",
+            "mentorship_recognized_publicly": "boolean",
+            "retention_conversation_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -2200,14 +2247,15 @@
         },
         "acceptance_conditions": [
           "Sam must be promoted, given the mentorship contribution and Rae's flight risk.",
-          "Sam's mentorship work must be explicitly credited.",
-          "A growth-conversation commitment for Rae must exist to address retention."
+          "Sam's mentorship work must be publicly recognized as part of the announcement.",
+          "A growth-conversation commitment for Rae must exist to address retention.",
+          "The retention conversation with Rae must happen within two weeks."
         ],
         "content_checks": {
           "C1": "decisions['promoted'] == 'Sam'",
-          "C2": "len(credited_facts) >= 1",
+          "C2": "decisions['mentorship_recognized_publicly'] == True",
           "C3": "any(c['type'] == 'growth_conversation' and c['target'] == 'Rae' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['retention_conversation_within_days'] >= 1 and decisions['retention_conversation_within_days'] <= 14"
         },
         "provenance_checks": {
           "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2218,17 +2266,19 @@
             "owner": "A2",
             "flips": [
               "C1",
+              "C2",
               "P1"
             ],
-            "why": "Rae's longer tenure makes her the default pick; without knowing about Sam's mentorship work, there is no basis to promote Sam instead."
+            "why": "Rae's longer tenure makes her the default pick; without knowing about Sam's mentorship work, there is no basis to promote Sam instead, or to publicly recognize mentorship that nobody knows happened."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C3"
+              "C3",
+              "C4"
             ],
-            "why": "Without knowing Rae is a flight risk, there is no reason to schedule a retention-focused growth conversation with her specifically."
+            "why": "Without knowing Rae is an active flight risk, there is no reason to schedule a retention-focused growth conversation with her specifically, let alone on an urgent two-week timeline."
           }
         ]
       }
@@ -2263,7 +2313,8 @@
           "S1": "The trip is a long weekend at a rented lake house.",
           "S2": "Maya is finalizing the itinerary and how costs are split.",
           "S3": "The lake house has a steep set of stairs down to the dock.",
-          "S4": "Before booking, Maya checks with everyone for anything that should shape the plan."
+          "S4": "Before booking, Maya checks with everyone for anything that should shape the plan.",
+          "S5": "The total trip cost, including the lake house rental and shared groceries, comes to $900."
         },
         "private_facts": {
           "PF1": {
@@ -2280,13 +2331,15 @@
             "S1",
             "S2",
             "S3",
-            "S4"
+            "S4",
+            "S5"
           ],
           "A2": [
             "S1",
             "S2",
             "S3",
             "S4",
+            "S5",
             "PF1"
           ],
           "A3": [
@@ -2294,6 +2347,7 @@
             "S2",
             "S3",
             "S4",
+            "S5",
             "PF2"
           ]
         },
@@ -2308,7 +2362,11 @@
         },
         "settlement_schema": {
           "decisions": {
-            "devs_share": "integer",
+            "cost_split": {
+              "Maya": "integer",
+              "Dev": "integer",
+              "Ana": "integer"
+            },
             "dock_access_plan_adjusted": "boolean"
           },
           "credited_facts": [
@@ -2326,15 +2384,16 @@
           ]
         },
         "acceptance_conditions": [
-          "Dev's share of the cost must not exceed $150.",
+          "The full $900 cost must be covered by the three shares combined.",
+          "Dev's share must be reduced to reflect his situation, landing between $100 and $150.",
           "The dock-access plan must be adjusted to avoid the stairs for Ana.",
           "A commitment to find an alternate dock route or skip it must exist."
         ],
         "content_checks": {
-          "C1": "decisions['devs_share'] <= 150",
-          "C2": "decisions['dock_access_plan_adjusted'] == True",
-          "C3": "any(c['type'] == 'alternate_access_plan' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C1": "sum(decisions['cost_split'].values()) == 900",
+          "C2": "decisions['cost_split']['Dev'] >= 100 and decisions['cost_split']['Dev'] <= 150",
+          "C3": "decisions['dock_access_plan_adjusted'] == True",
+          "C4": "any(c['type'] == 'alternate_access_plan' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2344,18 +2403,19 @@
             "fact_id": "PF1",
             "owner": "A2",
             "flips": [
-              "C1",
+              "C2",
               "P1"
             ],
-            "why": "An even three-way split would land well above $150; without knowing Dev's situation, there is no reason to give him a smaller share."
+            "why": "An even three-way split (300 each) would land well above $150; without knowing Dev's situation, there is no reason to give him a reduced share in that specific $100-150 band."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C3",
+              "C4"
             ],
-            "why": "Without knowing about Ana's knee, the itinerary would keep the dock stairs as planned rather than adjusting access."
+            "why": "Without knowing about Ana's knee, the itinerary would keep the dock stairs as planned rather than adjusting access or arranging an alternate route."
           }
         ]
       },
@@ -2430,7 +2490,8 @@
         "settlement_schema": {
           "decisions": {
             "lease_renewed": "boolean",
-            "short_term_sublet_plan_needed": "boolean"
+            "short_term_sublet_plan_needed": "boolean",
+            "jess_assigned_larger_room": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -2449,13 +2510,14 @@
         "acceptance_conditions": [
           "A short-term sublet plan must be flagged as needed, given Sam's likely move.",
           "The lease should still be renewed, since the risk is manageable with a sublet plan.",
+          "Jess must be assigned the larger bedroom as part of the workable rent plan.",
           "Sam's likely departure must be cited as justification for the sublet plan."
         ],
         "content_checks": {
           "C1": "decisions['short_term_sublet_plan_needed'] == True",
           "C2": "decisions['lease_renewed'] == True",
           "C3": "any(c['type'] == 'sublet_plan' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['jess_assigned_larger_room'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2466,17 +2528,19 @@
             "owner": "A2",
             "flips": [
               "C1",
+              "C3",
               "P1"
             ],
-            "why": "Without knowing Sam is likely to move, there's no reason to plan for a sublet at all when renewing the lease."
+            "why": "Without knowing Sam is likely to move, there's no reason to plan for a sublet, or log a sublet-plan commitment, at all when renewing the lease."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C2",
+              "C4"
             ],
-            "why": "Without knowing Jess would take the larger room at a higher share, a cautious response to Sam's departure risk might be to not renew rather than renew with a workable room/rent plan."
+            "why": "Without knowing Jess would take the larger room at a higher share, a cautious response to Sam's departure risk might be to not renew at all, rather than renew with Jess specifically moved into the larger room to cover the gap."
           }
         ]
       }
@@ -2557,7 +2621,8 @@
         "settlement_schema": {
           "decisions": {
             "final_offer": "integer",
-            "brake_disclosure_confirmed": "boolean"
+            "brake_disclosure_confirmed": "boolean",
+            "repair_credit_applied": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -2574,15 +2639,16 @@
           ]
         },
         "acceptance_conditions": [
-          "The final offer must be no more than $140, matching the better alternative.",
+          "The final offer must land between $100 and $140, matching the better alternative without lowballing unreasonably.",
           "The brake-cable issue must be explicitly confirmed before the deal closes.",
+          "A repair credit acknowledging the brake issue must be applied.",
           "The alternative listing must be cited as justification for the lower offer."
         ],
         "content_checks": {
-          "C1": "decisions['final_offer'] <= 140",
+          "C1": "decisions['final_offer'] >= 100 and decisions['final_offer'] <= 140",
           "C2": "decisions['brake_disclosure_confirmed'] == True",
           "C3": "any(c['type'] == 'condition_disclosure' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C4": "decisions['repair_credit_applied'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2601,9 +2667,10 @@
             "owner": "A2",
             "flips": [
               "C2",
+              "C4",
               "P1"
             ],
-            "why": "The bike looks fine from the outside; without the brake-cable admission, there is no reason to require explicit confirmation of its condition before buying."
+            "why": "The bike looks fine from the outside; without the brake-cable admission, there is no reason to require explicit confirmation of its condition before buying, or to apply any repair credit."
           }
         ]
       },
@@ -2641,7 +2708,7 @@
           },
           "PF2": {
             "owner": "A3",
-            "text": "Ben knows Karim's actual budget ceiling for this project is $600, higher than the number Karim first mentioned."
+            "text": "Ben knows Karim's actual budget ceiling for this project is $700, higher than the $500 number Karim first mentioned."
           }
         },
         "views": {
@@ -2696,14 +2763,15 @@
         },
         "acceptance_conditions": [
           "The final price must reach at least $650 to cover the rush premium.",
+          "The final price must not exceed the $700 ceiling Ben knows about.",
           "The two-week deadline must be kept.",
           "The rush-premium need must be cited as justification for the higher price."
         ],
         "content_checks": {
           "C1": "decisions['final_price'] >= 650",
-          "C2": "decisions['deadline_kept_at_two_weeks'] == True",
-          "C3": "any(c['type'] == 'rush_premium' for c in commitments)",
-          "C4": "len(justification_fact_ids) >= 1"
+          "C2": "decisions['final_price'] <= 700",
+          "C3": "decisions['deadline_kept_at_two_weeks'] == True",
+          "C4": "any(c['type'] == 'rush_premium' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2714,17 +2782,18 @@
             "owner": "A2",
             "flips": [
               "C1",
+              "C4",
               "P1"
             ],
-            "why": "Without knowing about the conflicting project, there is no reason to pay a rush premium above the original $500 quote."
+            "why": "Without knowing about the conflicting project, there is no reason to pay a rush premium above the original $500 quote, or to log a rush_premium commitment at all."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C1"
+              "C2"
             ],
-            "why": "Without knowing Karim's real budget ceiling is $600, agreeing to any price above the original quote (let alone $650) would look unaffordable rather than reasonable."
+            "why": "Without knowing Karim's real budget ceiling is $700, a generic settlement might either underpay (missing C1) or, more importantly, has no confirmed room to go as high as $650-700 -- the ceiling is what makes that range known-affordable rather than a guess."
           }
         ]
       }
