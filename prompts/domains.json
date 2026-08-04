@@ -1,0 +1,2733 @@
+{
+  "healthcare": {
+    "display_name": "Healthcare",
+    "domain_context": "Scenarios happen inside hospitals, clinics, or care networks. Decision-makers are typically charge nurses, attending physicians, case managers, or administrators choosing between patients, treatments, discharge plans, staffing, or resource allocation (beds, equipment, on-call slots). Private facts should read like ordinary clinical or logistical details: a lab result not yet charted, a family's verbally-stated preference, an insurance authorization window, a staffing conflict, a prior incident report. Avoid graphic medical detail; keep facts at the level of care-coordination information, not diagnosis descriptions. Commitments often take the form of care-plan conditions, follow-up appointments, or staffing pledges rather than money.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_healthcare_001",
+        "scenario_type": "resource_allocation",
+        "description": "A charge nurse must assign the last available ICU bed between two patients being considered for transfer, with input from an attending physician and a patient-family liaison.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dana",
+            "role": "Charge Nurse"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Dr. Okafor",
+            "role": "Attending Physician"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Patient-Family Liaison"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two patients, in Bay 3 and Bay 7, are both being evaluated for the one open ICU bed.",
+          "S2": "Dana makes the final bed assignment.",
+          "S3": "Bay 3's patient was admitted earlier today after a scheduled procedure.",
+          "S4": "Bay 7's patient has been stable on the general floor for two days.",
+          "S5": "Before the assignment is finalized, Dana checks in with the attending and the family liaison for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Bay 7's patient's morning labs, not yet charted, show early signs of sepsis requiring ICU-level monitoring within the hour."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Bay 3's family has verbally agreed to a step-down unit instead, if a step-down bed can be confirmed within two hours."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "icu_bed_assigned_to": "string",
+            "step_down_requested": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The ICU bed must go to Bay 7, because of the unrecorded sepsis-risk labs.",
+          "A step-down bed request for Bay 3 must be logged as a commitment.",
+          "The sepsis finding must be explicitly cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['icu_bed_assigned_to'] == 'Bay 7'",
+          "C2": "decisions['step_down_requested'] == True",
+          "C3": "any(c['type'] == 'step_down_request' and c['target'] == 'Bay 3' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the uncharted sepsis labs, Bay 3 (admitted earlier, seemingly higher acuity on paper) looks like the natural pick; revealed, Bay 7 becomes the correct ICU assignment."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C3"
+            ],
+            "why": "Nothing public says Bay 3's family would accept a step-down bed; without PF2, there's no reason to log that commitment instead of just losing the ICU bed outright."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_healthcare_002",
+        "scenario_type": "discharge_planning",
+        "description": "A case manager must finalize a patient's discharge date and plan, with input from a bedside nurse and a hospital social worker.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Tom",
+            "role": "Case Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Renee",
+            "role": "Bedside Nurse"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Marcus",
+            "role": "Social Worker"
+          }
+        ],
+        "shared_context": {
+          "S1": "The patient is medically cleared for discharge as of today.",
+          "S2": "Tom finalizes the discharge date and any required follow-up plan.",
+          "S3": "The patient lives alone in a two-story home.",
+          "S4": "Tom asks the nurse and social worker for any concerns before confirming the discharge."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The patient struggled to climb the stairs to the bathroom unassisted during this morning's mobility check."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "A home-health aide is only authorized by insurance if the discharge order explicitly documents a mobility deficit."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "discharge_today": "boolean",
+            "mobility_deficit_documented": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The discharge order must document a mobility deficit.",
+          "A home-health aide commitment must be logged.",
+          "The mobility finding must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['mobility_deficit_documented'] == True",
+          "C2": "any(c['type'] == 'home_health_aide' for c in commitments)",
+          "C3": "decisions['discharge_today'] == True",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the stair-climb difficulty, a routine discharge order has no reason to document a mobility deficit at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing the aide requires that specific documentation, Tom has no reason to connect the mobility note to actually ordering the aide."
+          }
+        ]
+      }
+    ]
+  },
+  "software_technology": {
+    "display_name": "Software & Technology",
+    "domain_context": "Scenarios happen inside a product/engineering org: sprint planning, release go/no-go calls, incident postmortems, architecture or vendor decisions. Decision-makers are typically eng managers, tech leads, or product managers. Private facts should read like ordinary engineering reality: an undocumented tech-debt shortcut, a flaky test nobody escalated, a customer SLA clause, an on-call burnout signal, a security finding not yet ticketed. Commitments often take the form of scope cuts, follow-up tickets, staffing changes, or customer communications rather than money.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_swtech_001",
+        "scenario_type": "release_scope",
+        "description": "An engineering manager must decide whether to ship a feature in the current release or cut it, with input from a senior developer and the QA lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Sam",
+            "role": "Engineering Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Priya",
+            "role": "Senior Developer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Jordan",
+            "role": "QA Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "The release is scheduled to ship Friday.",
+          "S2": "Sam makes the final call on what ships.",
+          "S3": "The new export feature has passed all planned functional test cases.",
+          "S4": "Before the release is finalized, Sam asks the team for any last concerns."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The export feature was built on a temporary data pipeline that will silently drop rows above 10,000 records."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "A fix for the row-limit issue could be tested and verified by Thursday if flagged today."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "ship_export_feature": "boolean",
+            "row_limit_fix_scheduled": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The row-limit fix must be scheduled before Friday.",
+          "The feature must still ship, since a same-week fix is possible.",
+          "The silent data-loss risk must be cited as justification for the fix."
+        ],
+        "content_checks": {
+          "C1": "decisions['row_limit_fix_scheduled'] == True",
+          "C2": "decisions['ship_export_feature'] == True",
+          "C3": "any(c['type'] == 'hotfix' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The feature looks release-ready from passing tests alone; without PF1, there's no reason to schedule a row-limit fix at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing a fix is achievable by Thursday, the safe generic response is to delay the whole feature rather than ship it on schedule."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_swtech_002",
+        "scenario_type": "incident_postmortem",
+        "description": "A team lead must decide the remediation plan after a production outage, with input from an on-call SRE and a product manager.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Alex",
+            "role": "Team Lead"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Noor",
+            "role": "On-call SRE"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ben",
+            "role": "Product Manager"
+          }
+        ],
+        "shared_context": {
+          "S1": "Yesterday's outage lasted 40 minutes and affected the billing API.",
+          "S2": "Alex writes the final remediation plan.",
+          "S3": "The immediate cause was a bad config push.",
+          "S4": "Alex asks the SRE and PM for anything the postmortem should include."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The config push succeeded because the staging validation step has been silently disabled for three weeks."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The affected enterprise customer's contract includes a service-credit penalty triggered by any outage over 30 minutes unless a root-cause fix is committed within 5 business days."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "staging_validation_restored": "boolean",
+            "fix_committed_within_5_days": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Staging validation must be restored.",
+          "A committed fix date within 5 business days must exist.",
+          "The disabled validation step must be cited as the real root cause."
+        ],
+        "content_checks": {
+          "C1": "decisions['staging_validation_restored'] == True",
+          "C2": "decisions['fix_committed_within_5_days'] == True",
+          "C3": "any(c['type'] == 'root_cause_fix' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The bad config push looks like the root cause on its own; without PF1, there's no reason to touch staging validation at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without the contract penalty clause, there's no forcing reason to commit to a 5-day fix instead of an open-ended 'we'll look into it'."
+          }
+        ]
+      }
+    ]
+  },
+  "defense": {
+    "display_name": "Defense",
+    "domain_context": "Scenarios happen inside a military or defense-logistics unit: route selection, equipment allocation, mission-support decisions. Decision-makers are typically a commander or XO. Keep content at the level of routine operational logistics and planning \u2014 never depict combat violence, casualties, or weapons use; the tension is entirely about incomplete information (intel timing, fuel/maintenance status, competing mission priorities), not violence. Private facts should read like ordinary staff-officer reports. Commitments often take the form of route changes, resupply requests, or reassignment orders.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_defense_001",
+        "scenario_type": "logistics_routing",
+        "description": "A convoy commander must choose between two supply routes, with input from an intelligence officer and a logistics officer.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Capt. Reyes",
+            "role": "Convoy Commander"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Lt. Chen",
+            "role": "Intelligence Officer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Sgt. Watts",
+            "role": "Logistics Officer"
+          }
+        ],
+        "shared_context": {
+          "S1": "Route Alpha is 20 minutes shorter than Route Bravo.",
+          "S2": "Capt. Reyes gives the final routing order.",
+          "S3": "The convoy must reach the forward base before nightfall.",
+          "S4": "Before departure, Capt. Reyes asks the intel and logistics officers for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "An unconfirmed report flags increased irregular checkpoint activity along Route Alpha within the last six hours."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Route Bravo's bridge crossing has a load restriction requiring the convoy to split into two smaller groups, adding roughly 25 minutes."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "route_selected": "string",
+            "split_convoy": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Route Bravo must be selected, given the checkpoint-activity report on Alpha.",
+          "The convoy split required by Bravo's bridge restriction must be planned for.",
+          "The checkpoint-activity report must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['route_selected'] == 'Bravo'",
+          "C2": "decisions['split_convoy'] == True",
+          "C3": "any(c['type'] == 'convoy_split_plan' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Route Alpha is the faster default choice; without PF1, there is no reason to divert to Bravo."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing Bravo's bridge forces a convoy split, the plan would not account for the split, leaving logistics unprepared."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_defense_002",
+        "scenario_type": "equipment_allocation",
+        "description": "A battalion executive officer must allocate a limited shipment of new radios between two company commanders.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Maj. Kim",
+            "role": "Battalion XO"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Capt. Diallo",
+            "role": "Company A Commander"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Capt. Ibrahim",
+            "role": "Company B Commander"
+          }
+        ],
+        "shared_context": {
+          "S1": "Only 12 new radios arrived, enough to fully equip one company but not both.",
+          "S2": "Maj. Kim makes the final allocation.",
+          "S3": "Company A is currently based near the main camp.",
+          "S4": "Before deciding, Maj. Kim asks both commanders for anything relevant to the allocation."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Company A's current radios have a confirmed intermittent failure rate that already caused two missed check-ins this week."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Company B is scheduled to begin an extended patrol rotation with degraded communications coverage starting in three days."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "radios_assigned_to": "string",
+            "old_radios_repair_requested": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The radios must go to Company A, given its confirmed equipment failures.",
+          "A repair request for Company B's existing radios ahead of the patrol rotation must be logged.",
+          "The equipment-failure report must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['radios_assigned_to'] == 'Company A'",
+          "C2": "decisions['old_radios_repair_requested'] == True",
+          "C3": "any(c['type'] == 'equipment_repair' and c['target'] == 'Company B' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the confirmed failure report, there is no basis to prefer Company A over a generic even split or seniority-based call."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing Company B's rotation timing, there is no urgency to request a repair for their existing radios instead of leaving it unaddressed."
+          }
+        ]
+      }
+    ]
+  },
+  "finance": {
+    "display_name": "Finance",
+    "domain_context": "Scenarios happen inside a bank, fund, or corporate finance team: loan approvals, portfolio rebalancing, budget sign-off. Decision-makers are typically credit officers, portfolio managers, or finance directors. Private facts should read like ordinary desk-level information: an unlogged risk flag, a compliance constraint, a client relationship detail, a liquidity note. Commitments often take the form of covenants, monitoring requirements, or conditional approvals rather than a simple yes/no.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_finance_001",
+        "scenario_type": "credit_decision",
+        "description": "A credit officer must decide whether to approve a small-business loan, with input from a risk analyst and a relationship manager.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Farah",
+            "role": "Credit Officer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Colin",
+            "role": "Risk Analyst"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Bianca",
+            "role": "Relationship Manager"
+          }
+        ],
+        "shared_context": {
+          "S1": "The applicant is requesting a $150,000 working-capital loan.",
+          "S2": "Farah makes the final approval decision.",
+          "S3": "The applicant's submitted financials show two years of steady revenue.",
+          "S4": "Before deciding, Farah asks the risk analyst and relationship manager for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "A recent credit-bureau pull, not yet in the file, shows the applicant's personal credit score dropped sharply last month due to a separate missed payment."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The applicant has agreed, if asked, to pledge additional collateral (a delivery vehicle) that would cover the loan gap."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "loan_approved": "boolean",
+            "additional_collateral_required": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Additional collateral must be required given the credit-score drop.",
+          "The loan must still be approved, since the collateral gap is coverable.",
+          "The credit-score drop must be cited as justification for requiring collateral."
+        ],
+        "content_checks": {
+          "C1": "decisions['additional_collateral_required'] == True",
+          "C2": "decisions['loan_approved'] == True",
+          "C3": "any(c['type'] == 'collateral_pledge' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The file looks clean on steady revenue alone; without PF1, there is no reason to require additional collateral at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing collateral is actually available, the safe generic response to a credit-score drop is to decline the loan outright rather than approve it conditionally."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_finance_002",
+        "scenario_type": "portfolio_rebalancing",
+        "description": "A portfolio manager must decide whether to rebalance a client fund out of a large equity position, with input from a compliance officer and a trader.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Wei",
+            "role": "Portfolio Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Sofia",
+            "role": "Compliance Officer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Marco",
+            "role": "Trader"
+          }
+        ],
+        "shared_context": {
+          "S1": "The fund currently holds 18% of its assets in a single equity position.",
+          "S2": "Wei makes the final rebalancing decision.",
+          "S3": "The position has performed well over the past year.",
+          "S4": "Before deciding, Wei asks compliance and the trading desk for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "A new internal concentration limit, effective this week, caps any single position at 15% of fund assets."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Selling down the position in a single trade would move the market price; a staged sell-down over three days avoids meaningful slippage."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "rebalance_position": "boolean",
+            "staged_sell_down": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The position must be rebalanced down to comply with the new 15% limit.",
+          "The sell-down must be staged rather than executed in a single trade.",
+          "The new concentration limit must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['rebalance_position'] == True",
+          "C2": "decisions['staged_sell_down'] == True",
+          "C3": "any(c['type'] == 'staged_execution' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The position looks fine on strong past performance alone; without PF1, there's no compliance reason to rebalance at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about slippage risk, a generic rebalancing decision would not specify staging the trade, risking a worse execution."
+          }
+        ]
+      }
+    ]
+  },
+  "education": {
+    "display_name": "Education",
+    "domain_context": "Scenarios happen inside a school or district: student placement, discipline, field-trip logistics, resource requests. Decision-makers are typically principals, department heads, or counselors. Private facts should read like ordinary school-administration details: an IEP requirement, a behavioral-fit note from a teacher, a budget cap from the office, a safety concern from a chaperone. Commitments often take the form of accommodations, staffing changes, or budget conditions.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_education_001",
+        "scenario_type": "student_placement",
+        "description": "A principal must decide which class a transferring student joins, with input from a teacher and a school counselor.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Ms. Alvarez",
+            "role": "Principal"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Mr. Doyle",
+            "role": "5th Grade Teacher"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ms. Freeman",
+            "role": "School Counselor"
+          }
+        ],
+        "shared_context": {
+          "S1": "A transferring student needs to be placed in one of two 5th-grade classes.",
+          "S2": "Ms. Alvarez makes the final placement decision.",
+          "S3": "Both classes currently have similar enrollment numbers.",
+          "S4": "Before deciding, Ms. Alvarez asks the teacher and counselor for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Mr. Doyle's class already has two students with significant behavioral support needs, and adding a third would exceed what one aide can manage."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The transferring student's file includes an active IEP requiring a classroom aide be present at all times."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "placed_in_class": "string",
+            "aide_assigned": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The student must be placed in the other class, given Mr. Doyle's aide capacity.",
+          "An aide must be assigned given the IEP requirement.",
+          "The IEP requirement must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['placed_in_class'] != 'Doyle'",
+          "C2": "decisions['aide_assigned'] == True",
+          "C3": "any(c['type'] == 'aide_assignment' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing Mr. Doyle's class is already at aide capacity, a generic even-split placement could still send the student there."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "P1"
+            ],
+            "why": "Without the IEP requirement, there is no reason to assign a dedicated aide at all."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_education_002",
+        "scenario_type": "field_trip_logistics",
+        "description": "A department head must approve the vendor and budget for an upcoming field trip, with input from the lead teacher and the school's business office liaison.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Mr. Suarez",
+            "role": "Department Head"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Ms. Whitfield",
+            "role": "Lead Teacher"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Devon",
+            "role": "Business Office Liaison"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two bus vendors have submitted quotes for the trip.",
+          "S2": "Mr. Suarez gives final approval on vendor and budget.",
+          "S3": "Vendor A's quote is $200 cheaper than Vendor B's.",
+          "S4": "Before approving, Mr. Suarez asks the lead teacher and business office for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Vendor A's buses lack the wheelchair lift needed for a student on this trip."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The trip's total budget, including Vendor B's higher quote, is already approved and does not need additional sign-off."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "vendor_selected": "string",
+            "additional_budget_approval_needed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Vendor B must be selected, given Vendor A's lack of accessibility.",
+          "No additional budget approval should be flagged as needed.",
+          "The accessibility gap must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['vendor_selected'] == 'Vendor B'",
+          "C2": "decisions['additional_budget_approval_needed'] == False",
+          "C3": "len(justification_fact_ids) >= 1",
+          "C4": "any(c['type'] == 'accessibility_confirmation' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Vendor A looks like the obvious cheaper pick; without PF1, there is no reason to pay more for Vendor B."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing the higher quote is already covered, a cautious generic response would flag needing more budget approval before picking the pricier vendor."
+          }
+        ]
+      }
+    ]
+  },
+  "entertainment": {
+    "display_name": "Entertainment",
+    "domain_context": "Scenarios happen inside a production, festival, or studio: lineup scheduling, reshoot budgets, casting or booking calls. Decision-makers are typically producers, programmers, or showrunners. Private facts should read like ordinary industry logistics: a rider clause, an equipment constraint, a footage-quality note, an insurance detail. Commitments often take the form of schedule changes, budget line items, or contract riders.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_entertainment_001",
+        "scenario_type": "lineup_scheduling",
+        "description": "A festival programmer must decide the closing set time, with input from the stage manager and an artist liaison.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Robin",
+            "role": "Festival Programmer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Casey",
+            "role": "Stage Manager"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Imani",
+            "role": "Artist Liaison"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two acts, Nova and Ember, are both being considered for the closing headline slot.",
+          "S2": "Robin makes the final scheduling call.",
+          "S3": "Nova has the larger existing local fanbase.",
+          "S4": "Before finalizing, Robin asks the stage manager and artist liaison for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Nova's stage setup requires 45 minutes of changeover time that would push the venue past its city noise curfew."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Ember's contract rider includes a clause guaranteeing the closing slot if requested, which Ember's team has verbally confirmed they will invoke."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "closing_act": "string",
+            "curfew_risk_addressed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Ember must close, honoring the rider clause.",
+          "The curfew risk from Nova's changeover must be addressed by scheduling Nova earlier.",
+          "The rider clause must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['closing_act'] == 'Ember'",
+          "C2": "decisions['curfew_risk_addressed'] == True",
+          "C3": "any(c['type'] == 'schedule_change' and c['target'] == 'Nova' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about the changeover/curfew conflict, there is no reason to move Nova's set earlier at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Nova's bigger fanbase makes it the obvious closing pick; without the rider clause, there's no reason to give the slot to Ember instead."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_entertainment_002",
+        "scenario_type": "reshoot_budget",
+        "description": "A producer must decide whether to approve a reshoot for a key scene, with input from the director and the production accountant.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Elaine",
+            "role": "Producer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Theo",
+            "role": "Director"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Grace",
+            "role": "Production Accountant"
+          }
+        ],
+        "shared_context": {
+          "S1": "The scene in question was shot on location last week.",
+          "S2": "Elaine makes the final call on approving any reshoot.",
+          "S3": "A reshoot would cost roughly $40,000 in crew and location fees.",
+          "S4": "Before deciding, Elaine asks the director and accountant for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The audio track for the scene has an unfixable wind-noise problem that makes the dialogue unusable in post."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The production's insurance policy covers up to $50,000 for reshoots caused by an unusable original take, if filed within two weeks of the original shoot."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "reshoot_approved": "boolean",
+            "insurance_claim_filed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The reshoot must be approved, given the unusable audio.",
+          "An insurance claim must be filed to cover the cost.",
+          "The unusable-audio finding must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['reshoot_approved'] == True",
+          "C2": "decisions['insurance_claim_filed'] == True",
+          "C3": "any(c['type'] == 'insurance_claim' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing the audio is genuinely unusable, a cost-conscious producer would decline the $40,000 reshoot."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing insurance would cover it, there is no reason to file a claim rather than eating the cost or skipping the reshoot."
+          }
+        ]
+      }
+    ]
+  },
+  "legal": {
+    "display_name": "Legal",
+    "domain_context": "Scenarios happen inside a law firm or in-house legal team: settlement authority, contract renewal, litigation strategy. Decision-makers are typically lead attorneys or general counsel. Private facts should read like ordinary case-file or business detail: a precedent not yet briefed, a client's non-monetary priority, an audit finding, a pricing benchmark. Commitments often take the form of settlement terms, contract clauses, or compliance actions rather than bare dollar figures alone.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_legal_001",
+        "scenario_type": "settlement_negotiation",
+        "description": "A lead attorney must set the firm's settlement offer terms in a contract dispute, with input from a junior associate and the client liaison.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Ms. Patel",
+            "role": "Lead Attorney"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Jon",
+            "role": "Associate"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Renata",
+            "role": "Client Liaison"
+          }
+        ],
+        "shared_context": {
+          "S1": "The dispute involves a claimed $80,000 in damages.",
+          "S2": "Ms. Patel sets the final settlement offer.",
+          "S3": "The opposing party has signaled openness to settling out of court.",
+          "S4": "Before finalizing the offer, Ms. Patel asks the associate and client liaison for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "A recent appellate ruling in a near-identical case caps recoverable damages at $50,000 in this jurisdiction."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The client has privately said a public non-disparagement clause matters more to them than the exact settlement amount."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "offer_amount": "integer",
+            "nondisparagement_clause_included": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The offer amount must not exceed $50,000, per the appellate cap.",
+          "A non-disparagement clause must be included.",
+          "The appellate ruling must be cited as justification for the offer amount."
+        ],
+        "content_checks": {
+          "C1": "decisions['offer_amount'] <= 50000",
+          "C2": "decisions['nondisparagement_clause_included'] == True",
+          "C3": "any(c['type'] == 'nondisparagement' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the appellate cap, a generic offer near the full $80,000 claim would not be recognized as excessive."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing the client's real priority, a generic settlement focused only on the dollar amount would omit the non-disparagement clause."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_legal_002",
+        "scenario_type": "contract_renewal",
+        "description": "A general counsel must decide whether to renew a vendor contract, with input from a compliance counsel and a procurement lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Mr. Osei",
+            "role": "General Counsel"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Lena",
+            "role": "Compliance Counsel"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ravi",
+            "role": "Procurement Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "The vendor's current contract expires in two weeks.",
+          "S2": "Mr. Osei decides whether to renew.",
+          "S3": "The vendor has met all delivery deadlines this year.",
+          "S4": "Before deciding, Mr. Osei asks compliance and procurement for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "An internal audit, not yet finalized, found the vendor's data-handling practices fall short of the required certification standard."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "A competing vendor has quoted 12% lower pricing for equivalent service, contingent on switching within 30 days."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "certification_remediation_required": "boolean",
+            "price_renegotiation_requested": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Certification remediation must be required given the audit finding.",
+          "A price renegotiation must be requested given the competing quote.",
+          "The audit finding must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['certification_remediation_required'] == True",
+          "C2": "any(c['type'] == 'certification_remediation' for c in commitments)",
+          "C3": "len(justification_fact_ids) >= 1",
+          "C4": "decisions['price_renegotiation_requested'] == True"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C2",
+              "P1"
+            ],
+            "why": "The vendor looks compliant based on delivery performance alone; without PF1, there is no reason to require certification remediation at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without the competing 12%-cheaper quote, there is no leverage or reason to request a price renegotiation from the current vendor."
+          }
+        ]
+      }
+    ]
+  },
+  "manufacturing": {
+    "display_name": "Manufacturing",
+    "domain_context": "Scenarios happen on a factory floor or in a supply chain: line reallocation, supplier selection, maintenance scheduling. Decision-makers are typically plant managers or procurement leads. Private facts should read like ordinary shop-floor or vendor detail: a defect-rate reading, an equipment-downtime note, a certification lapse, a lead-time figure. Commitments often take the form of maintenance schedules, certification requirements, or supplier conditions.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_manufacturing_001",
+        "scenario_type": "line_reallocation",
+        "description": "A plant manager must decide how to reallocate a production line between two product runs, with input from a quality engineer and a maintenance lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Diane",
+            "role": "Plant Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Hector",
+            "role": "Quality Engineer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Yusuf",
+            "role": "Maintenance Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "Line 2 is currently running Product A and could be switched to Product B.",
+          "S2": "Diane makes the final reallocation decision.",
+          "S3": "Product B has higher near-term order demand.",
+          "S4": "Before deciding, Diane asks the quality engineer and maintenance lead for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Product A's defect rate on Line 2 has quietly crept to 6%, above the 3% internal threshold, over the last two shifts."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Switching Line 2 to Product B requires a calibration that takes the line offline for 8 hours."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "line_switched_to": "string",
+            "downtime_scheduled": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Line 2 must switch to Product B, given the elevated defect rate on Product A.",
+          "The calibration downtime must be scheduled explicitly.",
+          "The defect-rate finding must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['line_switched_to'] == 'Product B'",
+          "C2": "decisions['downtime_scheduled'] == True",
+          "C3": "any(c['type'] == 'calibration_downtime' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the defect-rate finding, there is no quality reason to switch away from the currently-running Product A."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing calibration requires 8 hours of downtime, a generic switch decision would not explicitly schedule that downtime."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_manufacturing_002",
+        "scenario_type": "supplier_selection",
+        "description": "A procurement manager must select a supplier for a key component, with input from a QA specialist and a logistics coordinator.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Ines",
+            "role": "Procurement Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Kwame",
+            "role": "QA Specialist"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Petra",
+            "role": "Logistics Coordinator"
+          }
+        ],
+        "shared_context": {
+          "S1": "Supplier Alpha's quote is 8% cheaper than Supplier Beta's.",
+          "S2": "Ines makes the final supplier selection.",
+          "S3": "Both suppliers have worked with the company before.",
+          "S4": "Before deciding, Ines asks QA and logistics for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Supplier Alpha's ISO certification lapsed last month and has not yet been renewed."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Supplier Beta can guarantee a two-week lead time if the order is confirmed by Friday."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "supplier_selected": "string",
+            "order_confirmed_by_friday": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Supplier Beta must be selected, given Alpha's lapsed certification.",
+          "The order must be confirmed by Friday to lock in the two-week lead time.",
+          "The lapsed certification must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['supplier_selected'] == 'Supplier Beta'",
+          "C2": "decisions['order_confirmed_by_friday'] == True",
+          "C3": "any(c['type'] == 'order_confirmation' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Supplier Alpha's lower price makes it the obvious pick; without PF1, there is no reason to pay more for Supplier Beta."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing the Friday deadline unlocks the two-week lead time, the order confirmation timing has no forcing reason to be set that soon."
+          }
+        ]
+      }
+    ]
+  },
+  "workplace_interpersonal": {
+    "display_name": "Workplace Interpersonal",
+    "domain_context": "Scenarios are about interpersonal dynamics at work rather than a technical or financial task: crediting contributions, mediating a conflict, deciding a promotion. Decision-makers are typically managers or directors. Private facts should read like ordinary workplace detail a colleague might not volunteer unprompted: an uncredited contribution, a burnout signal, a mentorship relationship, a retention risk. Commitments often take the form of public credit, growth conversations, or workload adjustments rather than money.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_workplace_001",
+        "scenario_type": "conflict_mediation",
+        "description": "A manager must resolve a dispute over who gets credit for a successful project, with input from both teammates involved.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Naomi",
+            "role": "Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Felix",
+            "role": "Teammate"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Grace",
+            "role": "Teammate"
+          }
+        ],
+        "shared_context": {
+          "S1": "Felix presented the project results to leadership and received public praise.",
+          "S2": "Naomi decides how credit is formally documented.",
+          "S3": "Grace was quieter during the leadership presentation.",
+          "S4": "Before finalizing, Naomi asks both teammates what they believe the record should reflect."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A3",
+            "text": "Grace designed the core analysis method the entire presentation was built on, a fact Felix never mentioned to leadership."
+          },
+          "PF2": {
+            "owner": "A2",
+            "text": "Felix privately worries that correcting the credit now, after the presentation, will make him look like he took credit deliberately."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "credit_correction_issued": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "A formal credit correction naming Grace's analysis work must be issued.",
+          "Grace's contribution must be explicitly acknowledged.",
+          "A commitment to communicate the correction to leadership must exist."
+        ],
+        "content_checks": {
+          "C1": "decisions['credit_correction_issued'] == True",
+          "C2": "any(c['type'] == 'leadership_communication' for c in commitments)",
+          "C3": "len(credited_facts) >= 1",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing Grace designed the core method, there is no basis to issue any credit correction at all -- Felix's public presentation stands as the record."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing Felix's worry about looking bad, the correction might be issued without a communication plan, leaving the awkwardness unaddressed and the correction likely to be quietly ignored."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_workplace_002",
+        "scenario_type": "promotion_decision",
+        "description": "A director must decide which of two candidates gets promoted to team lead, with input from a peer and a skip-level manager.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Carlos",
+            "role": "Director"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Beatriz",
+            "role": "Peer Colleague"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Owen",
+            "role": "Skip-Level Manager"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two candidates, Rae and Sam, are both up for the team lead promotion.",
+          "S2": "Carlos makes the final promotion decision.",
+          "S3": "Rae has slightly longer tenure on the team.",
+          "S4": "Before deciding, Carlos asks a peer and a skip-level manager for input."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Sam has been quietly mentoring two junior engineers for the past six months, with visible improvement in their output."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Rae has confided that she is actively interviewing elsewhere and is unlikely to accept the promotion if offered."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "promoted": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Sam must be promoted, given the mentorship contribution and Rae's flight risk.",
+          "Sam's mentorship work must be explicitly credited.",
+          "A growth-conversation commitment for Rae must exist to address retention."
+        ],
+        "content_checks": {
+          "C1": "decisions['promoted'] == 'Sam'",
+          "C2": "len(credited_facts) >= 1",
+          "C3": "any(c['type'] == 'growth_conversation' and c['target'] == 'Rae' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Rae's longer tenure makes her the default pick; without knowing about Sam's mentorship work, there is no basis to promote Sam instead."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing Rae is a flight risk, there is no reason to schedule a retention-focused growth conversation with her specifically."
+          }
+        ]
+      }
+    ]
+  },
+  "friends_family_informal": {
+    "display_name": "Friends, Family & Informal",
+    "domain_context": "Scenarios are informal, personal decisions among friends or family: trip planning, shared living arrangements, splitting a task or cost. There is no institutional decision-maker -- one person naturally ends up organizing or deciding (the trip planner, the one whose name is on the lease, the eldest sibling), but the tone should stay casual, not corporate. Private facts should read like things a person might not volunteer unless asked directly: a money worry, a scheduling conflict, a health/mobility limit, an unspoken preference. Commitments are informal \u2014 a promise, a plan, a way of splitting something \u2014 not legal or monetary instruments.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_friendsfamily_001",
+        "scenario_type": "trip_planning",
+        "description": "One sibling organizing a family trip must finalize the itinerary and cost split, with input from the other two siblings.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Maya",
+            "role": "Trip Organizer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Dev",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ana",
+            "role": "Parent"
+          }
+        ],
+        "shared_context": {
+          "S1": "The trip is a long weekend at a rented lake house.",
+          "S2": "Maya is finalizing the itinerary and how costs are split.",
+          "S3": "The lake house has a steep set of stairs down to the dock.",
+          "S4": "Before booking, Maya checks with everyone for anything that should shape the plan."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Dev is between jobs right now and can't cover more than $150 toward the trip without real difficulty."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Ana's knee has been bothering her enough that the stairs to the dock would need to be avoided."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "devs_share": "integer",
+            "dock_access_plan_adjusted": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Dev's share of the cost must not exceed $150.",
+          "The dock-access plan must be adjusted to avoid the stairs for Ana.",
+          "A commitment to find an alternate dock route or skip it must exist."
+        ],
+        "content_checks": {
+          "C1": "decisions['devs_share'] <= 150",
+          "C2": "decisions['dock_access_plan_adjusted'] == True",
+          "C3": "any(c['type'] == 'alternate_access_plan' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "An even three-way split would land well above $150; without knowing Dev's situation, there is no reason to give him a smaller share."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about Ana's knee, the itinerary would keep the dock stairs as planned rather than adjusting access."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_friendsfamily_002",
+        "scenario_type": "shared_living",
+        "description": "One roommate, whose name is on the lease, must decide whether to renew and how to assign rooms, with input from the other two roommates.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Priya",
+            "role": "Lease Holder"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Sam",
+            "role": "Roommate"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Jess",
+            "role": "Roommate"
+          }
+        ],
+        "shared_context": {
+          "S1": "The current lease is up for renewal next month.",
+          "S2": "Priya decides whether to renew and how rooms are assigned.",
+          "S3": "The apartment has one larger bedroom and two smaller ones.",
+          "S4": "Before deciding, Priya checks with Sam and Jess for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Sam has a job offer in another city and is about 80% likely to move out within two months regardless of the lease."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Jess would take the larger bedroom at a higher rent share if it were offered, but hasn't brought it up unprompted."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "lease_renewed": "boolean",
+            "short_term_sublet_plan_needed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "A short-term sublet plan must be flagged as needed, given Sam's likely move.",
+          "The lease should still be renewed, since the risk is manageable with a sublet plan.",
+          "Sam's likely departure must be cited as justification for the sublet plan."
+        ],
+        "content_checks": {
+          "C1": "decisions['short_term_sublet_plan_needed'] == True",
+          "C2": "decisions['lease_renewed'] == True",
+          "C3": "any(c['type'] == 'sublet_plan' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing Sam is likely to move, there's no reason to plan for a sublet at all when renewing the lease."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing Jess would take the larger room at a higher share, a cautious response to Sam's departure risk might be to not renew rather than renew with a workable room/rent plan."
+          }
+        ]
+      }
+    ]
+  },
+  "informal_commerce_bargaining": {
+    "display_name": "Informal Commerce / Bargaining",
+    "domain_context": "Scenarios are informal price or terms negotiations outside a corporate setting: a flea market or classifieds sale, a freelance gig arranged through a mutual contact, a private used-goods sale. There is no institutional authority \u2014 the decision-maker is whoever makes the final call on price/terms (the buyer, the client). Private facts should read like things a party in an informal deal might know but not volunteer: a defect, a better alternative offer (BATNA), a real budget ceiling, a scheduling conflict. Commitments are informal terms \u2014 a price, a condition disclosure, a delivery promise \u2014 agreed verbally.",
+    "few_shot_examples": [
+      {
+        "scenario_id": "domain_informalcommerce_001",
+        "scenario_type": "used_goods_negotiation",
+        "description": "A buyer at a flea market must decide a final offer for a used bicycle, with the seller and the buyer's friend both weighing in.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Theo",
+            "role": "Buyer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marisol",
+            "role": "Seller"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Nadia",
+            "role": "Buyer's Friend"
+          }
+        ],
+        "shared_context": {
+          "S1": "The bicycle is listed at $180.",
+          "S2": "Theo decides the final offer.",
+          "S3": "The bicycle looks to be in good condition from the outside.",
+          "S4": "Before offering, Theo asks the seller and his friend for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The rear brake cable is fraying and will need replacing within a month, something Marisol would confirm honestly if asked directly."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Nadia saw a nearly identical bike, in confirmed better condition, listed for $140 at another stall an hour ago."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "final_offer": "integer",
+            "brake_disclosure_confirmed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The final offer must be no more than $140, matching the better alternative.",
+          "The brake-cable issue must be explicitly confirmed before the deal closes.",
+          "The alternative listing must be cited as justification for the lower offer."
+        ],
+        "content_checks": {
+          "C1": "decisions['final_offer'] <= 140",
+          "C2": "decisions['brake_disclosure_confirmed'] == True",
+          "C3": "any(c['type'] == 'condition_disclosure' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing about the cheaper, better-condition alternative, there is no leverage to offer below the $180 asking price beyond generic haggling."
+          },
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C2",
+              "P1"
+            ],
+            "why": "The bike looks fine from the outside; without the brake-cable admission, there is no reason to require explicit confirmation of its condition before buying."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_informalcommerce_002",
+        "scenario_type": "freelance_gig_negotiation",
+        "description": "A client must finalize price and turnaround for a freelance design job, arranged through a mutual contact, with the freelancer and the contact both weighing in.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Karim",
+            "role": "Client"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Yara",
+            "role": "Freelancer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ben",
+            "role": "Mutual Contact"
+          }
+        ],
+        "shared_context": {
+          "S1": "The job is a logo redesign, initially quoted at $500 for a two-week turnaround.",
+          "S2": "Karim finalizes the price and deadline.",
+          "S3": "Yara has done good work for others in the past.",
+          "S4": "Before finalizing, Karim checks with Yara and Ben for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Yara already has a conflicting project due the same week and would need a $150 rush premium to hit the two-week deadline."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Ben knows Karim's actual budget ceiling for this project is $600, higher than the number Karim first mentioned."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3"
+          ],
+          "turn_cap": 12
+        },
+        "settlement_schema": {
+          "decisions": {
+            "final_price": "integer",
+            "deadline_kept_at_two_weeks": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The final price must reach at least $650 to cover the rush premium.",
+          "The two-week deadline must be kept.",
+          "The rush-premium need must be cited as justification for the higher price."
+        ],
+        "content_checks": {
+          "C1": "decisions['final_price'] >= 650",
+          "C2": "decisions['deadline_kept_at_two_weeks'] == True",
+          "C3": "any(c['type'] == 'rush_premium' for c in commitments)",
+          "C4": "len(justification_fact_ids) >= 1"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing about the conflicting project, there is no reason to pay a rush premium above the original $500 quote."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing Karim's real budget ceiling is $600, agreeing to any price above the original quote (let alone $650) would look unaffordable rather than reasonable."
+          }
+        ]
+      }
+    ]
+  }
+}

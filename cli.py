@@ -41,6 +41,7 @@ import config
 from challenger import generate_scenario
 from cascade import run_cascade
 from storage import record_iteration
+import domain_loader
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +74,21 @@ def write_json(path: str, data: list):
 
 def ensure_scenario_id(scenario: dict) -> str:
     return scenario.setdefault("scenario_id", f"seed_{uuid.uuid4().hex[:8]}")
+
+
+# ---------------------------------------------------------------------------
+# Stage: domains (list available domain keys -- no generation, no cascade)
+# ---------------------------------------------------------------------------
+
+def cmd_domains(args):
+    print("Available --scenario-type domain values:\n")
+    for key, display_name in domain_loader.available_domains():
+        print(f"  {key:32s} ({display_name})")
+    print(
+        "\nPass any of the keys above (or its display name) as --scenario-type to inject that "
+        "domain's context + few-shot examples into the Challenger prompt. Any other value is still "
+        "accepted as a free-text hint, same as before."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -148,9 +164,16 @@ def main():
     parser = argparse.ArgumentParser(description="Run individual stages of the scenario pipeline.")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    p = sub.add_parser("domains", help="List available --scenario-type domain values.")
+    p.set_defaults(func=cmd_domains)
+
     p = sub.add_parser("challenger", help="Generate new candidate scenarios.")
     p.add_argument("--n", type=int, default=1, help="How many scenarios to generate.")
-    p.add_argument("--scenario-type", type=str, default=None, help="Optional preferred scenario_type hint.")
+    p.add_argument(
+        "--scenario-type", type=str, default=None,
+        help="A known domain key/name (see `python cli.py domains`) to inject that domain's "
+             "context + few-shot examples, or any other free-text hint (used as before).",
+    )
     p.add_argument("--out", type=str, default="output/challenger_scenarios.json")
     p.set_defaults(func=cmd_challenger)
 
