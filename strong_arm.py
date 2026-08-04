@@ -1,11 +1,12 @@
 """
 Strong arm: the full multi-agent group conversation. Every agent, including the
-decision-maker, is played by the same model -- gpt-5.4 -- called through the
-normal OpenAI client with no custom endpoint. One model, called repeatedly,
-wearing a different agent's prompt each turn.
+decision-maker, is played by the same model -- GLM-5.2-FP8, served via Vultr
+Inference -- called through llm_clients.strong_arm_chat() with no per-turn
+config needed beyond the prompt. One model, called repeatedly, wearing a
+different agent's prompt each turn.
 """
 import config
-from llm_clients import gpt_chat, extract_json
+from llm_clients import strong_arm_chat, extract_json
 from prompt_builder import build_turn_prompt, _dm_list
 from grader import grade_content, grade_provenance, build_revealed_set
 
@@ -32,11 +33,10 @@ def run_strong_arm_rollout(scenario: dict) -> dict:
         settle_allowed = _settle_allowed_now(scenario, speaker, transcript, dm_list)
 
         messages = build_turn_prompt(scenario, speaker, transcript, settle_allowed)
-        raw = gpt_chat(
-            model=config.STRONG_ARM_MODEL,
+        raw = strong_arm_chat(
             messages=messages,
             temperature=config.STRONG_ARM_TEMPERATURE,
-            max_tokens=1500,
+            max_tokens=config.STRONG_ARM_MAX_TOKENS,
         )
 
         try:

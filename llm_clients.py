@@ -1,14 +1,25 @@
 """
-gpt-5.4 client used by challenger.py, verifier.py, and strong_arm.py.
-Just the normal OpenAI client -- reads OPENAI_API_KEY from the environment,
-no custom base_url.
+LLM clients.
+
+- `gpt_chat()` -> gpt-5.4, used by challenger.py and verifier.py. Normal OpenAI client,
+  reads OPENAI_API_KEY from the environment, no custom base_url.
+- `strong_arm_chat()` -> GLM-5.2-FP8, used by strong_arm.py. A second client pointed at
+  Vultr Inference's OpenAI-compatible endpoint, reads VULTR_API_KEY from the environment.
 """
 import json
+import os
 import re
 
 from openai import OpenAI
 
-client = OpenAI()  # requires OPENAI_API_KEY to be set in your environment
+import config
+
+client = OpenAI()  # gpt-5.4: requires OPENAI_API_KEY to be set in your environment
+
+strong_arm_client = OpenAI(
+    api_key=os.environ.get(config.STRONG_ARM_API_KEY_ENV, ""),
+    base_url=config.STRONG_ARM_BASE_URL,
+)
 
 
 def gpt_chat(model: str, messages: list, temperature: float = 0.7,
@@ -26,8 +37,26 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
     return resp.choices[0].message.content
 
 
+def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None) -> str:
+    """
+    Calls GLM-5.2-FP8 via Vultr Inference. Vultr's endpoint is a standard OpenAI-compatible
+    /chat/completions surface, so this uses the ordinary `max_tokens` param (unlike gpt_chat's
+    `max_completion_tokens`), and disables GLM's thinking mode via extra_body -- the strong arm
+    needs one action per turn, not a reasoning trace.
+    """
+    resp = strong_arm_client.chat.completions.create(
+        model=config.STRONG_ARM_MODEL,
+        messages=messages,
+        temperature=config.STRONG_ARM_TEMPERATURE if temperature is None else temperature,
+        max_tokens=config.STRONG_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
+        extra_body={"chat_template_kwargs": {"enable_thinking": config.STRONG_ARM_ENABLE_THINKING}},
+    )
+    return resp.choices[0].message.content
+
+
 def strip_reasoning(text: str) -> str:
-    """DeepSeek-R1-Distill emits a <think>...</think> block before its answer -- strip it."""
+    """Strip a <think>...</think> block if one is present -- a safety net in case a model's
+    reasoning-suppression setting doesn't fully apply server-side."""
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
