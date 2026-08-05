@@ -1,10 +1,5 @@
-"""
-Strong arm: the full multi-agent group conversation. Every agent, including the
-decision-maker, is played by the same model -- GLM-5.2-FP8, served via Vultr
-Inference -- called through llm_clients.strong_arm_chat() with no per-turn
-config needed beyond the prompt. One model, called repeatedly, wearing a
-different agent's prompt each turn.
-"""
+import random
+
 import config
 from llm_clients import strong_arm_chat, extract_json
 from prompt_builder import build_turn_prompt, _dm_list
@@ -12,7 +7,6 @@ from grader import grade_content, grade_provenance, build_revealed_set
 
 
 def _settle_allowed_now(scenario: dict, speaker: str, transcript: list, dm_list: list) -> bool:
-    """Settle is offered to a decision-maker once every non-decision-maker agent has spoken."""
     if speaker not in dm_list:
         return False
     non_dm_agents = {a["agent_id"] for a in scenario["agents"] if a["agent_id"] not in dm_list}
@@ -21,6 +15,7 @@ def _settle_allowed_now(scenario: dict, speaker: str, transcript: list, dm_list:
 
 
 def run_strong_arm_rollout(scenario: dict) -> dict:
+    temperature = round(random.uniform(*config.STRONG_ARM_TEMPERATURE_RANGE), 3)
     transcript = []
     turn_order = scenario["interaction_config"]["turn_order"]
     turn_cap = scenario["interaction_config"]["turn_cap"]
@@ -33,11 +28,7 @@ def run_strong_arm_rollout(scenario: dict) -> dict:
         settle_allowed = _settle_allowed_now(scenario, speaker, transcript, dm_list)
 
         messages = build_turn_prompt(scenario, speaker, transcript, settle_allowed)
-        raw = strong_arm_chat(
-            messages=messages,
-            temperature=config.STRONG_ARM_TEMPERATURE,
-            max_tokens=config.STRONG_ARM_MAX_TOKENS,
-        )
+        raw = strong_arm_chat(messages=messages, temperature=temperature)
 
         try:
             action = extract_json(raw)
@@ -57,13 +48,14 @@ def run_strong_arm_rollout(scenario: dict) -> dict:
     if not settled:
         return {
             "arm": "strong",
+            "temperature": temperature,
             "transcript": transcript,
             "settlement": None,
             "settled": False,
             "content_results": {},
             "provenance_results": {},
             "revealed": build_revealed_set(transcript),
-            "passed": False,  # turn cap hit with no settlement -> automatic fail
+            "passed": False,
         }
 
     content_results = grade_content(scenario, settlement)
@@ -75,6 +67,7 @@ def run_strong_arm_rollout(scenario: dict) -> dict:
 
     return {
         "arm": "strong",
+        "temperature": temperature,
         "transcript": transcript,
         "settlement": settlement,
         "settled": True,

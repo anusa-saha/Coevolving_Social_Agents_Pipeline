@@ -1,8 +1,5 @@
-"""
-Weak arm: the lone decision-maker, one generation call, no conversation.
-Runs on the GPU via weak_arm_model.generate() -- no API, no server.
-Graded by content checks only (no transcript exists, so provenance doesn't apply).
-"""
+import random
+
 import config
 import weak_arm_model
 from llm_clients import extract_json
@@ -11,8 +8,9 @@ from grader import grade_content
 
 
 def run_weak_arm_rollout(scenario: dict) -> dict:
+    temperature = round(random.uniform(*config.WEAK_ARM_TEMPERATURE_RANGE), 3)
     messages = build_weak_arm_prompt(scenario)
-    raw = weak_arm_model.generate(messages)
+    raw = weak_arm_model.generate(messages, temperature=temperature)
 
     try:
         settlement = extract_json(raw)
@@ -24,6 +22,7 @@ def run_weak_arm_rollout(scenario: dict) -> dict:
 
     return {
         "arm": "weak",
+        "temperature": temperature,
         "raw_output": raw,
         "settlement": settlement,
         "content_results": content_results,

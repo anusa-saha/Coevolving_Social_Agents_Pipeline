@@ -1,24 +1,13 @@
-"""
-Programmatic grading: every content_check / provenance_check string is a literal
-Python boolean expression over a fixed, restricted namespace. No LLM judging happens
-here -- grading a given settlement + transcript always produces the same result.
-"""
 import ast
 
 ALLOWED_NAMES = {"decisions", "credited_facts", "commitments", "justification_fact_ids", "revealed"}
 ALLOWED_BUILTINS = {"any": any, "all": all, "len": len, "sum": sum}
-# Safe read-only dict methods checks are allowed to call (e.g. decisions['x'].values()).
-# Nothing else may be called as a method -- this blocks things like .__class__, .append(), etc.
 ALLOWED_METHODS = {"values", "keys", "items", "get"}
 
 
 def validate_check(check_str: str) -> ast.AST:
-    """Raise if a check references anything outside the allowed names/builtins, or uses a ternary."""
     tree = ast.parse(check_str, mode="eval")
 
-    # Names bound by comprehension/generator-expression targets (e.g. the `c` in
-    # `any(c['type'] == 'x' for c in commitments)`) are legal even though they
-    # aren't one of the five fixed namespace names.
     bound_names = set()
     for node in ast.walk(tree):
         if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
@@ -29,9 +18,6 @@ def validate_check(check_str: str) -> ast.AST:
 
     allowed = ALLOWED_NAMES | bound_names
 
-    # An Attribute node is only OK when it's a whitelisted method name AND it's being
-    # called (e.g. `.values()`) -- never bare attribute access, and never any other
-    # method (this is what blocks things like .__class__, .__globals__, .append()).
     allowed_attribute_nodes = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
@@ -56,7 +42,6 @@ def validate_check(check_str: str) -> ast.AST:
 
 
 def validate_scenario_checks(scenario: dict):
-    """Validate every check in a scenario up front -- this is what catches MALFORMED cheaply."""
     for block in ("content_checks", "provenance_checks"):
         for check_id, check_str in scenario.get(block, {}).items():
             validate_check(check_str)
@@ -88,7 +73,7 @@ def grade_content(scenario: dict, settlement: dict) -> dict:
                 credited_facts=settlement.get("credited_facts", []),
                 commitments=settlement.get("commitments", []),
                 justification_fact_ids=settlement.get("justification_fact_ids", []),
-                revealed=[],  # not used by content checks; namespace must still exist
+                revealed=[],
             )
         except Exception:
             results[check_id] = False

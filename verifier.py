@@ -1,7 +1,3 @@
-"""
-Verifier: one cheap gpt-5.4 call that checks a candidate scenario before any
-rollouts run. Prompt lives in prompts/verifier_prompt.md.
-"""
 import json
 from pathlib import Path
 
@@ -18,7 +14,6 @@ VERIFIER_SYSTEM_PROMPT = _load_prompt("verifier_prompt.md")
 
 
 def run_verifier(scenario: dict) -> dict:
-    # Fast, free, local check first: are the check strings even valid Python?
     try:
         validate_scenario_checks(scenario)
     except ValueError as e:
