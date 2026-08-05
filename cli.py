@@ -34,13 +34,12 @@ Usage:
 """
 import argparse
 import json
-import uuid
 from pathlib import Path
 
 import config
 from challenger import generate_scenario
 from cascade import run_cascade
-from storage import record_iteration
+from storage import record_iteration, next_scenario_id
 import domain_loader
 
 
@@ -73,7 +72,9 @@ def write_json(path: str, data: list):
 
 
 def ensure_scenario_id(scenario: dict) -> str:
-    return scenario.setdefault("scenario_id", f"seed_{uuid.uuid4().hex[:8]}")
+    if not scenario.get("scenario_id"):
+        scenario["scenario_id"] = next_scenario_id()
+    return scenario["scenario_id"]
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +135,8 @@ def _run_gated_stage(args, target_stage: str, stage_label: str):
 
         if result["status"] == "exhausted":
             print(f"scenario_id={scenario.get('scenario_id')}: EXHAUSTED after "
-                  f"{result['rounds_taken']} round(s), giving up")
+                  f"{result['rounds_taken']} round(s) -- {result['exhausted_stage']} hit its "
+                  f"own failure limit, giving up")
 
     write_json(args.out_accepted, accepted)
     write_json(args.out_rejected, rejected)
@@ -182,7 +184,11 @@ def main():
         help="Run the verifier gate. A rejection revises via the Challenger and retries the verifier.",
     )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
-    p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
+    p.add_argument(
+        "--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS,
+        help="Independent failure budget PER STAGE (Verifier/Weak arm/Strong arm each get "
+             "this many failures of their own before the scenario is abandoned).",
+    )
     p.add_argument("--out-accepted", type=str, default="output/verifier_accepted.json")
     p.add_argument("--out-rejected", type=str, default="output/verifier_rejected.json")
     p.set_defaults(func=cmd_verifier)
@@ -193,7 +199,11 @@ def main():
              "restarts from the Verifier -- never resumes partway through.",
     )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
-    p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
+    p.add_argument(
+        "--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS,
+        help="Independent failure budget PER STAGE (Verifier/Weak arm/Strong arm each get "
+             "this many failures of their own before the scenario is abandoned).",
+    )
     p.add_argument("--out-accepted", type=str, default="output/weak_arm_accepted.json")
     p.add_argument("--out-rejected", type=str, default="output/weak_arm_rejected.json")
     p.set_defaults(func=cmd_weak_arm)
@@ -204,7 +214,11 @@ def main():
              "Challenger and restarts the whole chain from the Verifier.",
     )
     p.add_argument("--in", "--input", dest="input", type=str, required=True, help="Input scenarios JSON file.")
-    p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
+    p.add_argument(
+        "--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS,
+        help="Independent failure budget PER STAGE (Verifier/Weak arm/Strong arm each get "
+             "this many failures of their own before the scenario is abandoned).",
+    )
     p.add_argument("--out-accepted", type=str, default="output/strong_arm_accepted.json")
     p.add_argument("--out-rejected", type=str, default="output/strong_arm_rejected.json")
     p.set_defaults(func=cmd_strong_arm)
