@@ -1,5 +1,5 @@
 """
-Challenger: writes and revises scenario objects using gpt-5.4.
+Challenger: writes and revises scenario objects using openai/gpt-5.4 via OpenRouter.
 Base prompt lives in prompts/challenger_prompt.md.
 
 Domain support: if scenario_type resolves to a known domain (see prompts/domains.json /
@@ -14,6 +14,7 @@ from pathlib import Path
 import config
 import domain_loader
 from llm_clients import gpt_chat, extract_json
+from storage import next_scenario_id
 
 
 def _load_prompt(name: str) -> str:
@@ -53,6 +54,11 @@ def generate_scenario(scenario_type: str = None) -> dict:
         json_mode=True,
     )
     scenario = extract_json(raw)
+    # scenario_id is pipeline-controlled bookkeeping, never model-controlled -- the Challenger's
+    # own output otherwise tends to copy the "domain_healthcare_001"-style IDs it saw in the
+    # domain few-shot examples, which breaks the scenario_1/scenario_2/... sequential naming used
+    # for transcript folders. Always overwrite with a fresh sequential ID here.
+    scenario["scenario_id"] = next_scenario_id()
     if domain_key:
         scenario["domain"] = domain_key  # remembered so revise_scenario re-injects the same domain block
     return scenario
@@ -92,6 +98,9 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
         json_mode=True,
     )
     scenario = extract_json(raw)
+    # A revision is the SAME scenario, not a new one -- always keep the original scenario_id,
+    # regardless of what the model echoed back (it may drift, e.g. copying a few-shot's ID).
+    scenario["scenario_id"] = previous_scenario["scenario_id"]
     if domain_key:
         scenario["domain"] = domain_key
     return scenario
