@@ -24,6 +24,7 @@ the message that goes to revise_scenario().
 import json
 
 import config
+import weak_arm_model
 from llm_clients import strong_arm_chat, extract_json
 
 
@@ -394,6 +395,129 @@ def _llm_synthesize_strong_arm_feedback(
     return diagnosis, fix_instructions
 
 
+def _first_pass(rollouts: list) -> dict:
+    """One concrete example rollout that PASSED -- for weak arm, this IS the leak instance worth
+    showing (a settlement that shouldn't have been reachable without the hidden facts, but was)."""
+    for r in rollouts:
+        if r.get("passed"):
+            return r
+    return {}
+
+
+def _weak_arm_leak_analysis(scenario: dict, content_tally: dict, n: int) -> tuple[str, dict]:
+    """
+    For the weak arm, every decisive fact is, BY DEFINITION, absent from the lone decision-maker's
+    view (the weak arm's prompt is built from the decision-maker's own row of `views` alone --
+    another agent's decisive fact can never be in it). So unlike the strong arm, there's no
+    "was it revealed" question to ask -- any check tied to a decisive fact that passes AT ALL is
+    direct, unambiguous evidence the check is satisfiable without the hidden information. This
+    names exactly which checks leaked, how often, and via which fact/owner -- the single most
+    useful signal for LEAKED, more precise than a bare pass-rate number.
+    """
+    lines = []
+    structured = {}
+    for check_id, pass_count in sorted(content_tally.items()):
+        if pass_count == 0:
+            continue  # never passed -- no leak signal from this check
+        linked_facts = _facts_linked_to_check(scenario, check_id)
+        if not linked_facts:
+            continue  # not gated by any decisive fact -- a pass here isn't a leak by this definition
+        fact_descr = ", ".join(f"{df['fact_id']} (owner {df['owner']})" for df in linked_facts)
+        lines.append(
+            f"{check_id} passed {pass_count}/{n} times despite depending on {fact_descr}, which the "
+            f"lone decision-maker NEVER has access to (that's the definition of the weak arm) -- "
+            f"every one of those passes is a leak, not a coincidence or lucky guess."
+        )
+        structured[check_id] = {
+            "pass_count": pass_count,
+            "linked_fact_ids": [df["fact_id"] for df in linked_facts],
+        }
+    return "\n".join(lines), structured
+
+
+def _template_weak_arm_diagnosis_and_fix(pass_count, n, leak_data) -> tuple[str, str]:
+    """Deterministic fallback -- used only if the weak arm's own LLM diagnosis call fails."""
+    diagnosis = (
+        f"The lone decision-maker passed {pass_count}/{n} runs (at most {config.WEAK_ARM_MAX_PASS} "
+        f"allowed). Checks that should depend on hidden information are passable without it."
+    )
+    if leak_data:
+        checks = sorted(leak_data.keys())
+        fix_instructions = (
+            f"Checks {checks} passed without their linked hidden fact ever being available to the "
+            f"lone decision-maker. Tighten each one's threshold/condition so it is only satisfiable "
+            f"using information the fact provides -- do not loosen any check, make it harder for a "
+            f"generic, fact-blind decision to satisfy by luck or stereotype."
+        )
+    else:
+        fix_instructions = (
+            "Use the per-check pass rates above: any check passing too often without the hidden "
+            "facts needs a tighter, more specific threshold tied exactly to what its decisive_facts "
+            "entry says it should flip."
+        )
+    return diagnosis, fix_instructions
+
+
+_WEAK_ARM_FEEDBACK_SYSTEM_PROMPT = """\
+You just played the lone decision-maker in 4 independent one-shot rollouts of a multi-agent \
+negotiation scenario, in a benchmark-generation pipeline. You saw ONLY the shared public facts \
+plus your own private facts (if any) -- no conversation happened, and no other agent's hidden \
+facts were ever visible to you. This "weak arm" test failed its gate (2 or more of your 4 \
+rollouts passed, when at most 1 is allowed) -- meaning the scenario is solvable alone, which \
+defeats the point of the benchmark (it's supposed to require multiple agents surfacing hidden \
+information together).
+
+Your job is to explain EXACTLY what let you pass without the hidden information, to the \
+Challenger -- a separate model that will revise the scenario based on what you say.
+
+You will be given deterministic, code-computed evidence: per-check pass rates, and for every \
+check that passed despite depending on a decisive fact you never had access to, exactly which \
+fact/owner it depends on. Every such pass is a leak by definition (you structurally cannot have \
+seen that fact), not a matter of chance.
+
+Ground every claim STRICTLY in this evidence -- do not invent facts, checks, or reasoning you \
+didn't actually use. Reference exact check IDs (e.g. "C3") and exact fact IDs (e.g. "PF1") \
+wherever the evidence names them. If you can tell from your own example passing settlement WHY \
+the check was satisfiable (e.g. a threshold that's easy to hit by generic caution/fairness/a \
+common trope, rather than genuine use of the missing fact), say so specifically.
+
+Respond with ONLY a JSON object of this exact shape, no other text:
+{"diagnosis": "2-3 sentences: what let the checks pass without the hidden information",
+ "fix_instructions": "specific, actionable instructions naming exact check IDs and fact IDs -- \
+what threshold/condition to tighten, and why the current version is guessable without the fact"}
+"""
+
+
+def _llm_synthesize_weak_arm_feedback(
+    scenario: dict, evidence_text: str, pass_count: int, n: int, leak_data: dict,
+) -> tuple[str, str]:
+    """
+    Calls the weak arm's OWN model (the local GPU model, via weak_arm_model.generate) to write the
+    diagnosis and fix_instructions, grounded in the deterministic evidence computed above. Uses a
+    lower temperature than rollout generation since this is a one-off analysis task, not a rollout
+    needing variety across repeats. Raises on any failure -- the caller catches it and falls back
+    to _template_weak_arm_diagnosis_and_fix.
+    """
+    user_message = (
+        f"SCENARIO DESCRIPTION: {scenario.get('description', '(none)')}\n\n"
+        f"DECISIVE FACTS (fact_id, owner, which checks it's supposed to flip, why):\n"
+        + json.dumps(scenario.get("decisive_facts", []), indent=2)
+        + "\n\nDETERMINISTIC EVIDENCE FROM THE 4 LONE ROLLOUTS:\n\n"
+        + evidence_text
+    )
+    messages = [
+        {"role": "system", "content": _WEAK_ARM_FEEDBACK_SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+    raw = weak_arm_model.generate(messages, max_new_tokens=700, temperature=0.3)
+    parsed = extract_json(raw)  # strips <think>...</think> then parses the JSON object
+    diagnosis = parsed["diagnosis"]
+    fix_instructions = parsed["fix_instructions"]
+    if not diagnosis or not fix_instructions:
+        raise ValueError(f"LLM returned empty diagnosis/fix_instructions: {parsed!r}")
+    return diagnosis, fix_instructions
+
+
 def _feedback_verifier(scenario: dict, result: dict) -> dict:
     """The verifier's own LLM call already produces diagnosis/evidence/fix_instructions."""
     return {
@@ -412,44 +536,46 @@ def _feedback_weak_arm(scenario: dict, result: dict) -> dict:
     pass_count = result["pass_count"]
 
     content_tally = _check_pass_tally(rollouts, "content_results")
-    never_revealed = _never_revealed_decisive_facts(rollouts, scenario)
-    example = _first_failure(rollouts)
+    leak_text, leak_data = _weak_arm_leak_analysis(scenario, content_tally, n)
+    example_pass = _first_pass(rollouts)
+    example_fail = _first_failure(rollouts)
 
     evidence_parts = [
         _format_check_tally(content_tally, n, "Content checks"),
     ]
-    if never_revealed:
-        lines = ["Decisive facts never needed by the lone agent to still pass some checks:"]
-        for df in never_revealed:
-            lines.append(
-                f"  {df['fact_id']} (owner: {df['owner']}, meant to flip {df['flips']}): {df['why']}"
-            )
-        evidence_parts.append("\n".join(lines))
-    evidence_parts.append(f"Example lone settlement:\n{_settlement_excerpt(example.get('settlement'))}")
+    if leak_text:
+        evidence_parts.append("Checks that leaked (passed without access to their gating fact):\n" + leak_text)
+    if example_pass.get("passed"):
+        evidence_parts.append(
+            f"Example PASSING lone settlement (the leak instance):\n"
+            f"{_settlement_excerpt(example_pass.get('settlement'))}"
+        )
+    if example_fail and not example_fail.get("passed"):
+        evidence_parts.append(
+            f"Example FAILING lone settlement, for contrast:\n"
+            f"{_settlement_excerpt(example_fail.get('settlement'))}"
+        )
+    evidence_text = "\n\n".join(evidence_parts)
 
-    diagnosis = (
-        f"The lone decision-maker passed {pass_count}/{n} runs "
-        f"(at most {config.WEAK_ARM_MAX_PASS} allowed). Checks that should depend on hidden "
-        f"information are passable without it."
-    )
-
-    fix_instructions = (
-        "Use the per-check pass rates above: any check passing too often without the hidden facts "
-        "needs a tighter, more specific threshold tied exactly to what its decisive_facts entry says "
-        "it should flip. Do not loosen any check -- make it harder for a generic, fact-blind decision "
-        "to satisfy by luck or stereotype."
-    )
+    try:
+        diagnosis, fix_instructions = _llm_synthesize_weak_arm_feedback(
+            scenario=scenario, evidence_text=evidence_text, pass_count=pass_count, n=n,
+            leak_data=leak_data,
+        )
+    except Exception as e:
+        diagnosis, fix_instructions = _template_weak_arm_diagnosis_and_fix(pass_count, n, leak_data)
+        fix_instructions = f"[LLM diagnosis unavailable ({e}), using template fallback] " + fix_instructions
 
     return {
         "stage": "weak_arm",
         "reject_tag": "LEAKED",
         "diagnosis": diagnosis,
-        "evidence": "\n\n".join(evidence_parts),
+        "evidence": evidence_text,
         "evidence_data": {
             "pass_count": pass_count,
             "n_rollouts": n,
             "content_check_tally": content_tally,
-            "never_revealed_decisive_facts": never_revealed,
+            "leaked_checks": leak_data,
         },
         "fix_instructions": fix_instructions,
     }
