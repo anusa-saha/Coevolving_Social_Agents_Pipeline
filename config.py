@@ -1,25 +1,27 @@
 """
 Config: model names and gate settings.
 
-- Challenger + Verifier: gpt-5.4, normal OpenAI client.
-- Strong arm: GLM-5.2, served via OpenRouter (OpenAI-compatible, custom base_url).
-- Weak / lone arm: loaded directly on your GPU (see weak_arm_model.py).
+- Challenger + Verifier + Strong arm: ALL served via OpenRouter (one OpenAI-compatible client,
+  one base_url, one API key -- see llm_clients.py).
+- Weak / lone arm: loaded directly on your GPU (see weak_arm_model.py), no API involved.
 """
 import os
 
-# --- Challenger + Verifier: gpt-5.4, normal OpenAI API ---
-CHALLENGER_MODEL = "gpt-5.4"
-VERIFIER_MODEL = "gpt-5.4"
+# --- OpenRouter: the single endpoint every API-backed role goes through ---
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"  # set this env var, never hardcode the key
 
-# --- Strong arm: GLM-5.2 via OpenRouter (OpenAI-compatible endpoint) ---
+# --- Challenger + Verifier: openai/gpt-5.4 via OpenRouter ---
+CHALLENGER_MODEL = "openai/gpt-5.4"
+VERIFIER_MODEL = "openai/gpt-5.4"
+
+# --- Strong arm: z-ai/glm-5.2 via OpenRouter ---
 STRONG_ARM_MODEL = "z-ai/glm-5.2"
-STRONG_ARM_BASE_URL = "https://openrouter.ai/api/v1"
-STRONG_ARM_API_KEY_ENV = "OPENROUTER_API_KEY"  # set this env var, never hardcode the key
 STRONG_ARM_TEMPERATURE = 0.9
 STRONG_ARM_MAX_TOKENS = 1500
 # GLM supports a reasoning mode; the strong arm wants the final action only, not a reasoning
-# trace, so this is passed as extra_body={"reasoning": {"enabled": False}} (OpenRouter's
-# unified reasoning-control field, distinct from Vultr's chat_template_kwargs.enable_thinking).
+# trace, so this is passed as extra_body={"reasoning": {"enabled": False}} -- OpenRouter's
+# unified reasoning-control field.
 STRONG_ARM_REASONING_ENABLED = False
 
 # --- Weak / lone arm: loaded directly on your GPU, no server ---
