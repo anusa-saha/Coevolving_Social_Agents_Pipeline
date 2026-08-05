@@ -1,10 +1,12 @@
 """
 LLM clients.
 
-- `gpt_chat()` -> gpt-5.4, used by challenger.py and verifier.py. Normal OpenAI client,
-  reads OPENAI_API_KEY from the environment, no custom base_url.
-- `strong_arm_chat()` -> GLM-5.2, used by strong_arm.py. A second client pointed at
-  OpenRouter's OpenAI-compatible endpoint, reads OPENROUTER_API_KEY from the environment.
+Everything routes through ONE OpenAI-compatible client pointed at OpenRouter -- same base_url,
+same API key, for every role:
+  - `gpt_chat()`        -> used by challenger.py and verifier.py (model="openai/gpt-5.4")
+  - `strong_arm_chat()` -> used by strong_arm.py (model="z-ai/glm-5.2")
+
+Reads OPENROUTER_API_KEY from the environment. Never hardcode the key here or anywhere else.
 """
 import json
 import os
@@ -14,11 +16,9 @@ from openai import OpenAI
 
 import config
 
-client = OpenAI()  # gpt-5.4: requires OPENAI_API_KEY to be set in your environment
-
-strong_arm_client = OpenAI(
-    api_key=os.environ.get(config.STRONG_ARM_API_KEY_ENV, ""),
-    base_url=config.STRONG_ARM_BASE_URL,
+client = OpenAI(
+    base_url=config.OPENROUTER_BASE_URL,
+    api_key=os.environ.get(config.OPENROUTER_API_KEY_ENV, ""),
 )
 
 
@@ -31,7 +31,7 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
         model=model,
         messages=messages,
         temperature=temperature,
-        max_completion_tokens=max_tokens,  # newer models (incl. gpt-5.4) reject the old `max_tokens` name
+        max_tokens=max_tokens,  # OpenRouter's standard param, regardless of underlying model
         **kwargs,
     )
     return resp.choices[0].message.content
@@ -39,12 +39,10 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
 
 def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None) -> str:
     """
-    Calls GLM-5.2 via OpenRouter. OpenRouter's endpoint is a standard OpenAI-compatible
-    /chat/completions surface, so this uses the ordinary `max_tokens` param (unlike gpt_chat's
-    `max_completion_tokens`), and disables GLM's reasoning mode via extra_body -- the strong arm
+    Calls GLM-5.2 via OpenRouter. Disables GLM's reasoning mode via extra_body -- the strong arm
     needs one action per turn, not a reasoning trace.
     """
-    resp = strong_arm_client.chat.completions.create(
+    resp = client.chat.completions.create(
         model=config.STRONG_ARM_MODEL,
         messages=messages,
         temperature=config.STRONG_ARM_TEMPERATURE if temperature is None else temperature,
