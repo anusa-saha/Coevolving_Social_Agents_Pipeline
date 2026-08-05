@@ -58,14 +58,16 @@ def _load():
     return _tokenizer, _model
 
 
-def generate(messages: list, max_new_tokens: int = None) -> str:
+def generate(messages: list, max_new_tokens: int = None, temperature: float = None) -> str:
     """
     messages: a list like [{"role": "system", "content": "..."}] (same shape you'd
     send to a chat API). Returns the model's raw text output, generated with the
-    exact sampling parameters set in config.py.
+    sampling parameters set in config.py -- except `temperature`, which callers doing a
+    one-off analysis task (rather than a rollout) can override for more stable output.
     """
     tokenizer, model = _load()
     max_new_tokens = config.WEAK_ARM_MAX_NEW_TOKENS if max_new_tokens is None else max_new_tokens
+    temperature = config.WEAK_ARM_TEMPERATURE if temperature is None else temperature
 
     prompt_text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
@@ -81,7 +83,7 @@ def generate(messages: list, max_new_tokens: int = None) -> str:
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=True,
-            temperature=config.WEAK_ARM_TEMPERATURE,
+            temperature=temperature,
             top_p=config.WEAK_ARM_TOP_P,
             top_k=config.WEAK_ARM_TOP_K,
             min_p=config.WEAK_ARM_MIN_P,
