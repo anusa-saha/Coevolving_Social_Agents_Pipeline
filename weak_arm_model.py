@@ -1,15 +1,3 @@
-"""
-Loads Qwen/Qwen3.5-9B directly into GPU memory and runs generation in-process.
-No server, no base_url -- just the model, loaded once, called with model.generate().
-
-Note: Qwen3.5 uses a hybrid architecture (Gated DeltaNet linear-attention layers
-mixed with regular Gated Attention layers). This is new enough that it may not
-be recognized by an older `transformers` release -- if `from_pretrained` fails
-with an unrecognized-architecture error, upgrade with:
-    pip install -U git+https://github.com/huggingface/transformers.git
-`trust_remote_code=True` is passed below as a safety net in case the model
-still ships custom modeling code at the time you run this.
-"""
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, LogitsProcessor, LogitsProcessorList
 
@@ -20,17 +8,6 @@ _model = None
 
 
 class PresencePenaltyLogitsProcessor(LogitsProcessor):
-    """
-    Implements OpenAI/vLLM-style "presence_penalty": a flat, one-time penalty
-    subtracted from the score of any token that has appeared at least once
-    already in the sequence so far -- regardless of how many times.
-
-    This is NOT the same thing as `transformers`' built-in `repetition_penalty`,
-    which instead scales a token's logit every time it reappears. `transformers`
-    has no native presence_penalty, so it's implemented here directly rather
-    than approximated or silently dropped.
-    """
-
     def __init__(self, penalty: float):
         self.penalty = penalty
 
@@ -44,7 +21,6 @@ class PresencePenaltyLogitsProcessor(LogitsProcessor):
 
 
 def _load():
-    """Loads the model once, the first time it's needed."""
     global _tokenizer, _model
     if _model is None:
         _tokenizer = AutoTokenizer.from_pretrained(config.WEAK_ARM_MODEL_NAME, trust_remote_code=True)
@@ -58,16 +34,9 @@ def _load():
     return _tokenizer, _model
 
 
-def generate(messages: list, max_new_tokens: int = None, temperature: float = None) -> str:
-    """
-    messages: a list like [{"role": "system", "content": "..."}] (same shape you'd
-    send to a chat API). Returns the model's raw text output, generated with the
-    sampling parameters set in config.py -- except `temperature`, which callers doing a
-    one-off analysis task (rather than a rollout) can override for more stable output.
-    """
+def generate(messages: list, max_new_tokens: int = None, temperature: float = 0.4) -> str:
     tokenizer, model = _load()
     max_new_tokens = config.WEAK_ARM_MAX_NEW_TOKENS if max_new_tokens is None else max_new_tokens
-    temperature = config.WEAK_ARM_TEMPERATURE if temperature is None else temperature
 
     prompt_text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True

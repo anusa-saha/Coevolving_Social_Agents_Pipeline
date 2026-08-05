@@ -1,13 +1,3 @@
-"""
-LLM clients.
-
-Everything routes through ONE OpenAI-compatible client pointed at OpenRouter -- same base_url,
-same API key, for every role:
-  - `gpt_chat()`        -> used by challenger.py and verifier.py (model="openai/gpt-5.4")
-  - `strong_arm_chat()` -> used by strong_arm.py (model="z-ai/glm-5.2")
-
-Reads OPENROUTER_API_KEY from the environment. Never hardcode the key here or anywhere else.
-"""
 import json
 import os
 import re
@@ -31,27 +21,21 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
         model=model,
         messages=messages,
         temperature=temperature,
-        max_tokens=max_tokens,  # OpenRouter's standard param, regardless of underlying model
+        max_tokens=max_tokens,
         **kwargs,
     )
     return resp.choices[0].message.content
 
 
-def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None,
+def strong_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = None,
                      reasoning_enabled: bool = None, json_mode: bool = False) -> str:
-    """
-    Calls GLM-5.2 via OpenRouter. Disables GLM's reasoning mode via extra_body by default -- the
-    strong arm's per-turn calls need one action per turn, not a reasoning trace -- but callers that
-    want GLM to actually think (e.g. writing its own failure diagnosis for the Challenger) can pass
-    reasoning_enabled=True to override that default for just this call.
-    """
     kwargs = {}
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     resp = client.chat.completions.create(
         model=config.STRONG_ARM_MODEL,
         messages=messages,
-        temperature=config.STRONG_ARM_TEMPERATURE if temperature is None else temperature,
+        temperature=temperature,
         max_tokens=config.STRONG_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
         extra_body={
             "reasoning": {
@@ -64,13 +48,10 @@ def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int =
 
 
 def strip_reasoning(text: str) -> str:
-    """Strip a <think>...</think> block if one is present -- a safety net in case a model's
-    reasoning-suppression setting doesn't fully apply server-side."""
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
 def extract_json(text: str) -> dict:
-    """Pull the first {...} JSON object out of raw model text (after stripping reasoning/markdown)."""
     text = strip_reasoning(text)
     text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     start = text.find("{")

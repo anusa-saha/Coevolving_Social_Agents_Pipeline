@@ -1,11 +1,3 @@
-"""
-Loads prompts/domains.json and builds the domain-specific block that gets injected into the
-Challenger's prompt: the domain's context paragraph + its 2 few-shot examples, formatted the same
-way as the base challenger_prompt.md's own "## Few-shot examples" section.
-
-Everything here is generic over the domain list -- add a new domain to domains.json and it's
-usable immediately, no code changes.
-"""
 import json
 from pathlib import Path
 
@@ -24,17 +16,10 @@ def _load() -> dict:
 
 
 def available_domains() -> list:
-    """Returns [(key, display_name), ...] for every domain in domains.json."""
     return [(key, entry.get("display_name", key)) for key, entry in _load().items()]
 
 
-def resolve_domain(scenario_type_arg: str | None) -> str | None:
-    """
-    Matches a --scenario-type value against known domain keys/display names, case-insensitively,
-    ignoring spaces/underscores/hyphens. Returns the canonical domain key, or None if it doesn't
-    match any known domain (the caller should then fall back to treating it as a free-text hint,
-    same as before this mechanism existed).
-    """
+def resolve_domain(scenario_type_arg):
     if not scenario_type_arg:
         return None
 
@@ -53,11 +38,6 @@ def display_name_for(domain_key: str) -> str:
 
 
 def build_domain_block(domain_key: str) -> str:
-    """
-    Renders the domain's context + its 2 few-shot examples as one text block, in the same shape
-    as challenger_prompt.md's own few-shot section, so it reads as a natural continuation of the
-    base prompt rather than a bolted-on aside.
-    """
     domains = _load()
     if domain_key not in domains:
         raise KeyError(f"Unknown domain key: {domain_key!r}. Known: {list(domains.keys())}")

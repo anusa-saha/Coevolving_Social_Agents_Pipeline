@@ -1,13 +1,3 @@
-"""
-Challenger: writes and revises scenario objects using openai/gpt-5.4 via OpenRouter.
-Base prompt lives in prompts/challenger_prompt.md.
-
-Domain support: if scenario_type resolves to a known domain (see prompts/domains.json /
-domain_loader.py), an extra message with that domain's context + 2 domain-specific few-shot
-examples is inserted between the base system prompt and the generation instruction. If it doesn't
-resolve to a known domain, scenario_type is used exactly as before -- a free-text hint appended to
-the user message, no domain block involved.
-"""
 import json
 from pathlib import Path
 
@@ -24,8 +14,7 @@ def _load_prompt(name: str) -> str:
 CHALLENGER_SYSTEM_PROMPT = _load_prompt("challenger_prompt.md")
 
 
-def _domain_messages(domain_key: str | None) -> list:
-    """One extra system message carrying the domain block, or [] if no domain was resolved."""
+def _domain_messages(domain_key) -> list:
     if not domain_key:
         return []
     return [{"role": "system", "content": domain_loader.build_domain_block(domain_key)}]
@@ -36,7 +25,6 @@ def generate_scenario(scenario_type: str = None) -> dict:
 
     user_msg = "Generate 1 new scenario."
     if scenario_type and not domain_key:
-        # Not a known domain -- keep the old free-text-hint behavior unchanged.
         user_msg += f" Prefer scenario_type: {scenario_type}."
     elif domain_key:
         user_msg += f" Set it in the {domain_loader.display_name_for(domain_key)} domain."
@@ -54,13 +42,9 @@ def generate_scenario(scenario_type: str = None) -> dict:
         json_mode=True,
     )
     scenario = extract_json(raw)
-    # scenario_id is pipeline-controlled bookkeeping, never model-controlled -- the Challenger's
-    # own output otherwise tends to copy the "domain_healthcare_001"-style IDs it saw in the
-    # domain few-shot examples, which breaks the scenario_1/scenario_2/... sequential naming used
-    # for transcript folders. Always overwrite with a fresh sequential ID here.
     scenario["scenario_id"] = next_scenario_id()
     if domain_key:
-        scenario["domain"] = domain_key  # remembered so revise_scenario re-injects the same domain block
+        scenario["domain"] = domain_key
     return scenario
 
 
@@ -79,7 +63,7 @@ def build_feedback_message(reject_tag: str, diagnosis: str, evidence: str, fix_i
 
 def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
                      evidence: str, fix_instructions: str) -> dict:
-    domain_key = previous_scenario.get("domain")  # stays pinned to whatever domain it was generated in
+    domain_key = previous_scenario.get("domain")
     feedback = build_feedback_message(reject_tag, diagnosis, evidence, fix_instructions)
 
     messages = (
@@ -98,8 +82,6 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
         json_mode=True,
     )
     scenario = extract_json(raw)
-    # A revision is the SAME scenario, not a new one -- always keep the original scenario_id,
-    # regardless of what the model echoed back (it may drift, e.g. copying a few-shot's ID).
     scenario["scenario_id"] = previous_scenario["scenario_id"]
     if domain_key:
         scenario["domain"] = domain_key

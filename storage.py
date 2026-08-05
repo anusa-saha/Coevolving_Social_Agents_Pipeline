@@ -1,21 +1,3 @@
-"""
-Storage: append-one-at-a-time persistence for the pipeline's outputs.
-
-A JSON array has to stay syntactically valid as a whole file, so "add one entry
-at a time" here means: read the current array, append the new item, write the
-whole array back out atomically. The important part is *when* this happens --
-append_json_array() is called immediately after each stage's result is known,
-not batched up and written once at the very end. If the pipeline crashes
-mid-run, everything processed so far is already safely on disk.
-
-Files produced under output_dir:
-  - accepted.json        every scenario that cleared all three gates
-  - rejected.json         every rejected attempt, tagged with its reject tag
-  - all_iterations.json   every single attempt at every stage (superset of the above)
-  - .scenario_counter     persistent counter backing next_scenario_id() -- not a dataset file
-  - transcripts/scenario_<n>/round_<n>_<arm>_rollout_<i>.json
-        full transcript/output for every weak-arm and strong-arm rollout (constraint #5)
-"""
 import json
 import os
 import threading
@@ -27,25 +9,13 @@ import config
 _counter_lock = threading.Lock()
 
 
-def _path(filename: str) -> Path:
-    p = Path(config.OUTPUT_DIR)
-    p.mkdir(parents=True, exist_ok=True)
-    return p / filename
-
-
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
 def next_scenario_id() -> str:
-    """
-    Returns 'scenario_N' with N incrementing persistently across the whole output directory's
-    lifetime (backed by a counter file), so scenario_ids stay sequential and readable
-    (scenario_1, scenario_2, ...) across separate runs/processes instead of colliding or resetting.
-    Thread-safe for use inside a single process; if you run multiple processes against the same
-    OUTPUT_DIR concurrently, external locking would be needed too (not done here).
-    """
-    path = _path(".scenario_counter")
+    path = Path(config.OUTPUT_DIR, ".scenario_counter")
+    path.parent.mkdir(parents=True, exist_ok=True)
     with _counter_lock:
         n = int(path.read_text().strip()) if path.exists() else 0
         n += 1
@@ -53,49 +23,85 @@ def next_scenario_id() -> str:
     return f"scenario_{n}"
 
 
-def append_json_array(filename: str, item: dict) -> Path:
-    """Read-modify-write append of a single item into a JSON array file."""
-    path = _path(filename)
-    if path.exists():
-        with open(path, "r") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-    else:
-        data = []
-
-    data.append(item)
-
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp_path, "w") as f:
+def _write_json(path: Path, data) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w") as f:
         json.dump(data, f, indent=2, default=str)
-    os.replace(tmp_path, path)  # atomic on POSIX, avoids a half-written file on crash
+    os.replace(tmp, path)
     return path
 
 
-def record_iteration(entry: dict) -> Path:
-    """Every single attempt at any stage: verifier reject, weak-arm reject, strong-arm reject, or accept."""
-    entry = {"timestamp": now_iso(), **entry}
-    return append_json_array("all_iterations.json", entry)
-
-
-def record_rejected(entry: dict) -> Path:
-    """Rejected attempts only, still carrying their reject_tag (MALFORMED / LEAKED / UNCOORDINATED)."""
-    entry = {"timestamp": now_iso(), **entry}
-    return append_json_array("rejected.json", entry)
-
-
-def record_accepted(entry: dict) -> Path:
-    entry = {"timestamp": now_iso(), **entry}
-    return append_json_array("accepted.json", entry)
-
-
-def save_transcript(scenario_id: str, round_num: int, arm: str, rollout_idx: int, data: dict) -> Path:
-    """Persist one rollout's full transcript/output (constraint #5)."""
-    scenario_dir = Path(config.OUTPUT_DIR, "transcripts", scenario_id)
-    scenario_dir.mkdir(parents=True, exist_ok=True)
-    path = scenario_dir / f"round_{round_num}_{arm}_rollout_{rollout_idx}.json"
-    with open(path, "w") as f:
-        json.dump({"timestamp": now_iso(), **data}, f, indent=2, default=str)
+def _append_jsonl(path: Path, entry: dict) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
     return path
+
+
+def read_jsonl(path) -> list:
+    path = Path(path)
+    if not path.exists():
+        return []
+    with open(path) as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def scenario_dir(scenario_id: str) -> Path:
+    return Path(config.OUTPUT_DIR, "scenarios", scenario_id)
+
+
+def round_stage_dir(scenario_id: str, round_num: int, stage: str) -> Path:
+    return scenario_dir(scenario_id) / f"round_{round_num}" / stage
+
+
+def save_stage_result(scenario_id: str, round_num: int, stage: str, scenario: dict,
+                       result: dict, feedback: dict, passed: bool) -> Path:
+    stage_dir = round_stage_dir(scenario_id, round_num, stage)
+
+    _write_json(stage_dir / "scenario.json", scenario)
+    _write_json(stage_dir / "result.json", result)
+    _write_json(stage_dir / "feedback.json", feedback)
+    _write_json(stage_dir / "outcome.json", {"passed": passed, "timestamp": now_iso()})
+
+    for i, rollout in enumerate(result.get("rollouts", [])):
+        _write_json(stage_dir / f"rollout_{i}.json", rollout)
+
+    entry = {
+        "timestamp": now_iso(),
+        "scenario_id": scenario_id,
+        "round": round_num,
+        "stage": stage,
+        "passed": passed,
+        "reject_tag": feedback.get("reject_tag"),
+        "diagnosis": feedback.get("diagnosis"),
+        "fix_instructions": feedback.get("fix_instructions"),
+    }
+    _append_jsonl(Path(config.OUTPUT_DIR, "all_iterations.jsonl"), entry)
+    _append_jsonl(
+        Path(config.OUTPUT_DIR, "accepted.jsonl" if passed else "rejected.jsonl"), entry
+    )
+    return stage_dir
+
+
+def save_scenario_outcome(scenario_id: str, status: str, scenario: dict, rounds_taken: int,
+                           exhausted_stage, stage_failure_counts: dict) -> Path:
+    data = {
+        "scenario_id": scenario_id,
+        "status": status,
+        "rounds_taken": rounds_taken,
+        "exhausted_stage": exhausted_stage,
+        "stage_failure_counts": stage_failure_counts,
+        "scenario": scenario,
+        "timestamp": now_iso(),
+    }
+    return _write_json(scenario_dir(scenario_id) / "outcome.json", data)
+
+
+def load_json_array(path) -> list:
+    with open(path) as f:
+        return json.load(f)
+
+
+def write_json_array(path, data) -> Path:
+    return _write_json(Path(path), data)
