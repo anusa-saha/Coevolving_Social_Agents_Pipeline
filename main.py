@@ -25,9 +25,10 @@ def main():
 
     for i in range(args.n):
         result = run_pipeline(args.scenario_type)
+        exhausted_note = f" exhausted_stage={result['exhausted_stage']}" if result.get("exhausted_stage") else ""
         print(
             f"[{i + 1}/{args.n}] status={result['status']} "
-            f"rounds_taken={result['rounds_taken']} "
+            f"rounds_taken={result['rounds_taken']}{exhausted_note} "
             f"scenario_id={result['scenario'].get('scenario_id')}"
         )
 

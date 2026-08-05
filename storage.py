@@ -12,15 +12,19 @@ Files produced under output_dir:
   - accepted.json        every scenario that cleared all three gates
   - rejected.json         every rejected attempt, tagged with its reject tag
   - all_iterations.json   every single attempt at every stage (superset of the above)
-  - transcripts/<scenario_id>/round_<n>_<arm>_rollout_<i>.json
+  - .scenario_counter     persistent counter backing next_scenario_id() -- not a dataset file
+  - transcripts/scenario_<n>/round_<n>_<arm>_rollout_<i>.json
         full transcript/output for every weak-arm and strong-arm rollout (constraint #5)
 """
 import json
 import os
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
 import config
+
+_counter_lock = threading.Lock()
 
 
 def _path(filename: str) -> Path:
@@ -31,6 +35,22 @@ def _path(filename: str) -> Path:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def next_scenario_id() -> str:
+    """
+    Returns 'scenario_N' with N incrementing persistently across the whole output directory's
+    lifetime (backed by a counter file), so scenario_ids stay sequential and readable
+    (scenario_1, scenario_2, ...) across separate runs/processes instead of colliding or resetting.
+    Thread-safe for use inside a single process; if you run multiple processes against the same
+    OUTPUT_DIR concurrently, external locking would be needed too (not done here).
+    """
+    path = _path(".scenario_counter")
+    with _counter_lock:
+        n = int(path.read_text().strip()) if path.exists() else 0
+        n += 1
+        path.write_text(str(n))
+    return f"scenario_{n}"
 
 
 def append_json_array(filename: str, item: dict) -> Path:
