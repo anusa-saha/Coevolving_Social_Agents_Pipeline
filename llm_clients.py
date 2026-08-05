@@ -37,17 +37,28 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
     return resp.choices[0].message.content
 
 
-def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None) -> str:
+def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None,
+                     reasoning_enabled: bool = None, json_mode: bool = False) -> str:
     """
-    Calls GLM-5.2 via OpenRouter. Disables GLM's reasoning mode via extra_body -- the strong arm
-    needs one action per turn, not a reasoning trace.
+    Calls GLM-5.2 via OpenRouter. Disables GLM's reasoning mode via extra_body by default -- the
+    strong arm's per-turn calls need one action per turn, not a reasoning trace -- but callers that
+    want GLM to actually think (e.g. writing its own failure diagnosis for the Challenger) can pass
+    reasoning_enabled=True to override that default for just this call.
     """
+    kwargs = {}
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
     resp = client.chat.completions.create(
         model=config.STRONG_ARM_MODEL,
         messages=messages,
         temperature=config.STRONG_ARM_TEMPERATURE if temperature is None else temperature,
         max_tokens=config.STRONG_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
-        extra_body={"reasoning": {"enabled": config.STRONG_ARM_REASONING_ENABLED}},
+        extra_body={
+            "reasoning": {
+                "enabled": config.STRONG_ARM_REASONING_ENABLED if reasoning_enabled is None else reasoning_enabled
+            }
+        },
+        **kwargs,
     )
     return resp.choices[0].message.content
 
