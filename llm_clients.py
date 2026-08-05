@@ -3,8 +3,8 @@ LLM clients.
 
 - `gpt_chat()` -> gpt-5.4, used by challenger.py and verifier.py. Normal OpenAI client,
   reads OPENAI_API_KEY from the environment, no custom base_url.
-- `strong_arm_chat()` -> GLM-5.2-FP8, used by strong_arm.py. A second client pointed at
-  Vultr Inference's OpenAI-compatible endpoint, reads VULTR_API_KEY from the environment.
+- `strong_arm_chat()` -> GLM-5.2, used by strong_arm.py. A second client pointed at
+  OpenRouter's OpenAI-compatible endpoint, reads OPENROUTER_API_KEY from the environment.
 """
 import json
 import os
@@ -39,9 +39,9 @@ def gpt_chat(model: str, messages: list, temperature: float = 0.7,
 
 def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int = None) -> str:
     """
-    Calls GLM-5.2-FP8 via Vultr Inference. Vultr's endpoint is a standard OpenAI-compatible
+    Calls GLM-5.2 via OpenRouter. OpenRouter's endpoint is a standard OpenAI-compatible
     /chat/completions surface, so this uses the ordinary `max_tokens` param (unlike gpt_chat's
-    `max_completion_tokens`), and disables GLM's thinking mode via extra_body -- the strong arm
+    `max_completion_tokens`), and disables GLM's reasoning mode via extra_body -- the strong arm
     needs one action per turn, not a reasoning trace.
     """
     resp = strong_arm_client.chat.completions.create(
@@ -49,7 +49,7 @@ def strong_arm_chat(messages: list, temperature: float = None, max_tokens: int =
         messages=messages,
         temperature=config.STRONG_ARM_TEMPERATURE if temperature is None else temperature,
         max_tokens=config.STRONG_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
-        extra_body={"chat_template_kwargs": {"enable_thinking": config.STRONG_ARM_ENABLE_THINKING}},
+        extra_body={"reasoning": {"enabled": config.STRONG_ARM_REASONING_ENABLED}},
     )
     return resp.choices[0].message.content
 
