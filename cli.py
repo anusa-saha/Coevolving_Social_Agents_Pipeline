@@ -4,7 +4,7 @@ from pathlib import Path
 
 import config
 import domain_loader
-from challenger import generate_scenario
+from challenger import generate_scenario, VALID_AGENT_COUNTS
 from cascade import run_cascade
 from storage import write_json_array, next_scenario_id
 
@@ -35,7 +35,7 @@ def cmd_domains(args):
 def cmd_challenger(args):
     results = []
     for i in range(args.n):
-        scenario = generate_scenario(args.scenario_type)
+        scenario = generate_scenario(args.scenario_type, args.num_agents)
         entry = {"scenario_id": scenario["scenario_id"], "stage": "challenger", "scenario": scenario}
         results.append(entry)
         print(f"[{i + 1}/{args.n}] generated scenario_id={scenario['scenario_id']}")
@@ -91,6 +91,7 @@ def main():
     p = sub.add_parser("challenger")
     p.add_argument("--n", type=int, default=1)
     p.add_argument("--scenario-type", type=str, default=None)
+    p.add_argument("--num-agents", type=int, default=None, choices=VALID_AGENT_COUNTS)
     p.add_argument("--out", type=str, default="output/challenger_scenarios.json")
     p.set_defaults(func=cmd_challenger)
 

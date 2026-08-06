@@ -46,7 +46,26 @@ def _diversity_message() -> list:
     return [{"role": "system", "content": "\n".join(lines)}]
 
 
-def generate_scenario(scenario_type: str = None) -> dict:
+VALID_AGENT_COUNTS = (3, 4, 5)
+
+
+def _agent_count_message(num_agents) -> list:
+    if not num_agents:
+        return []
+    return [{
+        "role": "system",
+        "content": (
+            f"This scenario MUST use EXACTLY {num_agents} agents -- one decision-maker and "
+            f"{num_agents - 1} non-decision-makers, each owning at least one decisive fact. Do not "
+            f"generate any other agent count."
+        ),
+    }]
+
+
+def generate_scenario(scenario_type: str = None, num_agents: int = None) -> dict:
+    if num_agents is not None and num_agents not in VALID_AGENT_COUNTS:
+        raise ValueError(f"num_agents must be one of {VALID_AGENT_COUNTS}, got {num_agents!r}")
+
     domain_key = domain_loader.resolve_domain(scenario_type)
 
     user_msg = "Generate 1 new scenario."
@@ -54,17 +73,20 @@ def generate_scenario(scenario_type: str = None) -> dict:
         user_msg += f" Prefer scenario_type: {scenario_type}."
     elif domain_key:
         user_msg += f" Set it in the {domain_loader.display_name_for(domain_key)} domain."
+    if num_agents:
+        user_msg += f" Use exactly {num_agents} agents."
 
     messages = (
         [{"role": "system", "content": CHALLENGER_SYSTEM_PROMPT}]
         + _domain_messages(domain_key)
+        + _agent_count_message(num_agents)
         + _diversity_message()
         + [{"role": "user", "content": user_msg}]
     )
     raw = gpt_chat(
         model=config.CHALLENGER_MODEL,
         messages=messages,
-        temperature=0.5,
+        temperature=1.0,
         max_tokens=4000,
         json_mode=True,
     )
@@ -72,6 +94,8 @@ def generate_scenario(scenario_type: str = None) -> dict:
     scenario["scenario_id"] = next_scenario_id()
     if domain_key:
         scenario["domain"] = domain_key
+    if num_agents:
+        scenario["requested_num_agents"] = num_agents
     record_scenario_summary(scenario)
     return scenario
 
@@ -92,11 +116,13 @@ def build_feedback_message(reject_tag: str, diagnosis: str, evidence: str, fix_i
 def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
                      evidence: str, fix_instructions: str) -> dict:
     domain_key = previous_scenario.get("domain")
+    num_agents = previous_scenario.get("requested_num_agents")
     feedback = build_feedback_message(reject_tag, diagnosis, evidence, fix_instructions)
 
     messages = (
         [{"role": "system", "content": CHALLENGER_SYSTEM_PROMPT}]
         + _domain_messages(domain_key)
+        + _agent_count_message(num_agents)
         + [
             {"role": "user", "content": f"Here is your previous scenario:\n{json.dumps(previous_scenario, indent=2)}"},
             {"role": "user", "content": feedback},
@@ -105,7 +131,7 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
     raw = gpt_chat(
         model=config.CHALLENGER_MODEL,
         messages=messages,
-        temperature=0.3,
+        temperature=1.0,
         max_tokens=4000,
         json_mode=True,
     )
@@ -113,4 +139,6 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
     scenario["scenario_id"] = previous_scenario["scenario_id"]
     if domain_key:
         scenario["domain"] = domain_key
+    if num_agents:
+        scenario["requested_num_agents"] = num_agents
     return scenario
