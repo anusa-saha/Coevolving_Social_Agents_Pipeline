@@ -1,6 +1,7 @@
 import argparse
 
 import domain_loader
+from challenger import VALID_AGENT_COUNTS
 from pipeline import run_pipeline
 
 
@@ -8,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run the scenario-generation pipeline.")
     parser.add_argument("--n", type=int, default=1)
     parser.add_argument("--scenario-type", type=str, default=None)
+    parser.add_argument("--num-agents", type=int, default=None, choices=VALID_AGENT_COUNTS)
     parser.add_argument("--list-domains", action="store_true")
     args = parser.parse_args()
 
@@ -17,7 +19,7 @@ def main():
         return
 
     for i in range(args.n):
-        result = run_pipeline(args.scenario_type)
+        result = run_pipeline(args.scenario_type, args.num_agents)
         exhausted_note = f" exhausted_stage={result['exhausted_stage']}" if result.get("exhausted_stage") else ""
         print(
             f"[{i + 1}/{args.n}] status={result['status']} "
