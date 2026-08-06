@@ -1,7 +1,7 @@
 {
   "healthcare": {
     "display_name": "Healthcare",
-    "domain_context": "Scenarios happen inside hospitals, clinics, or care networks. Decision-makers are typically charge nurses, attending physicians, case managers, or administrators choosing between patients, treatments, discharge plans, staffing, or resource allocation (beds, equipment, on-call slots). Private facts should read like ordinary clinical or logistical details: a lab result not yet charted, a family's verbally-stated preference, an insurance authorization window, a staffing conflict, a prior incident report. Avoid graphic medical detail; keep facts at the level of care-coordination information, not diagnosis descriptions. Commitments often take the form of care-plan conditions, follow-up appointments, or staffing pledges rather than money.",
+    "domain_context": "Scenarios happen inside hospitals, clinics, or care networks. Vary the decision-maker role across scenarios rather than defaulting to the same one -- charge nurses, attending physicians, case managers, pharmacy directors, OR/surgical scheduling directors, nursing supervisors, and department administrators all plausibly make binding calls in this domain. Vary the resource or stakes being decided too: bed or unit assignment, discharge destination and timing, operating-room block time, medication/formulary approval, staffing or shift coverage, referral or waitlist prioritization, equipment allocation, and on-call assignments are all fair game -- avoid defaulting to the same 'reassign a bed' or 'plan a discharge' shape every time. Vary the KIND of hidden lever as well, spreading it across categories: an uncharted clinical or lab finding, a logistical or equipment/scheduling constraint, an insurance or authorization rule, a family or caregiver circumstance, and a staffing or coverage conflict are all legitimate categories -- do not let every scenario's secret be 'a lab result nobody charted yet.' Private facts should read like ordinary clinical or logistical details a person in that role would plausibly know and might not think to volunteer unprompted. Avoid graphic medical detail; keep facts at the level of care-coordination information, not diagnosis descriptions. Commitments often take the form of care-plan conditions, follow-up appointments, staffing pledges, or facility/equipment requests rather than money. Scenarios in this domain commonly involve 3 to 5 agents -- as the agent count grows, add more distinct hidden-fact holders and decision-relevant departments (e.g. therapy, pharmacy, social work, nursing) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_healthcare_001",
@@ -132,40 +132,49 @@
         ]
       },
       {
-        "scenario_id": "domain_healthcare_002",
-        "scenario_type": "discharge_planning",
-        "description": "A case manager must finalize a patient's discharge date and plan, with input from a bedside nurse and a hospital social worker.",
+        "scenario_id": "domain_healthcare_003",
+        "scenario_type": "or_scheduling",
+        "description": "A surgical scheduling director must decide which of two surgeons gets an open Thursday operating-room block, with input from each surgeon's clinic coordinator and the sterile processing manager.",
         "agents": [
           {
             "agent_id": "A1",
-            "name": "Tom",
-            "role": "Case Manager"
+            "name": "Marcus",
+            "role": "Surgical Scheduling Director"
           },
           {
             "agent_id": "A2",
-            "name": "Renee",
-            "role": "Bedside Nurse"
+            "name": "Elena",
+            "role": "Dr. Reyes's Clinic Coordinator"
           },
           {
             "agent_id": "A3",
-            "name": "Marcus",
-            "role": "Social Worker"
+            "name": "Tobias",
+            "role": "Dr. Okonkwo's Clinic Coordinator"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Grace",
+            "role": "Sterile Processing Manager"
           }
         ],
         "shared_context": {
-          "S1": "The patient is medically cleared for discharge as of today.",
-          "S2": "Tom finalizes the discharge date and any required follow-up plan.",
-          "S3": "The patient has been cooperative and in good spirits throughout the stay.",
-          "S4": "Tom asks the nurse and social worker for any concerns before confirming the discharge."
+          "S1": "Thursday afternoon has one open 3-hour OR block that has not yet been assigned.",
+          "S2": "Marcus makes the final block assignment.",
+          "S3": "Both Dr. Reyes and Dr. Okonkwo have patients waiting for a similar elective procedure.",
+          "S4": "Before finalizing, Marcus checks in with both clinic coordinators and sterile processing for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "The patient struggled to climb the stairs to the bathroom unassisted during this morning's mobility check."
+            "text": "Dr. Reyes's patient's biopsy came back showing a fast-growing tumor type; guidelines call for surgery within 10 days, and Thursday is the only slot before that window closes."
           },
           "PF2": {
             "owner": "A3",
-            "text": "A home-health aide is only authorized by insurance if the discharge order explicitly documents a mobility deficit, and the authorization request must be filed the same day as discharge."
+            "text": "Dr. Okonkwo already secured a backup Saturday-morning slot at the outpatient surgical center for this same patient if the Thursday block isn't available."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The specialized instrument tray Dr. Reyes's procedure requires takes 48 hours to sterilize and reprocess, so it must be requested by Tuesday morning to be ready for Thursday."
           }
         },
         "views": {
@@ -188,6 +197,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -195,15 +211,16 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
-            "discharge_today": "boolean",
-            "mobility_deficit_documented": "boolean",
-            "insurance_auth_filed_same_day": "boolean"
+            "thursday_block_assigned_to": "string",
+            "instrument_tray_requested_by": "string",
+            "backup_slot_confirmed_for_okonkwo": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -220,16 +237,16 @@
           ]
         },
         "acceptance_conditions": [
-          "The discharge order must document a mobility deficit.",
-          "A home-health aide commitment must be logged.",
-          "The insurance authorization must be filed the same day as discharge.",
-          "The mobility finding must be cited as justification."
+          "The Thursday block must go to Dr. Reyes, given the 10-day surgical window on the biopsy finding.",
+          "The instrument tray must be requested by Tuesday, given the 48-hour sterilization lead time.",
+          "The existing backup Saturday slot for Dr. Okonkwo's patient must be explicitly confirmed in the plan.",
+          "The biopsy finding must be cited as justification for the block assignment."
         ],
         "content_checks": {
-          "C1": "decisions['mobility_deficit_documented'] == True",
-          "C2": "any(c['type'] == 'home_health_aide' for c in commitments)",
-          "C3": "decisions['discharge_today'] == True",
-          "C4": "decisions['insurance_auth_filed_same_day'] == True"
+          "C1": "decisions['thursday_block_assigned_to'] == 'Dr. Reyes'",
+          "C2": "decisions['instrument_tray_requested_by'] == 'Tuesday'",
+          "C3": "decisions['backup_slot_confirmed_for_okonkwo'] == True",
+          "C4": "any(c['type'] == 'instrument_request' and c['target'] == 'Sterile Processing' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -242,16 +259,200 @@
               "C1",
               "P1"
             ],
-            "why": "Nothing public suggests a mobility problem; without the stair-climb difficulty, a routine discharge order has no reason to document a mobility deficit at all."
+            "why": "Nothing public favors either surgeon; without the biopsy urgency, a scheduler has no forcing reason to give the block to Dr. Reyes over Dr. Okonkwo."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
+              "C3"
+            ],
+            "why": "Without knowing a backup slot already exists, reassigning the block away from Dr. Okonkwo would look like an unaddressed access problem rather than a settled non-issue."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
               "C2",
               "C4"
             ],
-            "why": "Without knowing the aide requires that specific documentation and same-day filing, Tom has no reason to connect the mobility note to ordering the aide, or to file the authorization same-day rather than whenever convenient."
+            "why": "Without knowing the 48-hour sterilization lead time, there's no reason to request the tray specifically by Tuesday or log that request at all -- a generic plan would leave it until closer to Thursday."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_healthcare_004",
+        "scenario_type": "discharge_planning",
+        "description": "A case manager must finalize a medically stable patient's discharge destination and care plan, with input from physical therapy, pharmacy, social work, and the primary nurse.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Priya",
+            "role": "Case Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Jordan",
+            "role": "Physical Therapist"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Amara",
+            "role": "Pharmacist"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Dan",
+            "role": "Social Worker"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Sofia",
+            "role": "Primary Nurse"
+          }
+        ],
+        "shared_context": {
+          "S1": "The patient is medically stable and being considered for discharge tomorrow.",
+          "S2": "Priya finalizes the discharge destination and care plan.",
+          "S3": "The patient has expressed a preference to go home if possible.",
+          "S4": "Before finalizing, Priya checks in with physical therapy, pharmacy, social work, and nursing for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "The patient failed this morning's stair-climb and transfer assessment and cannot safely navigate stairs without supervised therapy for at least one to two weeks."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "The patient's new blood-thinner requires lab draws twice a week for the first month; home health in this area only offers weekly draws, but a rehab facility can do them onsite."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The patient's preferred rehab facility, Willowbrook, has no open bed until Monday, but Cedar Ridge, a comparable facility, has an opening tomorrow."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "The patient's home caregiver, their daughter, just said a family emergency will keep her out of town for the next eight days, so no one would be home to help."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "discharge_destination": "string",
+            "rehab_facility_selected": "string",
+            "inr_monitoring_setting": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The patient must be discharged to rehab, not home, given the failed mobility assessment.",
+          "Cedar Ridge must be selected, since the preferred facility has no bed until Monday.",
+          "Lab monitoring must be set to onsite, since home health cannot meet the twice-weekly requirement.",
+          "A pharmacy order for the onsite monitoring must be logged.",
+          "A commitment to update the daughter on the plan must exist, given her unavailability."
+        ],
+        "content_checks": {
+          "C1": "decisions['discharge_destination'] == 'rehab'",
+          "C2": "decisions['rehab_facility_selected'] == 'Cedar Ridge'",
+          "C3": "decisions['inr_monitoring_setting'] == 'onsite'",
+          "C4": "any(c['type'] == 'inr_monitoring_order' and c['target'] == 'Pharmacy' for c in commitments)",
+          "C5": "any(c['type'] == 'family_communication' and c['target'] == 'Daughter' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The patient's own stated preference is to go home; without the failed mobility assessment, there is no reason to override that preference and choose rehab."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C3",
+              "C4"
+            ],
+            "why": "Without knowing home health can't meet the twice-weekly draw requirement, there is no reason to set monitoring to onsite or log a pharmacy order for it rather than defaulting to routine home health."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing Willowbrook has no bed until Monday, a generic plan would send the patient to the patient's actual preferred facility rather than Cedar Ridge."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing the daughter is unexpectedly unavailable, there is no reason to log a specific commitment to update her on the plan."
           }
         ]
       }
@@ -327,7 +528,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 14
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -362,7 +563,7 @@
           "C4": "decisions['row_limit_fix_due_by'] == 'Thursday'"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -451,7 +652,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -485,7 +686,7 @@
           "C4": "decisions['fix_commit_deadline_days'] >= 1"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -580,7 +781,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 8
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -615,7 +816,7 @@
           "C4": "decisions['estimated_extra_transit_minutes'] >= 20 and decisions['estimated_extra_transit_minutes'] <= 40"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -738,7 +939,7 @@
           "C4": "decisions['repair_requested_within_days'] >= 1 and decisions['repair_requested_within_days'] <= 3"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -867,7 +1068,7 @@
           "C4": "any(c['type'] == 'collateral_pledge' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -956,7 +1157,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -991,7 +1192,7 @@
           "C4": "decisions['sell_down_days'] >= 3 and decisions['sell_down_days'] <= 7"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -1086,7 +1287,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -1120,7 +1321,7 @@
           "C4": "any(c['type'] == 'iep_compliance_log' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
         },
         "decisive_facts": [
           {
@@ -1245,7 +1446,7 @@
           "C4": "any(c['type'] == 'accessibility_confirmation' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -1341,7 +1542,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -1375,7 +1576,7 @@
           "C4": "decisions['nova_new_slot_buffer_minutes'] >= 45 and decisions['nova_new_slot_buffer_minutes'] <= 90"
         },
         "provenance_checks": {
-          "P1": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
         },
         "decisive_facts": [
           {
@@ -1464,7 +1665,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 14
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -1498,7 +1699,7 @@
           "C4": "decisions['claim_filed_within_days'] >= 1 and decisions['claim_filed_within_days'] <= 14"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -1627,7 +1828,7 @@
           "C4": "decisions['nondisparagement_clause_public_scope'] == True"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -1716,7 +1917,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -1750,7 +1951,7 @@
           "C4": "decisions['price_renegotiation_requested'] == True"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -1846,7 +2047,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -1880,7 +2081,7 @@
           "C4": "decisions['downtime_hours'] >= 8 and decisions['downtime_hours'] <= 10"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -2004,7 +2205,7 @@
           "C4": "decisions['guaranteed_lead_time_weeks'] >= 1 and decisions['guaranteed_lead_time_weeks'] <= 2"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -2223,7 +2424,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -2358,7 +2559,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -2396,7 +2597,7 @@
           "C4": "any(c['type'] == 'alternate_access_plan' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -2520,7 +2721,7 @@
           "C4": "decisions['jess_assigned_larger_room'] == True"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -2616,7 +2817,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 8
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -2642,7 +2843,7 @@
           "The final offer must land between $100 and $140, matching the better alternative without lowballing unreasonably.",
           "The brake-cable issue must be explicitly confirmed before the deal closes.",
           "A repair credit acknowledging the brake issue must be applied.",
-          "The lower offer must reflect the cheaper, better-condition alternative Nadia found, without needing to name it in the paperwork."
+          "The alternative listing must be cited as justification for the lower offer."
         ],
         "content_checks": {
           "C1": "decisions['final_offer'] >= 100 and decisions['final_offer'] <= 140",
@@ -2651,7 +2852,7 @@
           "C4": "decisions['repair_credit_applied'] == True"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {
@@ -2740,7 +2941,7 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
@@ -2774,7 +2975,7 @@
           "C4": "any(c['type'] == 'rush_premium' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
         },
         "decisive_facts": [
           {

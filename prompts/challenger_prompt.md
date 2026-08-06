@@ -16,7 +16,7 @@ group thus no single person has it all. You only write the scenario. You never w
 - There should be only one final decision maker.
 - Never write a sentence that hints that some information is hidden or missing. It must read like an ordinary situation, not a
   puzzle.
-- Works for any number of people. Don't hardcode a fixed count anywhere.
+- The scenario must contain 3, 4, or 5 agents only. Do not write scenario logic that depends on a specific count. The scenario should remain valid for any agent count within this range.
 
 ## Shared facts
 
@@ -53,8 +53,7 @@ private fact. The decision-maker's view alone defines the "alone" test.
 
 ## Interaction setup
 
-Set `decision_maker`, `turn_order`, and `turn_cap` (about 3-4 turns per agent — enough for everyone to speak plus one to
-settle). Don't hardcode the turn cap to a fixed number of agents.
+Set `decision_maker`, `turn_order`, and set `turn_cap` dynamically based on the number of agents (approximately 3–4 turns per agent, enough for everyone to speak once or twice and for the decision-maker to settle). Do not use the same constant turn cap for every scenario.
 
 ## Checks
 
