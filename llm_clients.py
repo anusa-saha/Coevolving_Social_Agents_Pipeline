@@ -48,7 +48,10 @@ def strong_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = 
 
 
 def strip_reasoning(text: str) -> str:
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    if "<think>" in text:
+        text = text[:text.find("<think>")]
+    return text.strip()
 
 
 def extract_json(text: str) -> dict:
@@ -56,6 +59,11 @@ def extract_json(text: str) -> dict:
     text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     start = text.find("{")
     end = text.rfind("}")
+    if start != -1 and end == -1:
+        raise ValueError(
+            f"JSON object appears truncated (found '{{' but no closing '}}' -- the response likely "
+            f"hit max_tokens before finishing). Raw tail: {text[-300:]!r}"
+        )
     if start == -1 or end == -1 or end <= start:
         raise ValueError(f"No JSON object found in model output: {text[:300]!r}")
     return json.loads(text[start:end + 1])
