@@ -98,6 +98,20 @@ def save_scenario_outcome(scenario_id: str, status: str, scenario: dict, rounds_
     return _write_json(scenario_dir(scenario_id) / "outcome.json", data)
 
 
+def append_final_scenario(scenario: dict) -> Path:
+    path = Path(config.OUTPUT_DIR, "final_scenarios.json")
+    if path.exists():
+        with open(path) as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+    else:
+        data = []
+    data.append(scenario)
+    return _write_json(path, data)
+
+
 def load_json_array(path) -> list:
     with open(path) as f:
         return json.load(f)
