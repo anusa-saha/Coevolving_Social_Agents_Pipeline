@@ -1,0 +1,133 @@
+{
+  "scenario_id": "scenario_5",
+  "scenario_type": "discharge_planning",
+  "description": "A case manager must finalize a patient's discharge date, home oxygen order, and transportation plan after the patient is cleared for discharge.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Case Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jordan",
+      "role": "Bedside Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Mei",
+      "role": "Hospital Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "The patient is medically cleared for discharge and is being considered for discharge today or tomorrow.",
+    "S2": "The patient will need an arranged ride and home oxygen after leaving the hospital.",
+    "S3": "Elena finalizes the discharge order and related care-plan commitments.",
+    "S4": "Before confirming the plan, Elena reviews discharge readiness with Jordan and Mei."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "This morning's mobility and oxygen assessment showed that the patient requires oxygen at 2 liters per minute continuously, including during transport, and needs a portable oxygen tank for the trip home."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient's daughter, who will provide supervision at home, cannot receive the patient today; she is available tomorrow only between 10:00 and 12:00, and the ride service has confirmed that same window."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "discharge_date": "string",
+      "oxygen_flow_lpm": "integer",
+      "oxygen_continuous": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be discharged tomorrow.",
+    "The home oxygen order must specify 2 liters per minute.",
+    "The oxygen must be ordered for continuous use.",
+    "A portable oxygen tank must be committed for transport.",
+    "Transportation and home supervision must be committed for tomorrow between 10:00 and 12:00.",
+    "The oxygen assessment must be cited as justification.",
+    "The caregiver and transportation availability must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['discharge_date'] == 'tomorrow'",
+    "C2": "decisions['oxygen_flow_lpm'] == 2",
+    "C3": "decisions['oxygen_continuous'] == True",
+    "C4": "any(c['type'] == 'portable_oxygen' and c['target'] == 'patient' and c['detail'] == '2 liters per minute during transport' for c in commitments)",
+    "C5": "any(c['type'] == 'transport_and_home_supervision' and c['target'] == 'patient' and c['detail'] == 'tomorrow 10:00-12:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The assessment changes the oxygen order from an unspecified need to exactly 2 liters per minute continuously and adds a portable oxygen tank for transport."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C5",
+        "P2"
+      ],
+      "why": "The caregiver and ride availability changes the discharge date to tomorrow and fixes the required transportation and supervision window at 10:00-12:00."
+    }
+  ],
+  "domain": "healthcare"
+}
