@@ -74,7 +74,7 @@ def _call_weak_arm_llm(scenario: dict, evidence: dict) -> tuple[str, str]:
             {"role": "system", "content": WEAK_ARM_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        max_new_tokens=800,
+        max_new_tokens=config.WEAK_ARM_MAX_NEW_TOKENS,
         temperature=config.FEEDBACK_TEMPERATURE,
     )
     parsed = extract_json(raw)
