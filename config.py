@@ -3,8 +3,8 @@ import os
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 
-CHALLENGER_MODEL = "openai/gpt-5.4"
-VERIFIER_MODEL = "openai/gpt-5.4"
+CHALLENGER_MODEL = "openai/gpt-5.6-luna"
+VERIFIER_MODEL = "openai/gpt-5.6-luna"
 
 STRONG_ARM_MODEL = "z-ai/glm-5.2"
 STRONG_ARM_MAX_TOKENS = 1500
