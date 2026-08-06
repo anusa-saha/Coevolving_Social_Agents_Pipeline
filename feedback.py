@@ -31,7 +31,7 @@ WEAK_ARM_SYSTEM_PROMPT = """You are the diagnostic module of a benchmark-generat
 
 A candidate scenario just failed its Weak Arm gate. In every one of the rollouts below, a lone decision-maker made a one-shot decision using ONLY the shared public facts and their own private facts -- no conversation happened, and no other agent's private information was ever available to them. The gate requires at most a small number of these lone rollouts to pass; more than that means the scenario is solvable without the hidden information, which defeats its purpose.
 
-You are given the scenario's decisive_facts (which facts are supposed to be required, which checks they gate, and why), the per-check pass tallies, and the complete data for every rollout: its settlement, its per-check results, and which decisive facts it structurally could never have accessed.
+You are given the scenario's decisive_facts (which facts are supposed to be required, which checks they gate, and why), the per-check pass tallies, and the complete data for every rollout: its settlement (broken out into credited_facts, commitments, and justification_fact_ids for you), its per-check results, its raw model output, and which decisive facts it structurally could never have accessed.
 
 Any content check that passed in a rollout, while being linked (via decisive_facts.flips) to a fact the lone decision-maker never had access to, is proof that check is satisfiable without the hidden information -- not a coincidence, not a lucky guess, a structural leak. Read the actual passing settlement and identify concretely what let it through: a numeric threshold that's easy to hit by generic caution or fairness, a boolean that defaults true, an equal-split heuristic, or a narrative stereotype the model is pattern-matching to.
 
@@ -48,7 +48,7 @@ STRONG_ARM_SYSTEM_PROMPT = """You are the diagnostic module of a benchmark-gener
 
 A candidate scenario just failed its Strong Arm gate. Below are complete group-conversation rollouts: full transcripts (every say/reveal/settle event, in order), the resulting settlement, every content and provenance check result, and which facts were actually revealed. The gate requires most of these rollouts to pass; too many failures means the group could not reliably surface and use the hidden information.
 
-You are given the scenario's decisive_facts (which facts are supposed to be required, which checks they gate, and why) and the complete data for every rollout.
+You are given the scenario's decisive_facts (which facts are supposed to be required, which checks they gate, and why) and the complete data for every rollout: the full transcript, the settlement broken out into credited_facts, commitments, and justification_fact_ids, which facts were revealed, whether the rollout auto-failed on the turn cap, and its turn count.
 
 For every check that failed, read the actual transcript and settlement and determine the EXACT failure mode:
 - NEVER REVEALED: the fact's owner never disclosed it via a reveal action, and the settlement never cited it in justification_fact_ids.
@@ -65,33 +65,6 @@ Rules:
 
 Return ONLY a JSON object of this exact shape, no other text:
 {"diagnosis": "2-4 sentences describing exactly what happened across the rollouts and why the gate failed, naming exact check IDs and fact IDs", "fix_instructions": "specific, actionable revision instructions, naming exact check IDs and fact IDs, and stating which failure mode drove each one"}"""
-
-
-def _template_weak_arm_feedback(pass_count, n, leaked_checks):
-    diagnosis = (
-        f"The lone decision-maker passed {pass_count}/{n} runs (at most {config.WEAK_ARM_MAX_PASS} "
-        f"allowed)."
-    )
-    if leaked_checks:
-        fix_instructions = (
-            f"Checks {sorted(leaked_checks)} passed without access to their linked decisive fact(s). "
-            f"Tighten each one's threshold so it is not satisfiable by generic reasoning."
-        )
-    else:
-        fix_instructions = "Tighten any check with a pass rate above the allowed threshold."
-    return diagnosis, fix_instructions
-
-
-def _template_strong_arm_feedback(pass_count, n, settled_count):
-    diagnosis = (
-        f"The group passed {pass_count}/{n} runs (at least {config.STRONG_ARM_MIN_PASS} needed); "
-        f"{settled_count}/{n} rollouts reached a settlement."
-    )
-    fix_instructions = (
-        "Check the per-rollout data for which facts were never revealed and strengthen the shared "
-        "consultation norm so every fact-holder gets a natural opening to speak."
-    )
-    return diagnosis, fix_instructions
 
 
 def _call_weak_arm_llm(scenario: dict, evidence: dict) -> tuple[str, str]:
@@ -141,6 +114,21 @@ def _feedback_verifier(scenario: dict, result: dict) -> dict:
     }
 
 
+def _weak_arm_rollout_detail(rollout: dict, index: int) -> dict:
+    settlement = rollout.get("settlement") or {}
+    return {
+        "rollout_index": index,
+        "temperature": rollout.get("temperature"),
+        "passed": rollout.get("passed"),
+        "content_results": rollout.get("content_results", {}),
+        "settlement": settlement,
+        "credited_facts": settlement.get("credited_facts", []),
+        "commitments": settlement.get("commitments", []),
+        "justification_fact_ids": settlement.get("justification_fact_ids", []),
+        "raw_output": rollout.get("raw_output"),
+    }
+
+
 def _feedback_weak_arm(scenario: dict, result: dict) -> dict:
     rollouts = result["rollouts"]
     n = len(rollouts)
@@ -160,23 +148,25 @@ def _feedback_weak_arm(scenario: dict, result: dict) -> dict:
         "max_pass_allowed": config.WEAK_ARM_MAX_PASS,
         "content_check_tally": content_tally,
         "checks_that_leaked": leaked_checks,
-        "rollouts": [
-            {
-                "rollout_index": i,
-                "temperature": r.get("temperature"),
-                "passed": r.get("passed"),
-                "content_results": r.get("content_results", {}),
-                "settlement": r.get("settlement"),
-            }
-            for i, r in enumerate(rollouts)
-        ],
+        "rollouts": [_weak_arm_rollout_detail(r, i) for i, r in enumerate(rollouts)],
     }
 
     try:
         diagnosis, fix_instructions = _call_weak_arm_llm(scenario, evidence)
+        llm_call_error = None
     except Exception as e:
-        diagnosis, fix_instructions = _template_weak_arm_feedback(pass_count, n, leaked_checks)
-        fix_instructions = f"[LLM diagnosis unavailable: {e}] " + fix_instructions
+        llm_call_error = f"{type(e).__name__}: {e}"
+        diagnosis = (
+            f"LLM diagnosis call failed ({llm_call_error}). Raw evidence: {pass_count}/{n} rollouts "
+            f"passed (max {config.WEAK_ARM_MAX_PASS} allowed). Checks that leaked: {sorted(leaked_checks)}."
+        )
+        fix_instructions = (
+            f"Tighten checks {sorted(leaked_checks)} -- each passed despite depending on a decisive "
+            f"fact the lone decision-maker never had access to. See evidence_data.rollouts for the "
+            f"exact passing settlements."
+        )
+
+    evidence["llm_call_error"] = llm_call_error
 
     return {
         "stage": "weak_arm",
@@ -185,6 +175,27 @@ def _feedback_weak_arm(scenario: dict, result: dict) -> dict:
         "evidence": json.dumps(evidence, indent=2),
         "evidence_data": evidence,
         "fix_instructions": fix_instructions,
+    }
+
+
+def _strong_arm_rollout_detail(rollout: dict, index: int) -> dict:
+    settlement = rollout.get("settlement") or {}
+    transcript = rollout.get("transcript", [])
+    return {
+        "rollout_index": index,
+        "temperature": rollout.get("temperature"),
+        "settled": rollout.get("settled"),
+        "passed": rollout.get("passed"),
+        "auto_failed_on_turn_cap": rollout.get("settled") is False,
+        "turn_count": len(transcript),
+        "revealed_facts": rollout.get("revealed", []),
+        "content_results": rollout.get("content_results", {}),
+        "provenance_results": rollout.get("provenance_results", {}),
+        "settlement": settlement,
+        "credited_facts": settlement.get("credited_facts", []),
+        "commitments": settlement.get("commitments", []),
+        "justification_fact_ids": settlement.get("justification_fact_ids", []),
+        "transcript": transcript,
     }
 
 
@@ -205,30 +216,30 @@ def _feedback_strong_arm(scenario: dict, result: dict) -> dict:
         "n_rollouts": n,
         "min_pass_required": config.STRONG_ARM_MIN_PASS,
         "settled_count": settled_count,
+        "auto_failed_count": n - settled_count,
         "content_check_tally": content_tally,
         "provenance_check_tally": provenance_tally,
         "facts_linked_to_failing_checks": _linked_facts_by_check(scenario, failing_checks),
-        "rollouts": [
-            {
-                "rollout_index": i,
-                "temperature": r.get("temperature"),
-                "settled": r.get("settled"),
-                "passed": r.get("passed"),
-                "revealed_facts": r.get("revealed", []),
-                "content_results": r.get("content_results", {}),
-                "provenance_results": r.get("provenance_results", {}),
-                "settlement": r.get("settlement"),
-                "transcript": r.get("transcript", []),
-            }
-            for i, r in enumerate(rollouts)
-        ],
+        "rollouts": [_strong_arm_rollout_detail(r, i) for i, r in enumerate(rollouts)],
     }
 
     try:
         diagnosis, fix_instructions = _call_strong_arm_llm(scenario, evidence)
+        llm_call_error = None
     except Exception as e:
-        diagnosis, fix_instructions = _template_strong_arm_feedback(pass_count, n, settled_count)
-        fix_instructions = f"[LLM diagnosis unavailable: {e}] " + fix_instructions
+        llm_call_error = f"{type(e).__name__}: {e}"
+        diagnosis = (
+            f"LLM diagnosis call failed ({llm_call_error}). Raw evidence: {pass_count}/{n} rollouts "
+            f"passed (min {config.STRONG_ARM_MIN_PASS} required), {settled_count}/{n} settled, "
+            f"{n - settled_count}/{n} auto-failed on turn cap. Failing checks: {sorted(failing_checks)}."
+        )
+        fix_instructions = (
+            f"Inspect evidence_data.rollouts for checks {sorted(failing_checks)} -- for each, check "
+            f"whether the linked decisive fact (see facts_linked_to_failing_checks) was revealed and "
+            f"cited in justification_fact_ids in the failing rollouts."
+        )
+
+    evidence["llm_call_error"] = llm_call_error
 
     return {
         "stage": "strong_arm",

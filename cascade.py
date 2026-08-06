@@ -4,7 +4,7 @@ from verifier import run_verifier
 from weak_arm import run_weak_arm
 from strong_arm import run_strong_arm
 from feedback import build_feedback
-from storage import next_scenario_id, save_stage_result, save_scenario_outcome
+from storage import next_scenario_id, save_stage_result, save_scenario_outcome, append_final_scenario
 
 STAGE_ORDER = ["verifier", "weak_arm", "strong_arm"]
 
@@ -82,6 +82,8 @@ def run_cascade(scenario: dict, target_stage: str, max_rounds: int = None) -> di
                 break
         else:
             save_scenario_outcome(scenario_id, "accepted", current, round_num, None, dict(stage_failure_counts))
+            if target_stage == "strong_arm":
+                append_final_scenario(current)
             return {
                 "status": "accepted",
                 "scenario": current,
