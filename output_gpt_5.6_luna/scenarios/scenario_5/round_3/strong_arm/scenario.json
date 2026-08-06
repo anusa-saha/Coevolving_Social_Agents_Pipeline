@@ -1,0 +1,142 @@
+{
+  "scenario_id": "scenario_5",
+  "scenario_type": "discharge_planning",
+  "description": "A case manager must finalize a patient's discharge date, home oxygen order, and transportation plan after the patient is cleared for discharge.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Case Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jordan",
+      "role": "Bedside Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Mei",
+      "role": "Hospital Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "The patient is medically cleared for discharge and is being considered for discharge today or tomorrow.",
+    "S2": "The patient will need an arranged ride and home oxygen after leaving the hospital.",
+    "S3": "Elena finalizes the discharge order and related care-plan commitments.",
+    "S4": "The home oxygen supplier has confirmed that the home equipment will be arranged for the patient's discharge.",
+    "S5": "Before confirming the plan, Elena reviews the latest oxygen assessment with Jordan and the transportation and home-support arrangements with Mei."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "This morning's mobility and oxygen assessment showed that the patient requires oxygen at 2 liters per minute continuously, including during transport, and needs a portable oxygen tank for the trip home."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient's daughter, who will provide supervision at home, cannot receive the patient today; she is available tomorrow only between 10:00 and 12:00, and the ride service has confirmed that same window."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "discharge_date": "string",
+      "discharge_window": "string",
+      "oxygen_flow_lpm": "integer",
+      "oxygen_continuous": "boolean",
+      "portable_oxygen_tank": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be discharged tomorrow.",
+    "The discharge window must be tomorrow between 10:00 and 12:00.",
+    "The home oxygen order must specify 2 liters per minute.",
+    "The oxygen must be ordered for continuous use.",
+    "The plan must include a portable oxygen tank for transport.",
+    "Transportation and home supervision must be committed for tomorrow between 10:00 and 12:00.",
+    "The oxygen assessment must be cited as justification.",
+    "The caregiver and transportation availability must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['discharge_date'] == 'tomorrow'",
+    "C2": "decisions['discharge_window'] == '10:00-12:00'",
+    "C3": "decisions['oxygen_flow_lpm'] == 2",
+    "C4": "decisions['oxygen_continuous'] == True",
+    "C5": "decisions['portable_oxygen_tank'] == True",
+    "C6": "any(c.get('type') == 'transportation' and ('10:00-12:00' in c.get('detail', '') or '10:00 and 12:00' in c.get('detail', '') or '10:00 to 12:00' in c.get('detail', '')) for c in commitments) and any(c.get('type') in ['home_support', 'home support', 'home_supervision'] and ('10:00-12:00' in c.get('detail', '') or '10:00 and 12:00' in c.get('detail', '') or '10:00 to 12:00' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "P1"
+      ],
+      "why": "The assessment changes the oxygen order to exactly 2 liters per minute continuously and changes the transport plan by requiring a portable oxygen tank."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2",
+        "C6",
+        "P2"
+      ],
+      "why": "The caregiver and ride availability change the discharge date to tomorrow, fix the discharge window at 10:00-12:00, and require matching transportation and home-supervision commitments for that window."
+    }
+  ],
+  "domain": "healthcare"
+}

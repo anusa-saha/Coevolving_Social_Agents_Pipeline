@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_3",
+  "scenario_type": "discharge_planning",
+  "description": "A case manager must finalize the discharge date and home-care plan for a medically stable patient, with input from the bedside nurse and social worker.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Case Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Malik",
+      "role": "Bedside Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jo",
+      "role": "Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "The patient is medically stable and could otherwise leave the hospital.",
+    "S2": "Today is 2025-06-14.",
+    "S3": "Elena finalizes the discharge date, destination, and follow-up services.",
+    "S4": "The patient's spouse is the expected person to help with care at home.",
+    "S5": "Before signing the discharge order, Elena asks the bedside nurse and social worker to report any care or scheduling information that should be included."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During today's medication teach-back, the patient could not correctly explain the medication schedule and therefore needs a trained caregiver to participate in the home-care plan."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The spouse is available for caregiver training on 2025-06-15, and the insurer requires the home-health authorization to be filed by 16:00 on the discharge date."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "discharge_date": "string",
+      "destination": "string",
+      "trained_caregiver_required": "boolean",
+      "home_health_authorization_filed": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be discharged on 2025-06-15.",
+    "The destination must be home.",
+    "The plan must require participation by a trained caregiver.",
+    "The plan must include filing the home-health authorization.",
+    "A caregiver-training commitment for the spouse on 2025-06-15 must be recorded.",
+    "The home-health authorization commitment must specify filing by 16:00 on 2025-06-15.",
+    "The medication teach-back finding must be cited as a reason for the plan."
+  ],
+  "content_checks": {
+    "C1": "decisions['discharge_date'] == '2025-06-15'",
+    "C2": "decisions['destination'] == 'home'",
+    "C3": "decisions['trained_caregiver_required'] == True",
+    "C4": "decisions['home_health_authorization_filed'] == True",
+    "C5": "any(c['type'] == 'caregiver_training' and c['target'] == 'spouse' and c['detail'] == '2025-06-15' for c in commitments)",
+    "C6": "any(c['type'] == 'home_health_authorization' and c['target'] == 'patient' and c['detail'] == 'file by 16:00 on 2025-06-15' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in credited_facts and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in credited_facts and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "P1"
+      ],
+      "why": "The medication teach-back failure changes the plan from an ordinary discharge to one requiring a trained caregiver and supplies the clinical justification for that requirement."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C5",
+        "C6",
+        "P2"
+      ],
+      "why": "The spouse's 2025-06-15 availability sets the discharge and training date, while the insurer's 16:00 rule changes the plan to include a same-day authorization filing commitment."
+    }
+  ],
+  "domain": "healthcare"
+}

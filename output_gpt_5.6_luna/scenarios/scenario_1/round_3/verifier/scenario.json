@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_1",
+  "scenario_type": "resource_allocation",
+  "description": "A hospital bed manager must assign the last available telemetry bed between two patients and finalize the other patient's disposition, with input from an attending physician and a social worker.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Bed Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Shah",
+      "role": "Attending Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Maya",
+      "role": "Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "Patient E and Patient W are both medically cleared to leave their current inpatient rooms.",
+    "S2": "The hospital has one telemetry bed available tonight.",
+    "S3": "Patient E and Patient W are both being considered for that telemetry bed.",
+    "S4": "Elena makes the final telemetry assignment and disposition decision.",
+    "S5": "Before finalizing the plan, Elena conducts an interdisciplinary huddle so the attending physician and social worker can report relevant clinical and discharge information."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient E had a transient rhythm change at 14:00 today, and Dr. Shah's assessment is that Patient E requires continuous telemetry monitoring for at least 24 hours."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient W's family has agreed to provide a licensed caregiver for 12 hours nightly for 3 nights starting tonight, and the family will transport Patient W home tonight."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "telemetry_bed_assigned_to": "string",
+      "patient_W_disposition": "string",
+      "patient_W_discharge_date": "string",
+      "patient_E_telemetry_hours": "integer",
+      "caregiver_hours_per_night": "integer",
+      "caregiver_nights": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The telemetry bed must be assigned to Patient E.",
+    "Patient W must be discharged home tonight.",
+    "Patient E must receive at least 24 hours of continuous telemetry monitoring.",
+    "The plan must record 12 hours of licensed caregiver coverage nightly for 3 nights for Patient W.",
+    "The family transport and caregiver arrangement must be recorded as a discharge commitment for Patient W.",
+    "The transient rhythm change must be cited as justification for assigning the telemetry bed to Patient E.",
+    "The clinical and family-support facts must be stated aloud and cited by the decision-maker."
+  ],
+  "content_checks": {
+    "C1": "decisions['telemetry_bed_assigned_to'] == 'Patient E'",
+    "C2": "'home' in decisions['patient_W_disposition'] and decisions['patient_W_discharge_date'] == 'tonight'",
+    "C4": "decisions['patient_E_telemetry_hours'] >= 24",
+    "C5": "decisions['caregiver_hours_per_night'] == 12 and decisions['caregiver_nights'] == 3",
+    "C6": "any(c['target'] == 'Patient W' and 'home tonight' in c['detail'] and 'caregiver' in c['detail'] and '12 hours' in c['detail'] and '3 nights' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in credited_facts and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in credited_facts and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "P1"
+      ],
+      "why": "The rhythm change changes the telemetry assignment from Patient W or an arbitrary choice to Patient E and sets the required monitoring duration at 24 hours."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5",
+        "C6",
+        "P2"
+      ],
+      "why": "The family's transport and caregiver agreement changes Patient W's disposition to home tonight and sets the coverage commitment at 12 hours nightly for 3 nights."
+    }
+  ],
+  "domain": "healthcare"
+}
