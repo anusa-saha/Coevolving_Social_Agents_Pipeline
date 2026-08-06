@@ -27,18 +27,22 @@
         "shared_context": {
           "S1": "Two patients, in Bay 3 and Bay 7, are both being evaluated for the one open ICU bed.",
           "S2": "Dana makes the final bed assignment.",
-          "S3": "Bay 3's patient was admitted earlier today after a scheduled procedure.",
+          "S3": "Bay 3's patient had a procedure this morning that required one unit of transfused blood and is still on a post-op drip.",
           "S4": "Bay 7's patient has been stable on the general floor for two days.",
           "S5": "Before the assignment is finalized, Dana checks in with the attending and the family liaison for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Bay 7's patient's morning labs, not yet charted, show early signs of sepsis requiring ICU-level monitoring within the hour."
+            "text": "Bay 7's patient's morning labs came back showing a temperature of 102.6F and a lactate of 2.9, meeting criteria for likely sepsis requiring ICU-level monitoring within the hour -- Dr. Okafor saw the numbers directly but the resident is still finishing the chart note."
           },
           "PF2": {
+            "owner": "A2",
+            "text": "Bay 7's patient also needs continuous pulse-oximetry monitoring for the next four hours, which the general floor cannot provide but the ICU can -- this was flagged in Dr. Okafor's exam note, which is still pending co-signature."
+          },
+          "PF3": {
             "owner": "A3",
-            "text": "Bay 3's family has verbally agreed to a step-down unit instead, if a step-down bed can be confirmed within two hours."
+            "text": "Bay 3's family mentioned to Priya in the hallway ten minutes ago that they would accept a step-down unit instead, if a step-down bed can be confirmed within two hours -- it hasn't been logged in the system yet."
           }
         },
         "views": {
@@ -55,7 +59,8 @@
             "S3",
             "S4",
             "S5",
-            "PF1"
+            "PF1",
+            "PF2"
           ],
           "A3": [
             "S1",
@@ -63,7 +68,7 @@
             "S3",
             "S4",
             "S5",
-            "PF2"
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -73,11 +78,12 @@
             "A2",
             "A3"
           ],
-          "turn_cap": 10
+          "turn_cap": 12
         },
         "settlement_schema": {
           "decisions": {
             "icu_bed_assigned_to": "string",
+            "continuous_monitoring_ordered": "boolean",
             "step_down_requested": "boolean",
             "step_down_window_hours": "integer"
           },
@@ -96,16 +102,18 @@
           ]
         },
         "acceptance_conditions": [
-          "The ICU bed must go to Bay 7, because of the unrecorded sepsis-risk labs.",
+          "The ICU bed must go to Bay 7, because of the sepsis-risk labs.",
+          "Continuous pulse-oximetry monitoring must be ordered for Bay 7's patient.",
           "A step-down bed request for Bay 3 must be logged as a commitment.",
           "The step-down window must not exceed the two hours the family actually agreed to.",
           "The sepsis finding must be explicitly cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['icu_bed_assigned_to'] == 'Bay 7'",
-          "C2": "decisions['step_down_requested'] == True",
-          "C3": "any(c['type'] == 'step_down_request' and c['target'] == 'Bay 3' for c in commitments)",
-          "C4": "decisions['step_down_window_hours'] >= 1 and decisions['step_down_window_hours'] <= 2"
+          "C2": "decisions['continuous_monitoring_ordered'] == True",
+          "C3": "decisions['step_down_requested'] == True",
+          "C4": "any(c['type'] == 'step_down_request' and c['target'] == 'Bay 3' for c in commitments)",
+          "C5": "decisions['step_down_window_hours'] >= 1 and decisions['step_down_window_hours'] <= 2"
         },
         "provenance_checks": {
           "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -118,16 +126,24 @@
               "C1",
               "P1"
             ],
-            "why": "Without the uncharted sepsis labs, Bay 3 (admitted earlier, seemingly higher acuity on paper) looks like the natural pick; revealed, Bay 7 becomes the correct ICU assignment."
+            "why": "Bay 3 looks like the obvious pick on paper (fresh post-op, transfusion, still on a drip); without the sepsis labs, there is no reason to instead send the ICU bed to Bay 7."
           },
           {
             "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing continuous pulse-ox monitoring is specifically required, a generic settlement might assign the ICU bed but never explicitly order the monitoring that justifies needing it."
+          },
+          {
+            "fact_id": "PF3",
             "owner": "A3",
             "flips": [
-              "C3",
-              "C4"
+              "C4",
+              "C5"
             ],
-            "why": "Nothing public says Bay 3's family would accept a step-down bed, or on what timeline; without PF2, there's no reason to log that commitment, and no reason to cap the window at two hours rather than leaving it open-ended."
+            "why": "Nothing public says Bay 3's family would accept a step-down bed, or on what timeline; without PF3, there's no reason to log that commitment, and no reason to cap the window at two hours rather than leaving it open-ended."
           }
         ]
       },
@@ -166,15 +182,15 @@
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Dr. Reyes's patient's biopsy came back showing a fast-growing tumor type; guidelines call for surgery within 10 days, and Thursday is the only slot before that window closes."
+            "text": "Dr. Reyes's patient's biopsy came back showing a fast-growing tumor type; guidelines call for surgery within 10 days, and Thursday is the only slot before that window closes -- the results landed in Elena's inbox this morning and she hasn't updated the shared schedule yet."
           },
           "PF2": {
             "owner": "A3",
-            "text": "Dr. Okonkwo already secured a backup Saturday-morning slot at the outpatient surgical center for this same patient if the Thursday block isn't available."
+            "text": "Dr. Okonkwo already secured a backup Saturday-morning slot at the outpatient surgical center for this same patient earlier this week -- Tobias arranged it directly with the center and it isn't logged in the main scheduling system."
           },
           "PF3": {
             "owner": "A4",
-            "text": "The specialized instrument tray Dr. Reyes's procedure requires takes 48 hours to sterilize and reprocess, so it must be requested by Tuesday morning to be ready for Thursday."
+            "text": "The specialized instrument tray Dr. Reyes's procedure requires takes 48 hours to sterilize and reprocess, so it must be requested by Tuesday morning to be ready for Thursday -- this lead time only shows up in sterile processing's own tracking log, not the scheduling software."
           }
         },
         "views": {
@@ -320,19 +336,19 @@
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "The patient failed this morning's stair-climb and transfer assessment and cannot safely navigate stairs without supervised therapy for at least one to two weeks."
+            "text": "The patient failed this morning's stair-climb and transfer assessment and cannot safely navigate stairs without supervised therapy for at least one to two weeks -- Jordan just finished writing it up and was planning to raise it at today's check-in, but it isn't in the chart yet."
           },
           "PF2": {
             "owner": "A3",
-            "text": "The patient's new blood-thinner requires lab draws twice a week for the first month; home health in this area only offers weekly draws, but a rehab facility can do them onsite."
+            "text": "The patient's new blood-thinner requires lab draws twice a week for the first month; home health in this area only offers weekly draws, but a rehab facility can do them onsite -- Amara confirmed this with the prescribing physician an hour ago and hasn't updated the discharge orders yet."
           },
           "PF3": {
             "owner": "A4",
-            "text": "The patient's preferred rehab facility, Willowbrook, has no open bed until Monday, but Cedar Ridge, a comparable facility, has an opening tomorrow."
+            "text": "The patient's preferred rehab facility, Willowbrook, has no open bed until Monday, but Cedar Ridge, a comparable facility, has an opening tomorrow -- Dan got this update from Willowbrook by phone this morning and hasn't posted it to the shared placement board yet."
           },
           "PF4": {
             "owner": "A5",
-            "text": "The patient's home caregiver, their daughter, just said a family emergency will keep her out of town for the next eight days, so no one would be home to help."
+            "text": "The patient's home caregiver, their daughter, texted the unit ten minutes ago that a family emergency will keep her out of town for the next eight days, so no one would be home to help."
           }
         },
         "views": {
