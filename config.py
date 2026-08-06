@@ -3,11 +3,11 @@ import os
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 
-CHALLENGER_MODEL = "openai/gpt-5.6-luna"
-VERIFIER_MODEL = "openai/gpt-5.6-luna"
+CHALLENGER_MODEL = "openai/gpt-5.4"
+VERIFIER_MODEL = "openai/gpt-5.4"
 
 STRONG_ARM_MODEL = "z-ai/glm-5.2"
-STRONG_ARM_MAX_TOKENS = 4000
+STRONG_ARM_MAX_TOKENS = 1500
 STRONG_ARM_TEMPERATURE_RANGE = (0.2, 0.6)
 STRONG_ARM_REASONING_ENABLED = False
 
@@ -29,6 +29,7 @@ WEAK_ARM_MAX_PASS = 1
 STRONG_ARM_MIN_PASS = 3
 
 MAX_REFINEMENT_ROUNDS = 10
+CHALLENGER_DIVERSITY_WINDOW = 12
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")

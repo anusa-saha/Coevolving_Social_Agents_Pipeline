@@ -4,7 +4,7 @@ from pathlib import Path
 import config
 import domain_loader
 from llm_clients import gpt_chat, extract_json
-from storage import next_scenario_id
+from storage import next_scenario_id, record_scenario_summary, recent_scenario_summaries
 
 
 def _load_prompt(name: str) -> str:
@@ -20,6 +20,32 @@ def _domain_messages(domain_key) -> list:
     return [{"role": "system", "content": domain_loader.build_domain_block(domain_key)}]
 
 
+def _diversity_message() -> list:
+    recent = recent_scenario_summaries(config.CHALLENGER_DIVERSITY_WINDOW)
+    if not recent:
+        return []
+
+    lines = [
+        "## Do not repeat these recently generated scenarios",
+        "",
+        "Every scenario below was already generated. Your new scenario must be meaningfully "
+        "DIFFERENT from every one of them: a different premise, a different decision-maker role, "
+        "a different resource/stakes type (do not always split money, assign a slot, or pick a "
+        "vendor), and a different kind of hidden lever or decisive-fact pattern (do not reuse the "
+        "same 'a hidden deadline forces X' or 'a hidden defect reverses the obvious choice' shape "
+        "repeatedly). Reusing a close variant of any of these counts as a rejection-worthy repeat.",
+        "",
+    ]
+    for entry in recent:
+        role = entry.get("decision_maker_role") or "?"
+        desc = entry.get("description") or ""
+        themes = "; ".join(t for t in entry.get("decisive_fact_themes", []) if t)
+        lines.append(f"- [{entry.get('domain') or entry.get('scenario_type') or '?'}] "
+                      f"decision-maker={role}: {desc}" + (f" (hidden levers: {themes})" if themes else ""))
+
+    return [{"role": "system", "content": "\n".join(lines)}]
+
+
 def generate_scenario(scenario_type: str = None) -> dict:
     domain_key = domain_loader.resolve_domain(scenario_type)
 
@@ -32,6 +58,7 @@ def generate_scenario(scenario_type: str = None) -> dict:
     messages = (
         [{"role": "system", "content": CHALLENGER_SYSTEM_PROMPT}]
         + _domain_messages(domain_key)
+        + _diversity_message()
         + [{"role": "user", "content": user_msg}]
     )
     raw = gpt_chat(
@@ -45,6 +72,7 @@ def generate_scenario(scenario_type: str = None) -> dict:
     scenario["scenario_id"] = next_scenario_id()
     if domain_key:
         scenario["domain"] = domain_key
+    record_scenario_summary(scenario)
     return scenario
 
 

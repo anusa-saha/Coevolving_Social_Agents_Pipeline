@@ -112,6 +112,29 @@ def append_final_scenario(scenario: dict) -> Path:
     return _write_json(path, data)
 
 
+def record_scenario_summary(scenario: dict) -> Path:
+    summary = {
+        "scenario_id": scenario.get("scenario_id"),
+        "domain": scenario.get("domain"),
+        "scenario_type": scenario.get("scenario_type"),
+        "description": scenario.get("description"),
+        "decision_maker_role": None,
+        "decisive_fact_themes": [df.get("why") for df in scenario.get("decisive_facts", [])],
+    }
+    dm = scenario.get("decision_maker")
+    dm_id = dm[0] if isinstance(dm, list) else dm
+    for agent in scenario.get("agents", []):
+        if agent.get("agent_id") == dm_id:
+            summary["decision_maker_role"] = agent.get("role")
+            break
+    return _append_jsonl(Path(config.OUTPUT_DIR, "scenario_history.jsonl"), summary)
+
+
+def recent_scenario_summaries(n: int) -> list:
+    entries = read_jsonl(Path(config.OUTPUT_DIR, "scenario_history.jsonl"))
+    return entries[-n:]
+
+
 def load_json_array(path) -> list:
     with open(path) as f:
         return json.load(f)
