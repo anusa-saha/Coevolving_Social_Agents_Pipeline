@@ -1,0 +1,167 @@
+{
+  "scenario_id": "scenario_43",
+  "scenario_type": "medication_formulary_approval",
+  "description": "A hospital pharmacy director must decide whether to approve a non-formulary antiviral for an inpatient and finalize the drug regimen, dispensing route, authorization timing, and monitoring safeguards, with input from infectious disease, utilization review, and outpatient pharmacy.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Pharmacy Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Infectious Disease Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Luis",
+      "role": "Utilization Review Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nora",
+      "role": "Outpatient Pharmacist"
+    }
+  ],
+  "shared_context": {
+    "S1": "The inpatient team has requested emergency non-formulary approval for Lunacavir for a medically stable patient who is expected to leave the hospital later this week.",
+    "S2": "Maya makes the final formulary decision and signs the medication plan.",
+    "S3": "Lunacavir is not stocked on the hospital formulary, so approval must specify how it will be obtained and monitored if authorized.",
+    "S4": "The hospital's routine medication-review process includes a check-in with infectious disease, utilization review, and outpatient pharmacy before the director signs the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The patient's isolate is resistant to the two formulary alternatives, while infectious-disease guidance supports Lunacavir 400 mg twice daily for exactly 7 days; Dr. Chen received the susceptibility report this morning, but the result has not yet been added to the medication request."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The payer will cover Lunacavir only when it is dispensed through NorthStar Specialty Pharmacy, and the authorization ends on June 18 at 23:59; Luis confirmed both terms in the payer portal today, but the authorization record has not been attached to the request."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Because the patient takes tacrolimus, outpatient pharmacy requires a tacrolimus trough before the first Lunacavir dose and a second trough on day 4; NorthStar can release the medication only if the prescription reaches it by 15:00 today, according to Nora's direct call with the pharmacy."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "lunacavir_approved": "boolean",
+      "medication": "string",
+      "dose_mg": "integer",
+      "doses_per_day": "integer",
+      "duration_days": "integer",
+      "dispensing_pharmacy": "string",
+      "authorization_end": "string",
+      "first_trough_timing": "string",
+      "second_trough_timing": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Lunacavir must be approved because the patient's isolate is resistant to both formulary alternatives.",
+    "The approved regimen must be Lunacavir 400 mg twice daily for exactly 7 days.",
+    "The medication must be dispensed through NorthStar Specialty Pharmacy.",
+    "The authorization end must be recorded as June 18 at 23:59.",
+    "A prescription transmission commitment to NorthStar by 15:00 today must be recorded.",
+    "A tacrolimus trough must be ordered before the first Lunacavir dose.",
+    "A second tacrolimus trough must be ordered on day 4.",
+    "The resistance finding must be cited as justification for approval."
+  ],
+  "content_checks": {
+    "C1": "decisions['lunacavir_approved'] == True",
+    "C2": "decisions['medication'] == 'Lunacavir'",
+    "C3": "decisions['dose_mg'] == 400 and decisions['doses_per_day'] == 2 and decisions['duration_days'] == 7",
+    "C4": "decisions['dispensing_pharmacy'] == 'NorthStar Specialty Pharmacy' and decisions['authorization_end'] == 'June 18 at 23:59'",
+    "C5": "any('15:00 today' in c['detail'] and 'NorthStar' in c['detail'] and ('Prescription' in c['detail'] or 'prescription' in c['detail']) for c in commitments)",
+    "C6": "('before' in decisions['first_trough_timing'] and 'first' in decisions['first_trough_timing'] and 'Lunacavir' in decisions['first_trough_timing'] and 'dose' in decisions['first_trough_timing']) or ('Before' in decisions['first_trough_timing'] and 'first' in decisions['first_trough_timing'] and 'Lunacavir' in decisions['first_trough_timing'] and 'dose' in decisions['first_trough_timing'])",
+    "C7": "decisions['second_trough_timing'] == 'day 4' or decisions['second_trough_timing'] == 'Day 4'"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The resistance result changes the decision from an unsupported non-formulary approval to approval of Lunacavir at exactly 400 mg twice daily for 7 days, and supplies the clinical justification that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The payer terms change the dispensing choice to NorthStar Specialty Pharmacy and set the authorization end to exactly June 18 at 23:59."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "The outpatient pharmacy requirements change the plan to a prescription transmission commitment by exactly 15:00 today and tacrolimus troughs exactly before the first dose and on day 4."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

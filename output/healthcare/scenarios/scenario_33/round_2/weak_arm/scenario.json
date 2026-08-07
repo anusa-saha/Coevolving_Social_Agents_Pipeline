@@ -1,0 +1,186 @@
+{
+  "scenario_id": "scenario_33",
+  "scenario_type": "ambulatory_infusion_operations",
+  "description": "An ambulatory infusion center director must decide whether to open a Sunday treatment session for a patient whose next dose is time-sensitive and finalize the medication, staffing, and transportation plan, with input from the attending physician, pharmacy, nursing, and patient transport.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Ambulatory Infusion Center Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Attending Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nikhil",
+      "role": "Infusion Pharmacist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Tessa",
+      "role": "Infusion Nursing Manager"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Owen",
+      "role": "Patient Transport Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "The ambulatory infusion center is normally closed on Sundays.",
+    "S2": "A patient is being considered for a Sunday infusion because the weekday schedule is full.",
+    "S3": "Marisol makes the final decision about opening the Sunday session and records the operating plan.",
+    "S4": "The center's weekend-planning policy uses a roll call before a special session is finalized: the attending physician, pharmacy, nursing, and patient transport each state their operational requirements, and Marisol then records the decision."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The attending's signed order requires this patient's infusion to run for exactly six hours and requires completion on Sunday because the next dose is due Monday at 08:00; Dr. Chen has the signed order in the clinic work queue, but the Sunday request form has not been updated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The medication remains usable for exactly eight hours after compounding, and pharmacy can release the refrigerated preparation at exactly 07:30 Sunday; to preserve the labeled window, the infusion must begin at 08:00 Sunday."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Only RN Patel is credentialed for this medication's infusion protocol on Sunday, and Patel is available exactly from 08:00 through 14:00; the staffing roster has not yet been amended for a Sunday opening."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "The patient's wheelchair van is reserved to bring the patient to the center for arrival at exactly 07:15 Sunday, and the vendor can hold that reservation only if the center confirms it before the operating plan is finalized; the reservation is not in the center's appointment system."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 20
+  },
+  "settlement_schema": {
+    "decisions": {
+      "sunday_session_open": "boolean",
+      "infusion_start": "string",
+      "infusion_end": "string",
+      "medication_release_time": "string",
+      "assigned_nurse": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The Sunday infusion session must be opened.",
+    "The infusion must run from exactly 08:00 through 14:00 Sunday.",
+    "The medication must be released by pharmacy at exactly 07:30 Sunday.",
+    "RN Patel must be assigned for the infusion from 08:00 through 14:00.",
+    "The nursing coverage must be explicitly committed.",
+    "The patient's wheelchair van arrival at exactly 07:15 Sunday must be explicitly committed.",
+    "The attending physician's signed six-hour Sunday order must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['sunday_session_open'] == True",
+    "C2": "decisions['infusion_start'] == 'Sunday 08:00'",
+    "C3": "decisions['infusion_end'] == 'Sunday 14:00'",
+    "C4": "decisions['medication_release_time'] == 'Sunday 07:30'",
+    "C5": "decisions['assigned_nurse'] == 'RN Patel'",
+    "C6": "any(c['type'] == 'nursing_coverage' and c['target'] == 'Infusion Center' and c['detail'] == 'RN Patel, Sunday 08:00-14:00' for c in commitments)",
+    "C7": "any(c['type'] == 'transport_arrival' and c['target'] == 'Patient' and c['detail'] == 'wheelchair van arrival, Sunday 07:15' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "P1"
+      ],
+      "why": "The signed order changes the plan from an optional Sunday opening to a required session ending exactly at 14:00 because the six-hour infusion must be completed Sunday before the Monday 08:00 dose."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C4"
+      ],
+      "why": "The medication's eight-hour usability limit and 07:30 release time change the infusion start to exactly Sunday 08:00 and the pharmacy release entry to exactly Sunday 07:30."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The Sunday credential and availability record change the nurse assignment to RN Patel and require a nursing coverage commitment for exactly Sunday 08:00-14:00."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C7"
+      ],
+      "why": "The confirmed transport reservation changes the arrival plan to a wheelchair-van arrival at exactly Sunday 07:15 and requires that arrival to be documented."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 5
+}

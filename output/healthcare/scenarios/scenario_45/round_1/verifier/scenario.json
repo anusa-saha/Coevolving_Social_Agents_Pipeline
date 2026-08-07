@@ -1,0 +1,152 @@
+{
+  "scenario_id": "scenario_45",
+  "scenario_type": "admission_status_and_monitoring",
+  "description": "A utilization review physician must determine whether a patient in the emergency department should be admitted as an inpatient to telemetry or remain in observation, and must finalize the expected stay and follow-up plan with input from the attending physician, utilization review specialist, and patient educator.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Dr. Singh",
+      "role": "Utilization Review Physician"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Alvarez",
+      "role": "Emergency Department Attending Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Maya",
+      "role": "Utilization Review Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jon",
+      "role": "Patient Educator"
+    }
+  ],
+  "shared_context": {
+    "S1": "A patient in the emergency department is being considered for either inpatient admission to a telemetry bed or continued care in the observation unit.",
+    "S2": "Dr. Singh makes the final admission-status and care-plan decision.",
+    "S3": "The patient has had intermittent palpitations and is currently receiving evaluation and treatment in the emergency department.",
+    "S4": "Before the status is finalized, Dr. Singh follows the department's routine practice of checking with the attending physician, utilization review, and patient education for any relevant information."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The patient's rhythm strip showed intermittent pauses that Dr. Alvarez considers unsafe without continuous telemetry for the next 24 hours; the finding is in the attending's working notes but has not yet been entered into the shared chart."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient's payer applies its two-midnight inpatient rule when the treating physician expects hospital-level treatment to span at least two midnights; the utilization review portal confirms that this case qualifies for inpatient status if that expected stay is documented."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The patient's daughter can attend discharge teaching only on Friday from 16:30 to 17:00, and the family has asked that the appointment be reserved in that exact window; Jon received the request by phone but has not entered it in the education schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "admission_status": "string",
+      "admitting_service": "string",
+      "expected_length_of_stay_nights": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be admitted as an inpatient.",
+    "The patient must be assigned to telemetry.",
+    "The expected stay must be documented as two midnights.",
+    "A discharge-teaching appointment with the daughter must be reserved for Friday from 16:30 to 17:00.",
+    "The telemetry-relevant rhythm finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['admission_status'] == 'inpatient'",
+    "C2": "decisions['admitting_service'] == 'telemetry'",
+    "C3": "decisions['expected_length_of_stay_nights'] == 2",
+    "C4": "any(c['type'] == 'discharge_teaching' and c['target'] == 'Daughter' and c['detail'] == 'Friday 16:30-17:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The undocumented rhythm pauses change the admitting service from an open choice to telemetry for exactly the next 24 hours, and they provide the clinical fact that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C3"
+      ],
+      "why": "The payer portal's two-midnight rule changes the status to inpatient and fixes the documented expected stay at exactly two midnights instead of observation or an unspecified duration."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4"
+      ],
+      "why": "The daughter's availability changes the follow-up plan from an unspecified teaching arrangement to a discharge-teaching appointment on Friday from exactly 16:30 to 17:00."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

@@ -1,0 +1,180 @@
+{
+  "scenario_id": "scenario_14",
+  "status": "accepted",
+  "rounds_taken": 2,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 0,
+    "weak_arm": 0,
+    "strong_arm": 1
+  },
+  "scenario": {
+    "scenario_id": "scenario_14",
+    "scenario_type": "medication_formulary_approval",
+    "description": "A pharmacy director must authorize an outpatient antibiotic plan for a medically stable patient expected to leave the hospital tomorrow, with input from infectious disease, utilization review, and specialty-pharmacy coordination.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Marisol",
+        "role": "Pharmacy Director"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Dr. Chen",
+        "role": "Infectious Disease Physician"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Nadia",
+        "role": "Utilization Review Nurse"
+      },
+      {
+        "agent_id": "A4",
+        "name": "Leon",
+        "role": "Specialty Pharmacy Coordinator"
+      }
+    ],
+    "shared_context": {
+      "S1": "The patient is medically stable and is expected to leave the hospital tomorrow with a seven-day outpatient antibiotic plan.",
+      "S2": "The current formulary option is daily intravenous ceftriaxone, while linezolid is a restricted nonformulary oral option.",
+      "S3": "Marisol makes the final medication authorization and discharge-pharmacy decision.",
+      "S4": "The patient would prefer an oral medication if a clinically and operationally appropriate option can be arranged.",
+      "S5": "Before the authorization is finalized, Marisol follows the department's routine practice of checking with infectious disease, utilization review, and specialty-pharmacy coordination for relevant clinical, coverage, and delivery details."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "The finalized culture report shows the organism is susceptible to linezolid but resistant to the available oral alternatives, and Dr. Chen's treatment plan calls for linezolid 600 mg twice daily for exactly six days after discharge."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "The patient's insurer will authorize restricted linezolid only when the prior-authorization submission includes the culture result, the exact 600 mg twice-daily regimen, and a six-day duration; a submission for the formulary intravenous option does not satisfy the patient's outpatient coverage pathway."
+      },
+      "PF3": {
+        "owner": "A4",
+        "text": "The specialty pharmacy has confirmed that the linezolid can be delivered to the patient's home tomorrow between 8:00 and 9:00 AM, and the patient has no transportation available to collect it, so that delivery window must be recorded in the discharge plan."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF2"
+      ],
+      "A4": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF3"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A4"
+      ],
+      "turn_cap": 14
+    },
+    "settlement_schema": {
+      "decisions": {
+        "authorized_medication": "string",
+        "dose": "string",
+        "frequency": "string",
+        "duration_days": "integer",
+        "prior_authorization_submitted": "boolean",
+        "delivery_window": "string"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "Linezolid must be authorized rather than daily intravenous ceftriaxone.",
+      "The authorized regimen must be 600 mg twice daily for exactly six days.",
+      "A prior authorization must be submitted with the required regimen and culture documentation.",
+      "The specialty-pharmacy delivery must be scheduled for tomorrow between 8:00 and 9:00 AM.",
+      "The clinical culture finding must be cited as justification for choosing linezolid."
+    ],
+    "content_checks": {
+      "C1": "decisions['authorized_medication'] == 'linezolid'",
+      "C2": "decisions['dose'] == '600 mg' and decisions['frequency'] == 'twice daily' and decisions['duration_days'] == 6",
+      "C3": "decisions['prior_authorization_submitted'] == True",
+      "C4": "decisions['prior_authorization_submitted'] == True and decisions['authorized_medication'] == 'linezolid' and decisions['dose'] == '600 mg' and decisions['frequency'] == 'twice daily' and decisions['duration_days'] == 6",
+      "C5": "decisions['delivery_window'] == '8:00-9:00 AM tomorrow'",
+      "C6": "any(c['type'] in ['prior_authorization', 'prior_authorization_submission', 'delivery', 'delivery_coordination', 'home_delivery_arrangement'] for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed",
+      "P2": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed",
+      "P3": "'PF3' in credited_facts and 'PF3' in justification_fact_ids and 'PF3' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "P1"
+        ],
+        "why": "The culture result changes the medication choice from formulary ceftriaxone to linezolid and fixes the regimen at 600 mg twice daily for six days."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C3",
+          "C4",
+          "P2"
+        ],
+        "why": "The insurer rule changes the plan from an unspecified medication authorization to a prior authorization containing the culture result and the exact 600 mg twice-daily six-day regimen."
+      },
+      {
+        "fact_id": "PF3",
+        "owner": "A4",
+        "flips": [
+          "C5",
+          "C6",
+          "P3"
+        ],
+        "why": "The confirmed specialty-pharmacy arrangement changes the discharge logistics to a home delivery scheduled specifically for tomorrow between 8:00 and 9:00 AM."
+      }
+    ],
+    "domain": "healthcare",
+    "requested_num_agents": 4
+  },
+  "timestamp": "2026-08-07T09:15:28.777373+00:00"
+}

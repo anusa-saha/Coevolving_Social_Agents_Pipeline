@@ -1,0 +1,127 @@
+{
+  "scenario_id": "scenario_5",
+  "scenario_type": "referral_prioritization",
+  "description": "A specialty clinic director must place two new referrals into the clinic's two remaining consultation appointments for next week, with input from the referral nurse and a social worker.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Specialty Clinic Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Eli",
+      "role": "Referral Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "The clinic has two new-patient consultation appointments available next week: Tuesday at 10:00 AM and Friday at 2:00 PM.",
+    "S2": "The referrals are for Lin Park and Mateo Ortiz, and both patients are awaiting their first specialty consultation.",
+    "S3": "Mara makes the final appointment assignment and confirms the associated coordination steps.",
+    "S4": "The clinic's standard referral huddle includes a check with the referral nurse and social worker before next week's appointments are finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Lin Park needs a Mandarin interpreter for the consultation, and the clinic's only Mandarin medical interpreter is available for Lin only on Tuesday at 10:00 AM; Eli confirmed that interpreter availability directly with Language Services."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Mateo Ortiz's designated caregiver can attend the consultation only on Friday at 2:00 PM and must be present because Mateo relies on that caregiver to review the care plan and complete follow-up arrangements; Nadia confirmed this availability with the caregiver."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "tuesday_10am_patient": "string",
+      "friday_2pm_patient": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Lin Park must receive the Tuesday 10:00 AM consultation because that is the only listed appointment compatible with the Mandarin interpreter.",
+    "Mateo Ortiz must receive the Friday 2:00 PM consultation because that is the only listed appointment compatible with the caregiver's attendance.",
+    "A Mandarin interpreter must be booked for Lin Park's Tuesday consultation.",
+    "The caregiver's attendance must be confirmed as a consultation commitment for Mateo Ortiz.",
+    "The interpreter-availability fact must be explicitly cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['tuesday_10am_patient'] == 'Lin Park'",
+    "C2": "decisions['friday_2pm_patient'] == 'Mateo Ortiz'",
+    "C3": "any(c['type'] in ['interpreter_booking', 'interpreter_coordination'] and c['target'] in ['Lin Park', 'Language Services'] and 'Mandarin' in c['detail'] and 'Tuesday' in c['detail'] and '10:00 AM' in c['detail'] for c in commitments)",
+    "C4": "any(c['type'] in ['caregiver_attendance', 'caregiver_coordination', 'caregiver_notification'] and 'caregiver' in c['target'] and 'Friday' in c['detail'] and '2:00 PM' in c['detail'] and 'attendance' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "P1"
+      ],
+      "why": "The interpreter's only available appointment changes Lin Park's assignment to Tuesday at 10:00 AM and requires a Mandarin interpreter booking rather than an unspecified language-service request."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C4"
+      ],
+      "why": "The caregiver's Friday-only availability changes Mateo Ortiz's assignment to Friday at 2:00 PM and requires a commitment confirming caregiver attendance."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

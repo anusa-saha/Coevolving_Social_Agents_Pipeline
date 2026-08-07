@@ -1,0 +1,159 @@
+{
+  "scenario_id": "scenario_7",
+  "scenario_type": "service_operations",
+  "description": "A hospital operations administrator must decide whether to open the outpatient dialysis unit for a special Saturday session and, if so, set its operating window and required coordination steps, with input from nephrology, patient transport, and facilities.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Hospital Operations Administrator"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Nephrologist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Ravi",
+      "role": "Patient Transport Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Helen",
+      "role": "Facilities Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The outpatient dialysis unit is normally closed on Saturdays, but operations leadership is reviewing whether to authorize one special Saturday session this week.",
+    "S2": "Marisol makes the final operational decision for the unit.",
+    "S3": "The unit has four dialysis stations and ordinarily operates from 7:00 AM until 5:00 PM on weekdays.",
+    "S4": "Before the decision is finalized, Marisol conducts the unit's routine cross-department huddle with nephrology, patient transport, and facilities."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient Green's nephrologist has determined that Green must receive dialysis on Saturday at 8:00 AM for a four-hour treatment because there is no weekday opening that can safely replace it; Dr. Chen entered the order this morning, but the weekend session has not yet been approved."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The transport vendor confirmed a 7:15 AM pickup and a 12:45 PM return for Patient Green, but only if the dialysis treatment begins at 8:00 AM; Ravi received the confirmation by phone and has not added it to the shared transport board."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Water-treatment maintenance is scheduled to begin at 1:00 PM Saturday, and the dialysis unit must be cleared and closed by 12:30 PM for the work to proceed; Helen has the maintenance window on the facilities work-order calendar."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "saturday_session_open": "boolean",
+      "scheduled_patient": "string",
+      "session_start": "string",
+      "session_close": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The special Saturday dialysis session must be authorized.",
+    "Patient Green must be scheduled for the session.",
+    "The session must start at 8:00 AM.",
+    "The unit must close by 12:30 PM.",
+    "The confirmed transport arrangement must be documented.",
+    "The facilities maintenance constraint must be documented as an operational commitment.",
+    "The clinical need for Patient Green must be cited in the justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['saturday_session_open'] == True",
+    "C2": "decisions['scheduled_patient'] == 'Patient Green'",
+    "C3": "decisions['session_start'] == '8:00 AM'",
+    "C4": "decisions['session_close'] == '12:30 PM'",
+    "C5": "any(('7:15 AM' in c['detail'] or '7:15' in c['detail']) and ('12:45 PM' in c['detail'] or '12:45' in c['detail']) for c in commitments)",
+    "C6": "any(('12:30 PM' in c['detail'] or '12:30' in c['detail']) and ('1:00 PM' in c['detail'] or '1:00' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The specific order for Patient Green changes the decision from leaving Saturday closed to opening the session, identifies Green as the patient, and fixes the treatment start at 8:00 AM."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5"
+      ],
+      "why": "The vendor's confirmed 7:15 AM pickup and 12:45 PM return change the plan from an unspecified transport arrangement to a documented transport commitment for Patient Green."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C6"
+      ],
+      "why": "The maintenance window changes the permitted session close to exactly 12:30 PM and requires a facilities commitment to clear the unit before the 1:00 PM work begins."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}
