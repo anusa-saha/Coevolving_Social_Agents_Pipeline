@@ -7,7 +7,7 @@ import config
 import domain_loader
 from challenger import generate_scenario, VALID_AGENT_COUNTS
 from cascade import run_cascade
-from storage import write_json_array, next_scenario_id
+from storage import write_json_array, next_scenario_id, set_scenario_counter, current_scenario_counter
 
 
 def load_scenarios(path: str) -> list:
@@ -58,6 +58,16 @@ def ensure_scenario_id(scenario: dict) -> str:
 def cmd_domains(args):
     for key, display_name in domain_loader.available_domains():
         print(f"{key:32s} ({display_name})")
+
+
+def cmd_reset_counter(args):
+    before = current_scenario_counter()
+    if args.set is None:
+        print(f"Current scenario counter: {before} (next scenario would be scenario_{before + 1})")
+        return
+    set_scenario_counter(args.set)
+    print(f"Scenario counter changed: {before} -> {args.set}")
+    print(f"Next generated scenario will be scenario_{args.set + 1}")
 
 
 def cmd_challenger(args):
@@ -122,6 +132,12 @@ def main():
 
     p = sub.add_parser("domains")
     p.set_defaults(func=cmd_domains)
+
+    p = sub.add_parser("reset-counter")
+    p.add_argument("--set", type=int, default=None,
+                    help="Set the scenario counter to this value. Next scenario generated will be "
+                         "scenario_<value+1>. Omit to just print the current value.")
+    p.set_defaults(func=cmd_reset_counter)
 
     p = sub.add_parser("challenger")
     p.add_argument("--n", type=int, default=1)
