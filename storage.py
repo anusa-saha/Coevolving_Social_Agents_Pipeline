@@ -23,6 +23,23 @@ def next_scenario_id() -> str:
     return f"scenario_{n}"
 
 
+def set_scenario_counter(n: int) -> Path:
+    if n < 0:
+        raise ValueError(f"scenario counter must be >= 0, got {n}")
+    path = Path(config.OUTPUT_DIR, ".scenario_counter")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _counter_lock:
+        path.write_text(str(n))
+    return path
+
+
+def current_scenario_counter() -> int:
+    path = Path(config.OUTPUT_DIR, ".scenario_counter")
+    if not path.exists():
+        return 0
+    return int(path.read_text().strip())
+
+
 def _write_json(path: Path, data) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
