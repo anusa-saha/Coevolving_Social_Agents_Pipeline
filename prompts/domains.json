@@ -476,7 +476,7 @@
   },
   "software_technology": {
     "display_name": "Software & Technology",
-    "domain_context": "Scenarios happen inside a product/engineering org: sprint planning, release go/no-go calls, incident postmortems, architecture or vendor decisions. Decision-makers are typically eng managers, tech leads, or product managers. Private facts should read like ordinary engineering reality: an undocumented tech-debt shortcut, a flaky test nobody escalated, a customer SLA clause, an on-call burnout signal, a security finding not yet ticketed. Commitments often take the form of scope cuts, follow-up tickets, staffing changes, or customer communications rather than money.",
+    "domain_context": "Scenarios happen inside a product/engineering org. Vary the decision-maker role rather than defaulting to the same one -- engineering managers, tech leads, CTOs, product directors, platform/infra leads, and security engineering managers all plausibly make binding calls here. Vary the decision type too: sprint/release scope, incident postmortems, architecture or vendor selection, migration or cutover go/no-go calls, on-call staffing and pager rotations, technical-debt paydown prioritization, security patch rollout timing, feature-flag rollout decisions, and infra capacity/cost calls are all fair game -- avoid defaulting to the same 'ship or cut a feature' shape every time. Vary the KIND of hidden lever as well: an undocumented tech-debt shortcut, a flaky test nobody escalated, a customer SLA or contract clause, an on-call burnout signal, a security finding not yet ticketed, a cost/billing anomaly, a dependency vulnerability, a performance regression, a compliance/audit deadline, or a conflicting deploy window with another team -- do not let every scenario's secret be 'an undiscovered bug.' Private facts should read like ordinary engineering reality someone would plausibly know from their own work and might not think to proactively broadcast -- always give a concrete, mundane reason the information hasn't reached the decision-maker yet (found it during a different task, confirmed it minutes ago, hasn't filed the ticket/finding yet), never silence for no reason. Commitments often take the form of scope cuts, follow-up tickets, staffing changes, or customer communications rather than money. Scenarios in this domain commonly involve 3 to 5 agents -- as the count grows, add more distinct hidden-fact holders and decision-relevant functions (e.g. security, infra, support, QA) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_swtech_001",
@@ -502,17 +502,21 @@
         "shared_context": {
           "S1": "The release is scheduled to ship Friday.",
           "S2": "Sam makes the final call on what ships.",
-          "S3": "The new export feature has passed all planned functional test cases.",
+          "S3": "The new export feature has passed all planned functional test cases and load-tested cleanly up to 5,000 rows in yesterday's QA run.",
           "S4": "Before the release is finalized, Sam asks the team for any last concerns."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "The export feature was built on a temporary data pipeline that will silently drop rows above 10,000 records."
+            "text": "While profiling an unrelated ticket last night, Priya found that the export feature's data pipeline silently drops rows above 10,000 records -- well past what yesterday's QA run tested -- but she hasn't filed a bug for it yet."
           },
           "PF2": {
+            "owner": "A2",
+            "text": "There's also no automated alert configured for row-count anomalies on this pipeline, so a silent drop like this wouldn't be caught until a customer complained; Priya noticed this while investigating the bug but hasn't raised it in the release channel."
+          },
+          "PF3": {
             "owner": "A3",
-            "text": "A fix for the row-limit issue could be tested and verified by Thursday if flagged today."
+            "text": "Jordan confirmed with the QA rotation this morning that a fix for the row-limit issue could be tested and verified by Thursday if flagged today, but hasn't posted that in the release channel yet."
           }
         },
         "views": {
@@ -527,14 +531,15 @@
             "S2",
             "S3",
             "S4",
-            "PF1"
+            "PF1",
+            "PF2"
           ],
           "A3": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF2"
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -550,7 +555,8 @@
           "decisions": {
             "ship_export_feature": "boolean",
             "row_limit_fix_scheduled": "boolean",
-            "row_limit_fix_due_by": "string"
+            "row_limit_fix_due_by": "string",
+            "monitoring_alert_added": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -569,14 +575,16 @@
         "acceptance_conditions": [
           "The row-limit fix must be scheduled before Friday.",
           "The feature must still ship, since a same-week fix is possible.",
-          "The fix must be due by Thursday specifically, not just 'sometime soon'.",
+          "The fix must be due by Thursday specifically.",
+          "A monitoring alert for row-count anomalies must be added.",
           "The silent data-loss risk must be cited as justification for the fix."
         ],
         "content_checks": {
           "C1": "decisions['row_limit_fix_scheduled'] == True",
           "C2": "decisions['ship_export_feature'] == True",
           "C3": "any(c['type'] == 'hotfix' for c in commitments)",
-          "C4": "decisions['row_limit_fix_due_by'] == 'Thursday'"
+          "C4": "decisions['row_limit_fix_due_by'] == 'Thursday'",
+          "C5": "decisions['monitoring_alert_added'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -593,6 +601,14 @@
           },
           {
             "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing there's no alerting on row-count anomalies, a generic fix-and-ship plan wouldn't think to add monitoring for the underlying class of bug."
+          },
+          {
+            "fact_id": "PF3",
             "owner": "A3",
             "flips": [
               "C2",
@@ -603,9 +619,9 @@
         ]
       },
       {
-        "scenario_id": "domain_swtech_002",
+        "scenario_id": "domain_swtech_003",
         "scenario_type": "incident_postmortem",
-        "description": "A team lead must decide the remediation plan after a production outage, with input from an on-call SRE and a product manager.",
+        "description": "A team lead must decide the remediation plan after a production outage, with input from an on-call SRE, a product manager, and a security engineer.",
         "agents": [
           {
             "agent_id": "A1",
@@ -621,22 +637,31 @@
             "agent_id": "A3",
             "name": "Ben",
             "role": "Product Manager"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Priya",
+            "role": "Security Engineer"
           }
         ],
         "shared_context": {
           "S1": "Yesterday's outage lasted 40 minutes and affected the billing API.",
           "S2": "Alex writes the final remediation plan.",
           "S3": "The immediate cause was a bad config push.",
-          "S4": "Alex asks the SRE and PM for anything the postmortem should include."
+          "S4": "Alex asks the team for anything the postmortem should include."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "The config push succeeded because the staging validation step has been silently disabled for three weeks."
+            "text": "The config push succeeded because the staging validation step has been silently disabled for three weeks; Noor traced this to the root cause overnight while investigating the incident but hasn't filed the finding yet."
           },
           "PF2": {
             "owner": "A3",
-            "text": "The affected enterprise customer's contract includes a service-credit penalty triggered by any outage over 30 minutes unless a root-cause fix is committed within 5 business days."
+            "text": "The affected enterprise customer's contract includes a service-credit penalty triggered by any outage over 30 minutes unless a root-cause fix is committed within 5 business days; Ben confirmed this with legal an hour ago but hasn't updated the incident channel yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The same disabled validation step also means a scheduled security patch for a known vulnerability in the billing API never actually deployed last week; Priya found this while auditing the incident this morning but hasn't opened a ticket yet."
           }
         },
         "views": {
@@ -659,6 +684,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -666,14 +698,16 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "staging_validation_restored": "boolean",
-            "fix_commit_deadline_days": "integer"
+            "fix_commit_deadline_days": "integer",
+            "security_patch_deployed": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -691,15 +725,18 @@
         },
         "acceptance_conditions": [
           "Staging validation must be restored.",
-          "A committed fix deadline of at most 5 business days must exist.",
-          "The deadline must be a real, near-term commitment, not left open-ended.",
-          "The disabled validation step must be cited as the real root cause."
+          "A committed fix deadline of at most 5, at least 1, business days must exist.",
+          "The disabled validation step must be cited as the real root cause.",
+          "The pending security patch must be deployed.",
+          "A security-patch commitment must be logged."
         ],
         "content_checks": {
           "C1": "decisions['staging_validation_restored'] == True",
           "C2": "decisions['fix_commit_deadline_days'] <= 5",
           "C3": "any(c['type'] == 'root_cause_fix' for c in commitments)",
-          "C4": "decisions['fix_commit_deadline_days'] >= 1"
+          "C4": "decisions['fix_commit_deadline_days'] >= 1",
+          "C5": "decisions['security_patch_deployed'] == True",
+          "C6": "any(c['type'] == 'security_patch' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -721,7 +758,193 @@
               "C2",
               "C4"
             ],
-            "why": "Without the contract penalty clause, there's no forcing reason to commit to a specific 1-5 business day fix instead of an open-ended or zero/negative placeholder 'we'll look into it'."
+            "why": "Without the contract penalty clause, there's no forcing reason to commit to a specific 1-5 business day fix instead of an open-ended placeholder."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5",
+              "C6"
+            ],
+            "why": "Without knowing the security patch never deployed, the remediation plan would only address the outage and miss the still-open vulnerability entirely."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_swtech_004",
+        "scenario_type": "migration_cutover",
+        "description": "A CTO must decide whether to proceed with tonight's planned production database migration and finalize the window, rollback, and customer-communication plan, with input from a senior backend engineer, the database/infrastructure lead, the customer support lead, and a security engineer.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Morgan",
+            "role": "CTO"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Devon",
+            "role": "Senior Backend Engineer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Sasha",
+            "role": "Database/Infrastructure Lead"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Elena",
+            "role": "Customer Support Lead"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Kai",
+            "role": "Security Engineer"
+          }
+        ],
+        "shared_context": {
+          "S1": "Tonight's 11 PM-3 AM maintenance window is reserved for the planned production database migration.",
+          "S2": "Morgan makes the final go/no-go call for the migration.",
+          "S3": "The migration has passed all planned tests in the staging environment.",
+          "S4": "Before finalizing, Morgan checks with backend engineering, database/infra, customer support, and security for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "While reviewing the migration script this afternoon, Devon found that the rollback script doesn't correctly restore a specific index used by billing queries, meaning a rollback after a certain point would leave billing queries degraded for hours; he hasn't filed anything on this yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Sasha confirmed this morning that the actual production data volume is 40% larger than staging, meaning the migration will take approximately 5.5 hours rather than the runbook's estimated 3 -- pushing the finish to around 4:30 AM -- but this isn't updated in the maintenance ticket yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Elena found while reviewing the account list this morning that one major enterprise customer's contract requires 48 hours' advance notice for any maintenance affecting their region, and that customer hasn't been notified; she hasn't raised this yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Kai confirmed this week that postponing tonight's migration would delay a mandatory patch for a critical vulnerability that must be applied by Friday, since the patch depends on the new schema; he flagged this internally but hasn't escalated it formally."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "migration_proceeds_tonight": "boolean",
+            "extended_window_end_time": "string",
+            "rollback_script_fixed_before_start": "boolean",
+            "customer_x_shard_deferred": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The migration must proceed tonight, since postponing risks missing Friday's mandatory patch deadline.",
+          "The window must be extended to 4:30 AM to reflect the true migration duration.",
+          "The rollback script must be fixed before the migration starts.",
+          "The contractually-protected customer's shard must be deferred to a properly-noticed date.",
+          "A customer-notification commitment naming that customer must exist."
+        ],
+        "content_checks": {
+          "C1": "decisions['migration_proceeds_tonight'] == True",
+          "C2": "decisions['extended_window_end_time'] == '4:30 AM'",
+          "C3": "decisions['rollback_script_fixed_before_start'] == True",
+          "C4": "decisions['customer_x_shard_deferred'] == True",
+          "C5": "any(c['type'] == 'customer_notification' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C3",
+              "P1"
+            ],
+            "why": "Without knowing the rollback script is broken, there is no reason to require it be fixed before the migration starts."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without the real 5.5-hour duration, a generic plan would keep the runbook's 3-hour estimate and set the end time around 2 AM instead of 4:30 AM."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C4",
+              "C5"
+            ],
+            "why": "Without knowing about the 48-hour-notice customer, there is no reason to carve out and defer that specific shard or make a targeted notification commitment."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing postponing risks missing Friday's mandatory patch deadline, the generic cautious choice given three other open risks (PF1-PF3) would be to postpone the whole migration rather than proceed."
           }
         ]
       }
