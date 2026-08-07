@@ -952,12 +952,12 @@
   },
   "defense": {
     "display_name": "Defense",
-    "domain_context": "Scenarios happen inside a military or defense-logistics unit: route selection, equipment allocation, mission-support decisions. Decision-makers are typically a commander or XO. Keep content at the level of routine operational logistics and planning \u2014 never depict combat violence, casualties, or weapons use; the tension is entirely about incomplete information (intel timing, fuel/maintenance status, competing mission priorities), not violence. Private facts should read like ordinary staff-officer reports. Commitments often take the form of route changes, resupply requests, or reassignment orders.",
+    "domain_context": "Scenarios happen inside a military or defense-logistics unit. Keep content at the level of routine operational logistics and planning -- never depict combat violence, casualties, or weapons use; the tension is entirely about incomplete information (intel timing, fuel/maintenance status, competing mission priorities, personnel readiness), not violence. Vary the decision-maker role rather than defaulting to the same one -- convoy commanders, battalion XOs, company commanders, S-4 logistics officers, S-3 operations officers, and FOB commanders all plausibly make binding calls here. Vary the decision type too: route selection, equipment or radio allocation, fuel/POL distribution, maintenance prioritization, training or rotation scheduling, personnel assignment, and base facility or access planning are all fair game -- avoid defaulting to the same 'choose between two options' shape every time. Vary the KIND of hidden lever as well: intel timing, equipment/maintenance status, a competing mission priority, a personnel readiness or qualification gap, a supply-chain or logistics timing constraint, a terrain/weather factor, or a higher-headquarters directive not yet disseminated -- do not let every scenario's secret be 'an intel report.' Private facts should read like ordinary staff-officer knowledge someone would plausibly have from their own lane of work -- always give a concrete, mundane reason the information hasn't reached the decision-maker yet (confirmed this morning, still being verified, not yet on the briefing slide, not yet posted to the order), never silence for no reason. Commitments often take the form of route changes, resupply requests, or reassignment orders rather than money. Scenarios in this domain commonly involve 3 to 5 agents -- as the count grows, add more distinct hidden-fact holders and staff functions (e.g. intel, logistics, signal, aviation, medical) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_defense_001",
-        "scenario_type": "logistics_routing",
-        "description": "A convoy commander must choose between two supply routes, with input from an intelligence officer and a logistics officer.",
+        "scenario_type": "route_selection",
+        "description": "A convoy commander must choose between two supply routes and set the departure timing, with input from an intelligence officer and a logistics officer.",
         "agents": [
           {
             "agent_id": "A1",
@@ -978,17 +978,21 @@
         "shared_context": {
           "S1": "Route Alpha is 20 minutes shorter than Route Bravo.",
           "S2": "Capt. Reyes gives the final routing order.",
-          "S3": "The convoy must reach the forward base before nightfall.",
+          "S3": "The convoy must reach the forward base before nightfall, and Route Alpha has been the lower-traffic option for most of this month.",
           "S4": "Before departure, Capt. Reyes asks the intel and logistics officers for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "An unconfirmed report flags increased irregular checkpoint activity along Route Alpha within the last six hours."
+            "text": "An unconfirmed field report from an hour ago flags increased irregular checkpoint activity specifically along Route Alpha; Lt. Chen is still verifying the source and hasn't included it in this morning's briefing yet."
           },
           "PF2": {
+            "owner": "A2",
+            "text": "There's also a confirmed 45-minute window today, 10:00 to 10:45, when a partner-unit patrol will be clearing that same stretch of Route Alpha, which would add further risk if the convoy overlapped with it; Lt. Chen hasn't cross-checked this against the convoy's planned departure time yet."
+          },
+          "PF3": {
             "owner": "A3",
-            "text": "Route Bravo's bridge crossing has a load restriction requiring the convoy to split into two smaller groups, adding roughly 25 minutes."
+            "text": "Route Bravo's bridge crossing has a load restriction requiring the convoy to split into two smaller groups, adding roughly 25 minutes; Sgt. Watts confirmed this with the bridge engineers this morning, but the updated restriction hasn't been posted to the movement order yet."
           }
         },
         "views": {
@@ -1003,14 +1007,15 @@
             "S2",
             "S3",
             "S4",
-            "PF1"
+            "PF1",
+            "PF2"
           ],
           "A3": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF2"
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -1025,6 +1030,7 @@
         "settlement_schema": {
           "decisions": {
             "route_selected": "string",
+            "departure_time": "string",
             "split_convoy": "boolean",
             "estimated_extra_transit_minutes": "integer"
           },
@@ -1044,15 +1050,17 @@
         },
         "acceptance_conditions": [
           "Route Bravo must be selected, given the checkpoint-activity report on Alpha.",
+          "Departure must be set to 11:00 to clear the partner-unit patrol window.",
           "The convoy split required by Bravo's bridge restriction must be planned for.",
-          "The extra transit time from splitting must be estimated at roughly 25 minutes, not left unaccounted for.",
+          "The extra transit time from splitting must be estimated at 20-40 minutes.",
           "The checkpoint-activity report must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['route_selected'] == 'Bravo'",
-          "C2": "decisions['split_convoy'] == True",
-          "C3": "any(c['type'] == 'convoy_split_plan' for c in commitments)",
-          "C4": "decisions['estimated_extra_transit_minutes'] >= 20 and decisions['estimated_extra_transit_minutes'] <= 40"
+          "C2": "decisions['departure_time'] == '11:00'",
+          "C3": "decisions['split_convoy'] == True",
+          "C4": "decisions['estimated_extra_transit_minutes'] >= 20 and decisions['estimated_extra_transit_minutes'] <= 40",
+          "C5": "any(c['type'] == 'convoy_split_plan' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1065,23 +1073,32 @@
               "C1",
               "P1"
             ],
-            "why": "Route Alpha is the faster default choice; without PF1, there is no reason to divert to Bravo."
+            "why": "Route Alpha is the faster, historically-lower-traffic default; without PF1, there is no reason to divert to Bravo."
           },
           {
             "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about the 10:00-10:45 overlap window, a generic plan would not push departure to specifically 11:00."
+          },
+          {
+            "fact_id": "PF3",
             "owner": "A3",
             "flips": [
-              "C2",
-              "C4"
+              "C3",
+              "C4",
+              "C5"
             ],
-            "why": "Without knowing Bravo's bridge forces a convoy split adding roughly 25 minutes, the plan would neither account for the split nor estimate its real time cost."
+            "why": "Without knowing Bravo's bridge forces a convoy split adding roughly 25 minutes, the plan would neither split the convoy, estimate the time cost, nor log a split plan."
           }
         ]
       },
       {
         "scenario_id": "domain_defense_002",
         "scenario_type": "equipment_allocation",
-        "description": "A battalion executive officer must allocate a limited shipment of new radios between two company commanders.",
+        "description": "A battalion executive officer must allocate a limited shipment of new radios between two company commanders and finalize when the radios will actually be operational, with input from both company commanders and the signal officer.",
         "agents": [
           {
             "agent_id": "A1",
@@ -1097,22 +1114,197 @@
             "agent_id": "A3",
             "name": "Capt. Ibrahim",
             "role": "Company B Commander"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Lt. Osei",
+            "role": "Signal Officer"
           }
         ],
         "shared_context": {
           "S1": "Only 12 new radios arrived, enough to fully equip one company but not both.",
           "S2": "Maj. Kim makes the final allocation.",
           "S3": "Both companies are currently within radio range of battalion headquarters.",
-          "S4": "Before deciding, Maj. Kim asks both commanders for anything relevant to the allocation."
+          "S4": "The signal shop can begin programming radios as soon as they're allocated, starting at 0800 today.",
+          "S5": "Before deciding, Maj. Kim asks both commanders and the signal officer for anything relevant to the allocation."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Company A's current radios have a confirmed intermittent failure rate that already caused two missed check-ins this week."
+            "text": "Company A's current radios have a confirmed intermittent failure rate that already caused two missed check-ins this week; Capt. Diallo confirmed this with the commo section this week but hasn't submitted an equipment-readiness report yet."
           },
           "PF2": {
             "owner": "A3",
-            "text": "Company B is scheduled to begin an extended patrol rotation with degraded communications coverage starting in three days."
+            "text": "Company B is scheduled to begin an extended patrol rotation with degraded communications coverage starting in three days; Capt. Ibrahim received the rotation order yesterday but hasn't briefed battalion staff on the timeline yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The new radios require encryption-key loading and frequency programming that takes exactly 6 hours per full company set, and the shop can only process one company's set before end of day; Lt. Osei learned this from the shop supervisor this morning but hasn't flagged the timeline to battalion yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF3"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4"
+          ],
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "radios_assigned_to": "string",
+            "old_radios_repair_requested": "boolean",
+            "repair_requested_within_days": "integer",
+            "radios_operational_by": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The radios must go to Company A, given its confirmed equipment failures.",
+          "A repair request for Company B's existing radios must be logged, within 1-3 days.",
+          "The radios must be recorded as operational by 1400, given the 6-hour programming time starting at 0800.",
+          "The equipment-failure report must be cited as justification."
+        ],
+        "content_checks": {
+          "C1": "decisions['radios_assigned_to'] == 'Company A'",
+          "C2": "decisions['old_radios_repair_requested'] == True",
+          "C3": "any(c['type'] == 'equipment_repair' and c['target'] == 'Company B' for c in commitments)",
+          "C4": "decisions['repair_requested_within_days'] >= 1 and decisions['repair_requested_within_days'] <= 3",
+          "C5": "decisions['radios_operational_by'] == '1400'"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without the confirmed failure report, there is no basis to prefer Company A over a generic even split or seniority-based call."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C3",
+              "C4"
+            ],
+            "why": "Without knowing Company B's rotation starts in three days, there is no urgency to request a repair at all, let alone within that specific window."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing programming takes 6 hours starting at 0800, a generic plan would not set a specific 1400 operational time."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_defense_004",
+        "scenario_type": "fuel_allocation",
+        "description": "A forward operating base commander must allocate this week's constrained fuel delivery among ground operations, motor pool maintenance, aviation, and MEDEVAC standby, with input from the S-4 logistics officer, the motor pool maintenance chief, the aviation liaison, and the MEDEVAC coordinator.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Col. Whitfield",
+            "role": "FOB Commander"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Maj. Bishop",
+            "role": "S-4 Logistics Officer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "SFC Nunez",
+            "role": "Motor Pool Maintenance Chief"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Capt. Delgado",
+            "role": "Aviation Liaison"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Lt. Park",
+            "role": "MEDEVAC Coordinator"
+          }
+        ],
+        "shared_context": {
+          "S1": "This week's fuel delivery is 4,000 gallons.",
+          "S2": "Col. Whitfield makes the final fuel allocation and resupply plan.",
+          "S3": "Standard weekly requests are 2,000 gallons for ground operations, 1,500 for motor pool, and a 1,000-gallon standing reserve floor for aviation.",
+          "S4": "Before finalizing, Col. Whitfield holds the routine weekly logistics huddle with S-4, motor pool, aviation, and MEDEVAC for any updates to their standard requests."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Maj. Bishop confirmed this morning that 2nd Platoon's patrol schedule was extended by three additional days this week, requiring exactly 800 gallons above the standard ground request; the updated patrol order hasn't been reflected in the fuel request yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "SFC Nunez found during this week's vehicle inspection that two support vehicles need extended idle-time for battery reconditioning, consuming exactly 300 gallons beyond the standard motor-pool request; the finding is in his inspection log but hasn't been submitted to logistics yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Capt. Delgado confirmed with the flight surgeon's office this morning that aviation's fuel reserve cannot go below 1,200 gallons at any point this week without grounding the standby MEDEVAC helicopter -- 200 gallons above the standard floor -- but hasn't updated the standing order yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Lt. Park confirmed that Thursday's scheduled route-clearance operation requires MEDEVAC to hold an additional 150-gallon reserve strictly for the helicopter's post-mission return leg, on top of aviation's standing floor; this is in the operation's support annex but hasn't been cross-referenced with the fuel plan yet."
           }
         },
         "views": {
@@ -1135,6 +1327,20 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
           ]
         },
         "decision_maker": "A1",
@@ -1142,15 +1348,18 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4",
+            "A5"
           ],
-          "turn_cap": 12
+          "turn_cap": 18
         },
         "settlement_schema": {
           "decisions": {
-            "radios_assigned_to": "string",
-            "old_radios_repair_requested": "boolean",
-            "repair_requested_within_days": "integer"
+            "ground_unit_extra_gallons": "integer",
+            "motor_pool_extra_gallons": "integer",
+            "aviation_reserve_floor_gallons": "integer",
+            "medevac_thursday_reserve_gallons": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1167,37 +1376,55 @@
           ]
         },
         "acceptance_conditions": [
-          "The radios must go to Company A, given its confirmed equipment failures.",
-          "A repair request for Company B's existing radios must be logged, timed to land before its patrol rotation begins.",
-          "The equipment-failure report must be cited as justification."
+          "Ground operations must receive exactly 800 extra gallons for the extended patrol.",
+          "Motor pool must receive exactly 300 extra gallons for battery reconditioning.",
+          "Aviation's reserve floor must be raised to exactly 1,200 gallons.",
+          "MEDEVAC's Thursday reserve must be set to exactly 150 gallons.",
+          "A commitment formally updating the fuel request must exist."
         ],
         "content_checks": {
-          "C1": "decisions['radios_assigned_to'] == 'Company A'",
-          "C2": "decisions['old_radios_repair_requested'] == True",
-          "C3": "any(c['type'] == 'equipment_repair' and c['target'] == 'Company B' for c in commitments)",
-          "C4": "decisions['repair_requested_within_days'] >= 1 and decisions['repair_requested_within_days'] <= 3"
+          "C1": "decisions['ground_unit_extra_gallons'] == 800",
+          "C2": "decisions['motor_pool_extra_gallons'] == 300",
+          "C3": "decisions['aviation_reserve_floor_gallons'] == 1200",
+          "C4": "decisions['medevac_thursday_reserve_gallons'] == 150",
+          "C5": "any(c['type'] == 'fuel_request_update' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
         },
         "decisive_facts": [
           {
             "fact_id": "PF1",
             "owner": "A2",
             "flips": [
-              "C1",
-              "P1"
+              "C1"
             ],
-            "why": "Without the confirmed failure report, there is no basis to prefer Company A over a generic even split or seniority-based call."
+            "why": "Without knowing about the patrol extension, there is no reason to add 800 gallons above the standard ground request."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2",
+              "C2"
+            ],
+            "why": "Without knowing about the battery reconditioning need, there is no reason to add 300 gallons above the standard motor-pool request."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3",
+              "P1"
+            ],
+            "why": "Without knowing the MEDEVAC-linked floor rose to 1,200, the reserve would stay at the standard 1,000-gallon floor, risking grounding the standby helicopter."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
               "C4"
             ],
-            "why": "Without knowing Company B's rotation starts in three days, there is no urgency to request a repair at all, let alone specifically within that 3-day window."
+            "why": "Without knowing about Thursday's operation-specific reserve requirement, there is no reason to set aside the additional 150 gallons."
           }
         ]
       }
