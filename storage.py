@@ -141,4 +141,14 @@ def load_json_array(path) -> list:
 
 
 def write_json_array(path, data) -> Path:
-    return _write_json(Path(path), data)
+    path = Path(path)
+    existing = []
+    if path.exists():
+        try:
+            with open(path) as f:
+                loaded = json.load(f)
+            if isinstance(loaded, list):
+                existing = loaded
+        except json.JSONDecodeError:
+            existing = []
+    return _write_json(path, existing + data)
