@@ -1,0 +1,136 @@
+{
+  "scenario_id": "scenario_25",
+  "scenario_type": "medication_formulary_approval",
+  "description": "A pharmacy director must finalize a nonformulary medication exception and dispensing plan for a patient being discharged to rehabilitation tomorrow, with input from the attending physician and case manager.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Renee",
+      "role": "Pharmacy Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Malik",
+      "role": "Attending Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Case Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "Patient L is medically ready for discharge to Cedar Grove Rehabilitation tomorrow.",
+    "S2": "The prescriber has requested a 10-day course of Nerovex for Patient L.",
+    "S3": "Nerovex tablets are on the hospital formulary, while the liquid formulation requires a nonformulary exception.",
+    "S4": "Renee makes the final pharmacy decision about the exception and dispensing plan.",
+    "S5": "The medication-exception workflow requires Renee to hear a brief report from the attending physician and case manager before closing the request."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient L has a documented swallowing restriction and cannot safely use Nerovex tablets. The prescribed liquid dose is exactly 7.5 mL every 12 hours; Dr. Malik confirmed this during today's medication reconciliation, but the restriction and dose are not yet in the pharmacy request."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The insurer has authorized exactly 10 days of liquid Nerovex, and that authorization expires tomorrow at 17:00. The specialty pharmacy can deliver the medication to Cedar Grove Rehabilitation only if the order is transmitted by 15:00 tomorrow; Elena confirmed both details with the insurer and pharmacy."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "nonformulary_exception_approved": "boolean",
+      "nerovex_formulation": "string",
+      "nerovex_dose_ml_every_12_hours": "number",
+      "course_duration_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The nonformulary exception must be approved.",
+    "The prescription must specify liquid Nerovex.",
+    "The liquid dose must be exactly 7.5 mL every 12 hours.",
+    "The course duration must be exactly 10 days.",
+    "The order must include a commitment to transmit it to the specialty pharmacy by 15:00 tomorrow.",
+    "The attending physician's swallowing restriction and exact liquid dose must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['nonformulary_exception_approved'] == True",
+    "C2": "decisions['nerovex_formulation'] == 'liquid'",
+    "C3": "decisions['nerovex_dose_ml_every_12_hours'] == 7.5",
+    "C4": "decisions['course_duration_days'] == 10",
+    "C5": "any(c['type'] == 'medication_transmission' and c['target'] == 'Specialty Pharmacy' and c['detail'] == 'Transmit by 15:00 tomorrow' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The swallowing restriction changes the formulation from the available tablet to liquid, and the attending's order supplies the exact dose of 7.5 mL every 12 hours."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "why": "The insurer's authorization makes the exception approvable for exactly 10 days, while the specialty pharmacy's cutoff changes the plan to a transmission commitment by 15:00 tomorrow."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

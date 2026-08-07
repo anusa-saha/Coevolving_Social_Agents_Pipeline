@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_3",
+  "status": "accepted",
+  "rounds_taken": 2,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 0,
+    "weak_arm": 0,
+    "strong_arm": 1
+  },
+  "scenario": {
+    "scenario_id": "scenario_3",
+    "scenario_type": "equipment_allocation",
+    "description": "A case manager must finalize which of two medically cleared patients receives the hospital's only available home oxygen concentrator for discharge today, with input from respiratory therapy and social work.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Maya",
+        "role": "Case Manager"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Luis",
+        "role": "Respiratory Therapist"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Nina",
+        "role": "Social Worker"
+      }
+    ],
+    "shared_context": {
+      "S1": "Patient Harper and Patient Ellis are both medically cleared for discharge today and both have home oxygen orders.",
+      "S2": "The hospital has one available home oxygen concentrator, and both patients are currently listed as candidates for it.",
+      "S3": "Maya makes the final equipment assignment and discharge coordination decision.",
+      "S4": "The daily discharge huddle includes a routine check-in with respiratory therapy and social work before equipment assignments are finalized."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "Harper requires continuous oxygen at exactly 4 liters per minute while sleeping and ambulating, and the prescribed concentrator is the only available home device that can provide that continuous flow reliably overnight; Luis verified this during the bedside assessment, but the updated respiratory note is not yet in the discharge summary."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Ellis's oxygen supplier confirmed delivery of portable cylinders to the home at exactly 6:00 PM today, and Ellis's caregiver completed cylinder-use teaching; Nina received the confirmation and teaching sign-off directly from the supplier and caregiver, but neither has been entered into the discharge coordination record."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF2"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A1"
+      ],
+      "turn_cap": 10
+    },
+    "settlement_schema": {
+      "decisions": {
+        "concentrator_assigned_to": "string",
+        "harper_oxygen_flow_liters_per_minute": "number",
+        "ellis_oxygen_source": "string"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "The concentrator must be assigned to Harper.",
+      "Harper's home oxygen plan must specify exactly 4 liters per minute.",
+      "Ellis must use portable cylinders rather than the concentrator.",
+      "The 6:00 PM supplier delivery for Ellis must be documented as a commitment.",
+      "Harper's oxygen requirement must be cited as justification for assigning the concentrator."
+    ],
+    "content_checks": {
+      "C1": "decisions['concentrator_assigned_to'] == 'Harper'",
+      "C2": "decisions['harper_oxygen_flow_liters_per_minute'] == 4",
+      "C3": "'portable cylinders' in decisions['ellis_oxygen_source']",
+      "C4": "'6:00 PM' in decisions['ellis_oxygen_source'] or any(c['type'] == 'oxygen_delivery' and c['target'] == 'Ellis' and '6:00 PM' in c['detail'] for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "P1"
+        ],
+        "why": "Harper's exact continuous requirement of 4 liters per minute changes the assignment from an otherwise open choice to Harper and fixes the discharge flow at exactly 4 liters per minute."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C3",
+          "C4"
+        ],
+        "why": "Ellis's confirmed portable-cylinder delivery at exactly 6:00 PM changes the oxygen-source value to portable cylinders and supplies the exact delivery time that must be reflected in the plan."
+      }
+    ],
+    "domain": "healthcare",
+    "requested_num_agents": 3
+  },
+  "timestamp": "2026-08-07T07:24:17.691188+00:00"
+}

@@ -1,0 +1,183 @@
+{
+  "scenario_id": "scenario_31",
+  "scenario_type": "specialty_referral_prioritization",
+  "description": "A specialty clinic access director must choose which of two referred patients receives the clinic's only Monday heart-failure transition appointment and finalize the operational plan for that visit, with input from cardiology, utilization review, social work, and home-care coordination.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Specialty Clinic Access Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Cardiology Fellow"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Luis",
+      "role": "Utilization Review Nurse"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nora",
+      "role": "Social Worker"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Evelyn",
+      "role": "Home-Care Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "The heart-failure transition clinic has one new-patient appointment available on Monday at its downtown location.",
+    "S2": "Patient Alder and Patient Birch both have referrals for the clinic and are medically stable for outpatient evaluation.",
+    "S3": "Maya makes the final referral-priority decision and records the appointment plan.",
+    "S4": "The clinic's standard access huddle occurs before the Monday schedule is finalized, and Maya checks with cardiology, utilization review, social work, and home-care coordination for relevant scheduling and care requirements."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Dr. Chen reviewed Patient Alder's discharge summary and found that the cardiology team requires a transition-clinic visit within seven days of discharge to adjust the new regimen; Monday is the only available clinic visit inside that interval."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient Alder's insurer approved the transition-clinic evaluation, but the authorization expires Tuesday at 17:00; Patient Birch's referral has no active authorization on file."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Patient Alder's daughter can bring the patient only between 09:00 and 11:00 on Monday, and the daughter requested an Arabic interpreter for the visit; a 09:30 appointment is the only clinic time that fits both arrangements."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Patient Alder is being discharged with a portable oxygen concentrator, and the home-care supplier confirmed delivery to the patient's home by 07:00 Monday; the clinic's intake checklist requires that delivery before the patient attends the appointment."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "monday_slot_assigned_to": "string",
+      "appointment_time": "string",
+      "authorization_status": "string",
+      "authorization_expiry": "string",
+      "interpreter_language": "string",
+      "oxygen_delivery_confirmed": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The Monday appointment must be assigned to Patient Alder because Monday is the only visit inside the required seven-day transition interval.",
+    "The appointment must be scheduled for 09:30 on Monday.",
+    "The authorization must be recorded as approved with an expiry of Tuesday at 17:00.",
+    "An Arabic interpreter must be arranged for the visit.",
+    "Oxygen delivery must be recorded as confirmed before the appointment.",
+    "A commitment to arrange the Arabic interpreter must be recorded.",
+    "The cardiology timing requirement must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['monday_slot_assigned_to'] == 'Patient Alder'",
+    "C2": "decisions['appointment_time'] == 'Monday 09:30'",
+    "C3": "decisions['authorization_status'] == 'approved' and decisions['authorization_expiry'] == 'Tuesday 17:00'",
+    "C4": "decisions['interpreter_language'] == 'Arabic' and any(c['type'] == 'interpreter_arrangement' and c['target'] == 'Patient Alder' for c in commitments)",
+    "C5": "decisions['oxygen_delivery_confirmed'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The seven-day cardiology requirement changes the assignment from an open choice between Alder and Birch to Patient Alder and supplies the specific justification that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The authorization record changes from an unresolved coverage question to approved coverage with the exact Tuesday 17:00 expiration."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "C4"
+      ],
+      "why": "The daughter's 09:00-11:00 availability and Arabic-language request change the appointment to exactly Monday 09:30 and require an Arabic interpreter commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5"
+      ],
+      "why": "The supplier's confirmation of delivery by 07:00 Monday changes the oxygen field from unverified to confirmed before the 09:30 clinic visit."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 5
+}

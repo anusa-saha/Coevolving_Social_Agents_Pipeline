@@ -1,0 +1,160 @@
+{
+  "scenario_id": "scenario_12",
+  "scenario_type": "procedure_location_and_safety_authorization",
+  "description": "A perioperative services administrator must finalize the location, start time, and respiratory preparation for a bronchoscopy, with input from infection prevention, respiratory therapy, and facilities.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Perioperative Services Administrator"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Shah",
+      "role": "Infection Prevention Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Luis",
+      "role": "Respiratory Therapist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Helen",
+      "role": "Facilities Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "A bronchoscopy is planned for tomorrow for a patient who may need respiratory support during the procedure.",
+    "S2": "The procedure is currently listed for Procedure Room 2 at 1:00 PM.",
+    "S3": "Procedure Room 2 and AIIR 4 are the available locations being considered for the bronchoscopy.",
+    "S4": "Mara makes the final operational decision for the procedure.",
+    "S5": "The hospital's routine pre-procedure huddle includes infection prevention, respiratory therapy, and facilities before the location and setup are finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The patient's pending respiratory panel is positive for measles, so the bronchoscopy requires airborne-isolation conditions and must take place in AIIR 4 rather than Procedure Room 2; Dr. Shah reviewed the result directly, but the laboratory interface has not posted it to the procedural schedule."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient will need noninvasive ventilation during the bronchoscopy, and the approved setup is the HEPA NIV adapter, which Luis must bring and test before the procedure; this requirement is in respiratory therapy's bedside assessment but not in the procedural booking."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "AIIR 4's pressure certification can be completed at 3:00 PM tomorrow, and facilities requires a documented pressure-verification check before the room is used; the room cannot be released for the procedure at 1:00 PM."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "procedure_location": "string",
+      "procedure_start_time": "string",
+      "respiratory_setup": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The bronchoscopy must be moved to AIIR 4 because the patient requires airborne-isolation conditions.",
+    "The bronchoscopy must start at or after 3:00 PM tomorrow because AIIR 4 cannot be released before then.",
+    "The HEPA NIV adapter must be specified as the respiratory setup.",
+    "A facilities pressure-verification commitment for AIIR 4 must be documented before use.",
+    "A respiratory-therapy commitment to bring and test the HEPA NIV adapter must be documented.",
+    "The airborne-isolation finding must be cited as justification for moving the procedure."
+  ],
+  "content_checks": {
+    "C1": "decisions['procedure_location'] == 'AIIR 4'",
+    "C2": "'3:00 PM' in decisions['procedure_start_time'] or '3:30 PM' in decisions['procedure_start_time'] or '4:00 PM' in decisions['procedure_start_time']",
+    "C3": "'HEPA NIV adapter' in decisions['respiratory_setup']",
+    "C4": "any(c['type'] == 'facilities' and c['target'] == 'AIIR 4' and 'pressure certification' in c['detail'] and ('pressure-verification' in c['detail'] or 'pressure verification' in c['detail']) for c in commitments)",
+    "C5": "any(c['type'] == 'respiratory_therapy' and ('bring' in c['detail'] or 'setup' in c['detail']) and 'test' in c['detail'] and 'HEPA NIV adapter' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The positive measles result changes the location from the publicly scheduled Procedure Room 2 to AIIR 4 and supplies the airborne-isolation justification that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C5"
+      ],
+      "why": "The need for noninvasive ventilation changes the respiratory plan to the exact HEPA NIV adapter and requires a commitment to bring and test that adapter."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "C4"
+      ],
+      "why": "The 3:00 PM pressure-certification time changes the procedure start from the scheduled 1:00 PM to a start at or after 3:00 PM and requires a documented AIIR 4 pressure-verification commitment."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

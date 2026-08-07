@@ -1,0 +1,156 @@
+{
+  "scenario_id": "scenario_11",
+  "scenario_type": "inpatient_monitoring_and_transfer",
+  "description": "An attending physician must decide whether and when to transfer a patient from the emergency department to a monitored inpatient bed and finalize the immediate medication-monitoring plan, with input from cardiology, bed management, and clinical pharmacy.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Dr. Malik",
+      "role": "Attending Physician"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Cardiology Fellow"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rosa",
+      "role": "Bed Management Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Evan",
+      "role": "Clinical Pharmacist"
+    }
+  ],
+  "shared_context": {
+    "S1": "A patient in the emergency department is being observed after an episode of dizziness and is currently alert and hemodynamically stable.",
+    "S2": "The patient is awaiting a disposition decision and an inpatient bed if admission is selected.",
+    "S3": "Dr. Malik makes the final decision about the patient's destination, transfer timing, and immediate care plan.",
+    "S4": "The hospital's routine disposition huddle includes a check-in with cardiology, bed management, and clinical pharmacy before the attending finalizes the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The cardiology monitor review showed intermittent high-grade atrioventricular block, so the patient requires continuous telemetry for the next 24 hours rather than an unmonitored observation placement; Dr. Chen reviewed the rhythm strips directly, but the formal cardiology note is still pending."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "A telemetry bed in 4 West is confirmed to accept this patient at exactly 4:00 PM today, and Bed Management needs the transfer booking entered now to hold that bed."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The patient's home medication list includes sotalol, which should be held until cardiology reassessment, followed by a repeat ECG exactly 6 hours after the hold; Evan verified this recommendation with the medication-safety service."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "destination": "string",
+      "transfer_time": "string",
+      "sotalol_action": "string",
+      "repeat_ecg_hours_after_hold": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be transferred to a telemetry inpatient bed.",
+    "The transfer must be scheduled for exactly 4:00 PM today.",
+    "Sotalol must be held until cardiology reassessment.",
+    "A repeat ECG must be ordered exactly 6 hours after the sotalol hold.",
+    "The telemetry transfer booking must be entered with Bed Management.",
+    "The high-grade atrioventricular block finding must be cited as justification for the monitored admission."
+  ],
+  "content_checks": {
+    "C1": "decisions['destination'] == 'telemetry_inpatient_bed'",
+    "C2": "decisions['transfer_time'] == '4:00 PM today'",
+    "C3": "decisions['sotalol_action'] == 'hold_until_cardiology_reassessment'",
+    "C4": "decisions['repeat_ecg_hours_after_hold'] == 6",
+    "C5": "any(c['type'] == 'telemetry_transfer_booking' and c['target'] == 'Bed Management' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The rhythm-strip finding changes the destination from a plausible unmonitored observation placement to a telemetry inpatient bed and supplies the specific justification that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5"
+      ],
+      "why": "The confirmed 4:00 PM telemetry acceptance changes the transfer time from an unspecified disposition time to exactly 4:00 PM today and requires an immediate Bed Management booking."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The medication-safety review changes the plan from continuing the home medication without a defined follow-up to holding sotalol and repeating the ECG exactly 6 hours later."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

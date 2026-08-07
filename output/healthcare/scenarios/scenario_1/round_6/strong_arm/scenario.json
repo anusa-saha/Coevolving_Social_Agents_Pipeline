@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_1",
+  "scenario_type": "medication_approval",
+  "description": "A pharmacy director must approve an outpatient intravenous antibiotic plan for a patient expected to leave the hospital tomorrow, with input from the infectious-disease physician and the case manager.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Pharmacy Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Infectious-Disease Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lena",
+      "role": "Case Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The patient is clinically stable and is expected to leave the hospital tomorrow with an outpatient intravenous antibiotic plan.",
+    "S2": "The outpatient antibiotic request is awaiting pharmacy approval.",
+    "S3": "Marisol makes the final medication approval and dispensing-plan decision.",
+    "S4": "The hospital's routine medication huddle occurs before discharge approvals are finalized, and Marisol checks with the treating physician and case manager for current clinical and access requirements."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Dr. Chen's infectious-disease recommendation is dalbavancin 1500 mg IV today followed by 1500 mg IV on day 8; the culture results and the patient's documented immediate reaction to vancomycin make that exact two-dose regimen the appropriate outpatient plan."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient's insurer requires prior authorization to be submitted by 3:00 PM today and will cover the two-dose dalbavancin course only when it is dispensed through NorthStar Specialty Pharmacy, the insurer's contracted specialty pharmacy; Lena confirmed this in the insurer portal."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "medication_approved": "string",
+      "dose_schedule": "string",
+      "dispensing_pharmacy": "string",
+      "prior_authorization_submitted": "boolean",
+      "prior_authorization_deadline": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Dalbavancin must be approved.",
+    "The dose schedule must record 1500 mg and the day-8 second dose.",
+    "Dispensing must be assigned to NorthStar Specialty Pharmacy.",
+    "Prior authorization must be submitted.",
+    "The prior-authorization deadline must be recorded as 3:00 PM today.",
+    "A commitment must require coordination with NorthStar Specialty Pharmacy for dispensing."
+  ],
+  "content_checks": {
+    "C1": "decisions['medication_approved'] in ['dalbavancin', 'Dalbavancin', 'dalbavancin 1500 mg IV', 'Dalbavancin 1500 mg IV']",
+    "C2": "'1500 mg' in decisions['dose_schedule'] and ('day 8' in decisions['dose_schedule'] or 'second dose' in decisions['dose_schedule'])",
+    "C3": "'NorthStar Specialty Pharmacy' in decisions['dispensing_pharmacy']",
+    "C4": "decisions['prior_authorization_submitted'] == True",
+    "C5": "decisions['prior_authorization_deadline'] == '3:00 PM today'",
+    "C6": "any('NorthStar Specialty Pharmacy' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The clinical recommendation changes the approved drug to dalbavancin and fixes the regimen at 1500 mg IV today followed by a second 1500 mg IV dose on day 8 rather than allowing a generic antibiotic or schedule."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "why": "The insurer information changes the dispensing pharmacy to NorthStar Specialty Pharmacy, requires prior authorization, fixes its submission deadline at 3:00 PM today, and requires a dispensing commitment whose details reference NorthStar Specialty Pharmacy."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

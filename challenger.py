@@ -131,8 +131,8 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
     raw = gpt_chat(
         model=config.CHALLENGER_MODEL,
         messages=messages,
-        temperature=0.5,
-        max_tokens=4000,
+        temperature=0.2,
+        max_tokens=7000,
         json_mode=True,
     )
     scenario = extract_json(raw)

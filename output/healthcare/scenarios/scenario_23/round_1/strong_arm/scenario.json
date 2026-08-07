@@ -1,0 +1,193 @@
+{
+  "scenario_id": "scenario_23",
+  "scenario_type": "care_program_authorization",
+  "description": "An attending physician must decide whether to authorize a medically stable patient's enrollment in the hospital-at-home program and finalize the operational safeguards for the first day, with input from hospital-at-home nursing, pharmacy, social work, and utilization review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Dr. Mira Shah",
+      "role": "Attending Physician"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Lena Ortiz",
+      "role": "Hospital-at-Home Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Victor Chen",
+      "role": "Clinical Pharmacist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Naomi Brooks",
+      "role": "Social Worker"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Eli Morgan",
+      "role": "Utilization Review Specialist"
+    }
+  ],
+  "shared_context": {
+    "S1": "The patient is medically stable and is being considered for enrollment in the hospital-at-home program tomorrow.",
+    "S2": "The patient has said that returning home would be preferable if the care plan can be safely arranged.",
+    "S3": "The hospital-at-home program can provide in-home clinical visits, medication delivery, remote monitoring, and scheduled video follow-up.",
+    "S4": "Dr. Shah signs the final enrollment order and care plan.",
+    "S5": "The program's standing pre-enrollment huddle reviews nursing, pharmacy, home-support, and coverage requirements before Dr. Shah signs the order."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Lena's first-day nursing assessment requires exactly two in-home skilled-nursing visits, with the first visit at 08:00, because the patient needs an early assessment and an evening reassessment; those visit requirements are in the nursing intake worksheet but not yet in the enrollment order."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Victor confirmed that the discharge medication must be transported refrigerated and delivered to the home by exactly 07:30 tomorrow; the program pharmacy has accepted this delivery arrangement, but it is not yet recorded in the care plan."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Naomi confirmed that the patient's caregiver can provide in-home support only from 10:00 through 18:00 tomorrow and has agreed to be present during that interval; the availability was confirmed by phone but is not documented in the social-work note."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Eli verified that the insurer's authorization permits hospital-at-home enrollment only if a video clinician check is scheduled within 24 hours of arrival home; utilization review has the approval reference, but the condition is not yet attached to the enrollment order."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "hospital_at_home_enrollment": "boolean",
+      "nursing_visits_first_day": "integer",
+      "first_nursing_visit": "string",
+      "medication_delivery_method": "string",
+      "medication_delivery_time": "string",
+      "caregiver_support_window": "string",
+      "video_check_scheduled_within_24_hours": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The patient must be enrolled in hospital-at-home.",
+    "The first day must include exactly two skilled-nursing visits, with the first at 08:00.",
+    "The medication must be delivered refrigerated by 07:30 tomorrow.",
+    "The caregiver support window must be recorded as 10:00-18:00 tomorrow.",
+    "A video clinician check must be scheduled within 24 hours of arrival home.",
+    "A refrigerated medication-delivery commitment must be documented.",
+    "The 08:00 nursing visit must be documented as a care-plan commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['hospital_at_home_enrollment'] == True",
+    "C2": "decisions['nursing_visits_first_day'] == 2 and decisions['first_nursing_visit'] == '08:00'",
+    "C3": "decisions['medication_delivery_method'] == 'refrigerated' and decisions['medication_delivery_time'] == '07:30 tomorrow'",
+    "C4": "decisions['caregiver_support_window'] == '10:00-18:00 tomorrow'",
+    "C5": "decisions['video_check_scheduled_within_24_hours'] == True",
+    "C6": "any(c['type'] == 'medication_delivery' and c['target'] == 'Patient home' and c['detail'] == 'refrigerated delivery by 07:30 tomorrow' for c in commitments)",
+    "C7": "any(c['type'] == 'nursing_visit' and c['target'] == 'Patient home' and c['detail'] == 'first visit at 08:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The nursing worksheet changes the first-day schedule from an unspecified visit plan to exactly two visits and fixes the first visit at 08:00, which also enables the required nursing-visit commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The pharmacy confirmation changes medication logistics from an unspecified delivery to refrigerated delivery at exactly 07:30 tomorrow and requires the matching documented commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4"
+      ],
+      "why": "The caregiver confirmation changes the support plan from an unspecified availability to the exact 10:00-18:00 tomorrow window."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5"
+      ],
+      "why": "The insurer condition changes the coverage plan from an unspecified follow-up to a required video clinician check scheduled within 24 hours of arrival home."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 5
+}

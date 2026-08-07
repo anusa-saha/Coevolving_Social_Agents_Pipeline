@@ -1,0 +1,165 @@
+{
+  "scenario_id": "scenario_46",
+  "scenario_type": "infusion_service_approval",
+  "description": "An ambulatory infusion nurse manager must decide whether to approve a patient's first outpatient biologic infusion and finalize the medication order, observation period, payer authorization, and communication arrangements, with input from oncology, utilization review, and patient services.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Ambulatory Infusion Nurse Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Oncologist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Evan",
+      "role": "Utilization Review Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Patient Services Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "A patient has been referred for a first outpatient biologic infusion at the hospital's ambulatory infusion center.",
+    "S2": "Marisol makes the final decision about whether the infusion can proceed and records the associated care-plan requirements.",
+    "S3": "The patient prefers to receive the treatment at the hospital rather than travel to a distant specialty center.",
+    "S4": "The infusion center's routine intake process includes a check-in with oncology, utilization review, and patient services before a first infusion is finalized.",
+    "S5": "Once those three routine check-ins are complete, Marisol finalizes the infusion plan using the information provided and records any needed documentation or scheduling commitments."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Dr. Chen has a signed order for ocrelizumab 600 mg IV once, with a 30-minute post-infusion observation period; the order is in the oncology work queue but has not yet been entered into the ambulatory infusion plan."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The payer approved this treatment only at the hospital outpatient infusion center, with authorization valid through September 30 at 23:59; the approval is visible in the utilization-review portal but has not been copied into the infusion scheduling record."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The patient's daughter can attend the appointment only at 14:00 on the proposed treatment day, and the patient requires a Mandarin interpreter for infusion teaching; Nadia confirmed both arrangements by phone but has not entered them in the appointment note."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "infusion_approved": "boolean",
+      "medication": "string",
+      "dose": "string",
+      "route": "string",
+      "frequency": "string",
+      "observation_minutes": "integer",
+      "authorization_site": "string",
+      "authorization_expires": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The first outpatient infusion must be approved.",
+    "The medication must be ocrelizumab at 600 mg IV once.",
+    "The patient must remain under observation for 30 minutes after the infusion.",
+    "The authorization site must be the hospital outpatient infusion center and must expire on September 30 at 23:59.",
+    "A commitment of type family_and_interpreter_arrangement, targeting Patient Services, must arrange a Mandarin interpreter and daughter attendance at 14:00 on the treatment day.",
+    "The signed oncology order must be cited as justification for approving the infusion."
+  ],
+  "content_checks": {
+    "C1": "decisions['infusion_approved'] == True",
+    "C2": "decisions['medication'] == 'ocrelizumab' and decisions['dose'] == '600 mg' and decisions['route'] == 'IV' and decisions['frequency'] == 'once'",
+    "C3": "decisions['observation_minutes'] == 30",
+    "C4": "decisions['authorization_site'] == 'hospital outpatient infusion center' and decisions['authorization_expires'] == 'September 30 at 23:59'",
+    "C5": "any(c['type'] == 'family_and_interpreter_arrangement' and c['target'] == 'Patient Services' and c['detail'] == 'Mandarin interpreter and daughter attendance at 14:00 on treatment day' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The signed oncology order changes the plan from an unsupported referral to approval of ocrelizumab at exactly 600 mg IV once with exactly 30 minutes of observation, and supplies the fact that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The payer record changes the authorization fields from unspecified to the hospital outpatient infusion center through exactly September 30 at 23:59."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5"
+      ],
+      "why": "The confirmed family availability and language need change the plan from an unspecified communication arrangement to a Patient Services commitment for a Mandarin interpreter and daughter attendance at exactly 14:00."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}
