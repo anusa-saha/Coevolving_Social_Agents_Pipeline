@@ -1,0 +1,144 @@
+{
+  "scenario_id": "scenario_15",
+  "scenario_type": "water_distribution_scheduling",
+  "description": "A battalion S-4 logistics officer must publish the next day's potable-water point schedule for the clinic, engineer support, and personnel services, including allocation volumes and required control actions.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "Battalion S-4 Logistics Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Clinic Logistics NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Sgt. Patel",
+      "role": "Engineer Support NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The battalion water point can distribute up to 6,000 gallons tomorrow.",
+    "S2": "Maj. Alvarez publishes the final water distribution schedule.",
+    "S3": "The standard plan requests 1,800 gallons for the clinic, 1,600 gallons for engineer washdown, and 1,200 gallons for personnel services.",
+    "S4": "The water point is scheduled to operate in three windows tomorrow: 0700-0900, 0900-1100, and 1300-1500.",
+    "S5": "At the routine morning sustainment huddle, Maj. Alvarez asks the clinic and engineer support representatives to report any updates before the schedule is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The clinic's extended screening schedule tomorrow requires exactly 2,500 gallons, and the clinic must receive its water during the 0700-0900 window; SFC Morgan confirmed both details with the clinic supervisor this morning, but the revised request has not yet reached the S-4 worksheet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The engineer washdown area cannot accept water until 1300 because its concrete collection pad is curing, and the extended work plan requires exactly 2,200 gallons; Sgt. Patel received the site update from the engineer section this morning, but it has not yet been posted to the water-point schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "clinic_window": "string",
+      "clinic_gallons": "integer",
+      "personnel_services_window": "string",
+      "personnel_services_gallons": "integer",
+      "engineer_window": "string",
+      "engineer_gallons": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The clinic must be assigned the 0700-0900 window and exactly 2,500 gallons.",
+    "Personnel services must be assigned the 0900-1100 window and exactly 1,200 gallons.",
+    "Engineer washdown must be assigned the 1300-1500 window and exactly 2,200 gallons.",
+    "The published allocations must total exactly 5,900 gallons.",
+    "A clinic water-request update commitment must be recorded.",
+    "An engineer site-readiness confirmation commitment must be recorded.",
+    "The clinic requirement must be cited in the decision justification after being stated by the clinic representative."
+  ],
+  "content_checks": {
+    "C1": "decisions['clinic_window'] == '0700-0900' and decisions['clinic_gallons'] == 2500",
+    "C2": "decisions['personnel_services_window'] == '0900-1100' and decisions['personnel_services_gallons'] == 1200",
+    "C3": "decisions['engineer_window'] == '1300-1500' and decisions['engineer_gallons'] == 2200",
+    "C4": "decisions['clinic_gallons'] + decisions['personnel_services_gallons'] + decisions['engineer_gallons'] == 5900",
+    "C5": "any(c['type'] == 'clinic_water_request_update' and c['target'] == 'clinic' for c in commitments)",
+    "C6": "any(c['type'] == 'engineer_site_readiness_confirmation' and c['target'] == 'engineer_washdown' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "C5",
+        "P1"
+      ],
+      "why": "The clinic's exact requirement changes its allocation from 1,800 to 2,500 gallons, fixes the clinic to 0700-0900, raises the total to 5,900 gallons, and requires the clinic request update."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The curing pad changes engineer washdown from the standard plan to the 1300-1500 window and exactly 2,200 gallons, raises the total to 5,900 gallons, and requires site-readiness confirmation."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

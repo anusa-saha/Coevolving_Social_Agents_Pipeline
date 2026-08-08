@@ -1,0 +1,130 @@
+{
+  "scenario_id": "scenario_29",
+  "scenario_type": "equipment_allocation",
+  "description": "An S-4 logistics officer must assign available material-handling equipment to three routine warehouse moves for the next workday and record the control actions required for each move.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "S-4 Logistics Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Warehouse Operations NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "CW2 Patel",
+      "role": "Material-Handling Equipment Maintenance Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Tomorrow's warehouse plan includes moving one clinic cold-chain pallet, one generator skid, and one communications shelter crate from the receiving yard to their assigned storage areas.",
+    "S2": "One electric forklift designated F-2, one diesel forklift designated F-1, and one 5-ton mobile crane are available for the workday.",
+    "S3": "Maj. Alvarez issues the final material-handling assignment, and each move must have its equipment assignment and safety control recorded before work begins.",
+    "S4": "The logistics section uses its routine morning material-handling huddle to confirm any receiving, load-planning, or equipment-status updates before the assignment is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The clinic receiving dock's turning radius was measured this morning and only electric forklift F-2 can enter and align with the cold-chain pallet position; SFC Morgan has the signed warehouse measurement, but the revised dock note has not yet been added to tomorrow's handling sheet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The generator skid was weighed at 4,800 kilograms during this morning's receiving inspection, exceeding both forklifts' 3,000-kilogram rating, so the skid must be assigned to the 5-ton mobile crane; CW2 Patel has the scale record, but the receiving manifest still lists the old estimated weight."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "clinic_pallet_equipment": "string",
+      "generator_skid_equipment": "string",
+      "communications_crate_equipment": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The clinic cold-chain pallet must be assigned to electric forklift F-2.",
+    "The generator skid must be assigned to the 5-ton mobile crane.",
+    "The settlement must record that PF1 was used to support the clinic pallet assignment and its dock constraint.",
+    "The settlement must record that PF2 was used to support the generator skid assignment and its measured 4,800-kilogram weight.",
+    "Both the dock-measurement fact and the generator-weight fact must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "'F-2' in decisions['clinic_pallet_equipment']",
+    "C2": "decisions['generator_skid_equipment'] == '5-ton mobile crane'",
+    "C4": "'PF1' in credited_facts or 'PF1' in justification_fact_ids or any(('turning radius' in c['detail'] or 'F-2' in c['detail']) and ('clinic' in c['target'] or 'clinic' in c['detail'] or 'cold-chain' in c['target'] or 'cold-chain' in c['detail']) for c in commitments)",
+    "C5": "'PF2' in credited_facts or 'PF2' in justification_fact_ids or any('4,800' in c['detail'] and ('generator' in c['target'] or 'generator' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "P1"
+      ],
+      "why": "The measured dock constraint changes the clinic pallet assignment to F-2 and requires the settlement to record use of that dock constraint."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5",
+        "P2"
+      ],
+      "why": "The exact 4,800-kilogram weight changes the generator assignment to the 5-ton mobile crane and requires the settlement to record use of that measured weight."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

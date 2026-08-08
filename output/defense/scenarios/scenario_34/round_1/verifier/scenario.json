@@ -1,0 +1,169 @@
+{
+  "scenario_id": "scenario_34",
+  "scenario_type": "supply_chain_replenishment",
+  "description": "An S-4 logistics officer must approve a replenishment order for three routine sustainment commodities, set the delivery dates, and record the receiving controls needed for each shipment.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "S-4 Logistics Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Capt. Morgan",
+      "role": "Medical Logistics Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SFC Patel",
+      "role": "Maintenance Supply NCO"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Lt. Brooks",
+      "role": "Transportation Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The next supplier convoy can carry up to 700 combined load units for the base.",
+    "S2": "The standard replenishment request is 120 sterile-kit cases, 200 liters of hydraulic fluid, and 100 units of diesel additive.",
+    "S3": "Maj. Alvarez must approve the quantities, delivery dates, and receiving instructions before the order is released.",
+    "S4": "The weekly sustainment huddle is the routine point at which medical logistics, maintenance supply, and transportation report changes to their standard replenishment requests."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Capt. Morgan confirmed this morning that the clinic's upcoming treatment schedule requires exactly 180 sterile-kit cases, and the cases must arrive on 21 June for the clinic's receiving cycle; the updated clinical demand has not yet been entered in the logistics request."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "SFC Patel confirmed from the maintenance work package that exactly 260 liters of hydraulic fluid are required for the scheduled overhaul, with delivery set for 26 June; the work package is still being reconciled with the supply ledger."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Lt. Brooks confirmed that exactly 150 units of diesel additive must arrive on 24 June to meet the carrier's booked receiving appointment; the appointment confirmation is in the transportation folder but has not yet been added to the replenishment request."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "sterile_kit_cases": "integer",
+      "sterile_kit_delivery_date": "string",
+      "hydraulic_fluid_liters": "integer",
+      "hydraulic_fluid_delivery_date": "string",
+      "diesel_additive_units": "integer",
+      "diesel_additive_delivery_date": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The order must contain exactly 180 sterile-kit cases for delivery on 21 June.",
+    "The order must contain exactly 260 liters of hydraulic fluid for delivery on 26 June.",
+    "The order must contain exactly 150 units of diesel additive for delivery on 24 June.",
+    "The combined order must remain within the 700-load-unit convoy capacity.",
+    "A cold-chain receiving control must be recorded for the sterile-kit shipment.",
+    "A hazardous-material receiving control must be recorded for the hydraulic-fluid shipment.",
+    "A carrier-appointment confirmation control must be recorded for the diesel-additive shipment.",
+    "The clinic demand update must be cited in the justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['sterile_kit_cases'] == 180",
+    "C2": "decisions['sterile_kit_delivery_date'] == '21 June'",
+    "C3": "decisions['hydraulic_fluid_liters'] == 260",
+    "C4": "decisions['hydraulic_fluid_delivery_date'] == '26 June'",
+    "C5": "decisions['diesel_additive_units'] == 150",
+    "C6": "decisions['diesel_additive_delivery_date'] == '24 June'",
+    "C7": "decisions['sterile_kit_cases'] + decisions['hydraulic_fluid_liters'] + decisions['diesel_additive_units'] <= 700",
+    "C8": "any(c['type'] == 'cold_chain_receiving' and c['target'] == 'sterile_kit_cases' for c in commitments)",
+    "C9": "any(c['type'] == 'hazmat_receiving' and c['target'] == 'hydraulic_fluid' for c in commitments)",
+    "C10": "any(c['type'] == 'carrier_appointment_confirmation' and c['target'] == 'diesel_additive' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C8",
+        "P1"
+      ],
+      "why": "The clinic demand changes the sterile-kit quantity from the standard 120 cases to exactly 180 and fixes delivery on 21 June, requiring the cold-chain receiving control."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C9"
+      ],
+      "why": "The maintenance work package changes the hydraulic-fluid quantity from the standard 200 liters to exactly 260 and fixes delivery on 26 June, requiring the hazardous-material receiving control."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C10"
+      ],
+      "why": "The carrier appointment changes the diesel-additive quantity from the standard 100 units to exactly 150 and fixes delivery on 24 June, requiring appointment confirmation."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 4
+}

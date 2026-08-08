@@ -1,0 +1,164 @@
+{
+  "scenario_id": "scenario_33",
+  "scenario_type": "training_scheduling",
+  "description": "A company commander must publish a three-day schedule for mandatory operator and safety refresher sessions, assigning each session a time and recording the control required to conduct it.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Morgan",
+      "role": "Company Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Sgt. Patel",
+      "role": "Company Training NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SFC Alvarez",
+      "role": "Motor Pool Sergeant"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Lt. Brooks",
+      "role": "Company Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company must complete forklift-operator certification, generator-operator refresher training, and hazardous-materials handling refresher training during the next three workdays.",
+    "S2": "Each session requires a two-hour block, and Capt. Morgan publishes the binding company training schedule.",
+    "S3": "The normal available training periods are Monday 0800-1200, Tuesday 0800-1600, and Wednesday 0800-1200.",
+    "S4": "The training room, motor pool training bay, and safety classroom are available unless a scheduled facility or safety control requires otherwise.",
+    "S5": "At the routine weekly training review, Capt. Morgan asks the training NCO, motor pool sergeant, and safety officer for updates before signing the schedule."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The only currently certified forklift evaluator is available for the company session exactly Wednesday from 0900 to 1100; Sgt. Patel confirmed the evaluator's duty roster this morning, but the roster change has not yet been added to the company training slide."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The motor pool training bay is occupied by a scheduled generator load-bank inspection from Tuesday 0800 through 1200, so the generator-operator refresher must be held Tuesday from 1300 to 1500; SFC Alvarez received the maintenance booking from the shop supervisor, but it has not been entered on the training calendar."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The hazardous-materials refresher requires a ventilation pause and safety-monitoring team that are available exactly Monday from 1000 to 1200; Lt. Brooks confirmed the safety team's duty roster today, but the requirement is still only in the safety office's working copy."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "training_slots": {
+        "forklift_certification": "string",
+        "generator_refresher": "string",
+        "hazmat_refresher": "string"
+      },
+      "schedule_published": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The forklift certification must be scheduled for Wednesday 0900-1100.",
+    "The generator-operator refresher must be scheduled for Tuesday 1300-1500.",
+    "The hazardous-materials refresher must be scheduled for Monday 1000-1200.",
+    "The final schedule must be marked as published.",
+    "The generator session must include a load-bank inspection deconfliction commitment.",
+    "The hazardous-materials session must include a ventilation-pause and safety-monitoring commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['training_slots']['forklift_certification'] == 'Wednesday 0900-1100'",
+    "C2": "decisions['training_slots']['generator_refresher'] == 'Tuesday 1300-1500'",
+    "C3": "decisions['training_slots']['hazmat_refresher'] == 'Monday 1000-1200'",
+    "C4": "decisions['schedule_published'] == True",
+    "C5": "any(c['type'] == 'calendar_update' and c['target'] == 'SFC Alvarez' and 'load-bank inspection' in c['detail'] and 'Tuesday 0800-1200' in c['detail'] and 'Tuesday 1300-1500' in c['detail'] for c in commitments)",
+    "C6": "any(c['type'] == 'calendar_update' and c['target'] == 'Lt. Brooks' and 'ventilation pause' in c['detail'] and 'safety-monitoring' in c['detail'] and 'Monday 1000-1200' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1"
+      ],
+      "why": "The evaluator's exact Wednesday 0900-1100 availability changes the forklift session from an open scheduling choice to that specific two-hour slot."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5"
+      ],
+      "why": "The Tuesday 0800-1200 bay inspection changes the generator session to Tuesday 1300-1500 and requires a calendar update that records both the inspection and the rescheduled refresher."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The safety team's exact Monday 1000-1200 availability changes the hazardous-materials session to that slot and requires a calendar update recording the ventilation pause and safety-monitoring team."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 4
+}

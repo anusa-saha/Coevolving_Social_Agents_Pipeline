@@ -1,0 +1,128 @@
+{
+  "scenario_id": "scenario_28",
+  "scenario_type": "water_distribution",
+  "description": "A forward operating base commander must allocate a constrained potable-water delivery among the clinic, dining facility, and vehicle-wash point for the next 24 hours, while recording the operational controls for the distribution plan.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Col. Mercer",
+      "role": "FOB Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Maj. Alvarez",
+      "role": "Medical Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SFC Okafor",
+      "role": "Facilities and Utilities NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The water point will deliver exactly 9,000 liters of potable water for base services during the next 24 hours.",
+    "S2": "The standard daily requests are 2,000 liters for the clinic, 3,000 liters for the dining facility, and 4,000 liters for the vehicle-wash point.",
+    "S3": "Col. Mercer approves the final distribution and any operating controls attached to it.",
+    "S4": "The base's routine morning sustainment huddle reviews current service requirements and equipment status before the day's water allocation is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Maj. Alvarez confirmed this morning that a scheduled patient-screening surge requires exactly 3,600 liters for the clinic during the next 24 hours; the updated clinic consumption estimate is in the medical duty log but has not yet been entered into the sustainment request."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "SFC Okafor confirmed during yesterday's utilities inspection that the vehicle-wash reclaim unit is offline, limiting the wash point to exactly 2,400 liters for the next 24 hours; the maintenance note has not yet been attached to the water-distribution worksheet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "clinic_liters": "integer",
+      "dining_facility_liters": "integer",
+      "vehicle_wash_liters": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The clinic must receive exactly 3,600 liters.",
+    "The dining facility must receive exactly 3,000 liters.",
+    "The vehicle-wash point must receive exactly 2,400 liters.",
+    "The plan must include a control preventing the vehicle-wash point from drawing more than 2,400 liters.",
+    "The clinic requirement must be cited as a justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['clinic_liters'] == 3600",
+    "C2": "decisions['dining_facility_liters'] == 3000",
+    "C3": "decisions['vehicle_wash_liters'] == 2400",
+    "C4": "any((c['type'] == 'draw_limit' or c['type'] == 'operating_control') and (c['target'] == 'vehicle_wash_point' or c['target'] == 'vehicle-wash point') and ('2400' in c['detail'] or '2,400' in c['detail'] or 'draw limit' in c['detail'] or 'draw-limit' in c['detail'] or 'capped' in c['detail'] or 'limited' in c['detail']) for c in commitments)",
+    "C5": "decisions['clinic_liters'] + decisions['dining_facility_liters'] + decisions['vehicle_wash_liters'] == 9000"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The clinic's confirmed surge changes its allocation from the standard 2,000 liters to exactly 3,600 liters and supplies the fact that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The reclaim-unit outage changes the vehicle-wash allocation from the standard 4,000 liters to exactly 2,400 liters and requires a matching control that caps or limits the wash point at 2,400 liters."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

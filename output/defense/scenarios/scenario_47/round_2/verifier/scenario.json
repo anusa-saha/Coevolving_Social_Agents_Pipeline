@@ -1,0 +1,132 @@
+{
+  "scenario_id": "scenario_47",
+  "scenario_type": "maintenance_prioritization",
+  "description": "An S-4 logistics officer must publish the next-workday maintenance board for three support assets, setting their priority order, work windows, and operational controls.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "S-4 Logistics Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Brooks",
+      "role": "Motor Pool Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Capt. Morgan",
+      "role": "S-3 Operations Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The next-workday maintenance board covers V-21, GEN-5, and FL-2, and all three work orders are currently open.",
+    "S2": "The routine motor-pool queue currently lists FL-2 first, V-21 second, and GEN-5 third because FL-2's service parts are already staged.",
+    "S3": "The standard maintenance day runs from 0800 to 1600, and Maj. Alvarez publishes the binding board for support-asset work.",
+    "S4": "At the 0700 daily maintenance synchronization, Maj. Alvarez asks the motor pool chief and the S-3 operations officer for any scheduling or control updates before signing the board."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "SFC Brooks confirmed during this morning's inspection that V-21 requires a brake-system inspection before its next dispatch; the inspection must be the first board item from 0800 to 1200, with a dispatch hold until release. The inspection entry is still in the motor-pool log and has not been uploaded to the board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Capt. Morgan received the support annex for tomorrow's command-post exercise, which requires GEN-5 to remain online through 1300. GEN-5 must therefore occupy position 2 in priority_order, with FL-2 moved to position 3; GEN-5 must be the second board item from 1300 to 1500, with a power-continuity check before service. The annex has not yet been cross-referenced with the maintenance queue."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "priority_order": "list",
+      "V-21_window": "string",
+      "GEN-5_window": "string",
+      "FL-2_window": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "V-21 must be first, GEN-5 second, and FL-2 third on the maintenance board.",
+    "V-21 must be scheduled from 0800 to 1200.",
+    "GEN-5 must be scheduled from 1300 to 1500.",
+    "A commitment detail must include a dispatch hold for V-21.",
+    "A commitment detail must include a power-continuity check for GEN-5."
+  ],
+  "content_checks": {
+    "C1": "decisions['priority_order'] == ['V-21', 'GEN-5', 'FL-2']",
+    "C2": "decisions['V-21_window'] == '0800-1200'",
+    "C3": "decisions['GEN-5_window'] == '1300-1500'",
+    "C4": "any('dispatch hold' in c['detail'] and c['target'] == 'V-21' for c in commitments)",
+    "C5": "any(('power-continuity' in c['detail'] or 'power continuity' in c['detail']) and c['target'] == 'GEN-5' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C4",
+        "P1"
+      ],
+      "why": "The confirmed brake inspection changes V-21 from second in the routine queue to first, fixes its window at 0800-1200, and adds the dispatch hold."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C3",
+        "C5"
+      ],
+      "why": "The command-post exercise requirement places GEN-5 at position 2 instead of position 3, moves FL-2 to position 3, fixes GEN-5's window at 1300-1500, and adds the power-continuity check."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

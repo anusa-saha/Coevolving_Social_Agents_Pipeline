@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_43",
+  "scenario_type": "airfield_ramp_scheduling",
+  "description": "A forward operating base commander must publish the next-day airfield ramp board for three routine cargo aircraft, assigning each aircraft a loading window and recording the handling controls needed for the schedule.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Col. Mercer",
+      "role": "FOB Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Capt. Okafor",
+      "role": "Aviation Liaison"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Maj. Serrano",
+      "role": "S-4 Logistics Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Three routine cargo aircraft, Airlift-1, Airlift-2, and Airlift-3, are expected at the base tomorrow morning.",
+    "S2": "The airfield has one usable cargo ramp, and the available ramp windows are 0900-1000, 1100-1230, and 1300-1500.",
+    "S3": "Each aircraft must be assigned one complete ramp window, and the aircraft may wait on the apron until its assigned window.",
+    "S4": "The standard ramp board follows the aircraft arrival manifest order unless an operational constraint is confirmed.",
+    "S5": "At the routine morning airfield coordination huddle, the aviation liaison and S-4 logistics officer confirm their current constraints before the commander publishes the ramp board."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Airlift-2 has a confirmed onward departure appointment at 1030 and must clear the cargo ramp by 1000, so it requires the 0900-1000 window; Capt. Okafor received the appointment confirmation this morning, but it has not yet been added to the ramp briefing slide."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Airlift-3 carries eight pallets that require exactly 120 minutes of forklift-supported unloading, and the only qualified heavy forklift is booked for another task from 1100 to 1200; Maj. Serrano confirmed the equipment booking with the motor pool this morning, but the restriction has not yet been posted to the airfield schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "ramp_assignments": {
+        "Airlift-1": "string",
+        "Airlift-2": "string",
+        "Airlift-3": "string"
+      }
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Airlift-2 must receive the 0900-1000 ramp window because it must clear the ramp by 1000.",
+    "Airlift-1 must receive the 1100-1230 ramp window after Airlift-2 is processed.",
+    "Airlift-3 must receive the 1300-1500 ramp window so its 120-minute forklift-supported unloading does not overlap the forklift booking.",
+    "The published plan must include a ramp-priority commitment for Airlift-2.",
+    "The published plan must include a forklift-availability commitment for Airlift-3.",
+    "The aviation appointment fact must be cited by the commander."
+  ],
+  "content_checks": {
+    "C1": "decisions['ramp_assignments']['Airlift-2'] == '0900-1000'",
+    "C2": "decisions['ramp_assignments']['Airlift-1'] == '1100-1230'",
+    "C3": "decisions['ramp_assignments']['Airlift-3'] == '1300-1500'",
+    "C4": "any(c['type'] == 'ramp_priority' and c['target'] == 'Airlift-2' for c in commitments)",
+    "C5": "any(c['type'] == 'forklift_availability' and c['target'] == 'Airlift-3' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C4",
+        "P1"
+      ],
+      "why": "The confirmed 1030 onward appointment changes Airlift-2 from the ordinary later manifest position to the exact 0900-1000 window and moves Airlift-1 to 1100-1230, while requiring the ramp-priority control."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C5"
+      ],
+      "why": "The exact 120-minute unloading requirement and the 1100-1200 forklift booking change Airlift-3's usable assignment to exactly 1300-1500 and require a forklift-availability control."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}
