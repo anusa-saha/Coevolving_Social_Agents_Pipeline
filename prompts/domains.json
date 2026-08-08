@@ -1432,12 +1432,12 @@
   },
   "finance": {
     "display_name": "Finance",
-    "domain_context": "Scenarios happen inside a bank, fund, or corporate finance team: loan approvals, portfolio rebalancing, budget sign-off. Decision-makers are typically credit officers, portfolio managers, or finance directors. Private facts should read like ordinary desk-level information: an unlogged risk flag, a compliance constraint, a client relationship detail, a liquidity note. Commitments often take the form of covenants, monitoring requirements, or conditional approvals rather than a simple yes/no.",
+    "domain_context": "Scenarios happen inside a bank, fund, or corporate finance team. Vary the decision-maker role rather than defaulting to the same one -- credit officers, portfolio managers, finance directors, treasury directors, underwriting managers, and risk committee chairs all plausibly make binding calls here. Vary the decision type too: loan approval, portfolio rebalancing, budget sign-off, covenant waivers, credit line renewals, capital expenditure approval, hedging decisions, and cash/liquidity allocation are all fair game -- avoid defaulting to the same 'approve or decline' shape every time. Vary the KIND of hidden lever as well: an unlogged risk flag, a compliance or regulatory constraint, a client relationship detail, a liquidity note, a covenant breach not yet reported, a related-party disclosure, a pending policy change, an internal audit finding, or a counterparty concentration issue -- do not let every scenario's secret be 'a credit score dropped.' Private facts should read like ordinary desk-level information someone would plausibly have from their own coverage area -- always give a concrete, mundane reason the information hasn't reached the decision-maker yet (confirmed this morning, just received in a memo, found while reviewing a file this week, not yet circulated or logged), never silence for no reason. Commitments often take the form of covenants, monitoring requirements, or conditional approvals rather than a simple yes/no. Scenarios in this domain commonly involve 3 to 5 agents -- as the count grows, add more distinct hidden-fact holders and desk functions (e.g. risk, compliance, trading, client coverage) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_finance_001",
         "scenario_type": "credit_decision",
-        "description": "A credit officer must decide whether to approve a small-business loan, with input from a risk analyst and a relationship manager.",
+        "description": "A credit officer must decide whether to approve a small-business loan and its conditions, with input from a risk analyst and a relationship manager.",
         "agents": [
           {
             "agent_id": "A1",
@@ -1467,6 +1467,10 @@
             "text": "A recent credit-bureau pull, not yet in the file, shows the applicant's personal credit score dropped sharply last month due to a separate missed payment."
           },
           "PF2": {
+            "owner": "A2",
+            "text": "Because of the credit dip, standard desk practice also calls for a quarterly financial-reporting covenant on any approval; Colin noted this in his draft risk memo but hasn't attached it to the file yet."
+          },
+          "PF3": {
             "owner": "A3",
             "text": "The applicant has agreed, if asked, to pledge a delivery vehicle worth $20,000 as additional collateral, which would cover the loan gap."
           }
@@ -1483,14 +1487,15 @@
             "S2",
             "S3",
             "S4",
-            "PF1"
+            "PF1",
+            "PF2"
           ],
           "A3": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF2"
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -1505,7 +1510,8 @@
         "settlement_schema": {
           "decisions": {
             "loan_approved": "boolean",
-            "collateral_value_pledged_usd": "integer"
+            "collateral_value_pledged_usd": "integer",
+            "quarterly_reporting_covenant_attached": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -1522,16 +1528,17 @@
           ]
         },
         "acceptance_conditions": [
-          "Additional collateral of at least $20,000 must be required given the credit-score drop.",
-          "The collateral required must not exceed the $25,000 the applicant can realistically pledge.",
+          "Additional collateral of at least $20,000, and no more than $25,000, must be required.",
           "The loan must still be approved, since the collateral gap is coverable.",
+          "A quarterly reporting covenant must be attached given standard practice for this risk profile.",
           "The credit-score drop must be cited as justification for requiring collateral."
         ],
         "content_checks": {
           "C1": "decisions['collateral_value_pledged_usd'] >= 20000",
           "C2": "decisions['collateral_value_pledged_usd'] <= 25000",
           "C3": "decisions['loan_approved'] == True",
-          "C4": "any(c['type'] == 'collateral_pledge' for c in commitments)"
+          "C4": "decisions['quarterly_reporting_covenant_attached'] == True",
+          "C5": "any(c['type'] == 'collateral_pledge' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1549,6 +1556,14 @@
           },
           {
             "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without knowing standard practice calls for a reporting covenant at this risk profile, a generic settlement would approve the loan with collateral but skip the covenant entirely."
+          },
+          {
+            "fact_id": "PF3",
             "owner": "A3",
             "flips": [
               "C3"
@@ -1558,9 +1573,9 @@
         ]
       },
       {
-        "scenario_id": "domain_finance_002",
+        "scenario_id": "domain_finance_003",
         "scenario_type": "portfolio_rebalancing",
-        "description": "A portfolio manager must decide whether to rebalance a client fund out of a large equity position, with input from a compliance officer and a trader.",
+        "description": "A portfolio manager must decide whether to rebalance a client fund out of a large equity position and finalize the execution and client-notification plan, with input from a compliance officer, a trader, and the client relationship manager.",
         "agents": [
           {
             "agent_id": "A1",
@@ -1576,22 +1591,31 @@
             "agent_id": "A3",
             "name": "Marco",
             "role": "Trader"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Priya",
+            "role": "Client Relationship Manager"
           }
         ],
         "shared_context": {
           "S1": "The fund currently holds 18% of its assets in a single equity position.",
           "S2": "Wei makes the final rebalancing decision.",
           "S3": "The position has performed well over the past year.",
-          "S4": "Before deciding, Wei asks compliance and the trading desk for anything relevant."
+          "S4": "Before deciding, Wei asks compliance, the trading desk, and client relations for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "A new internal concentration limit, effective this week, caps any single position at 15% of fund assets."
+            "text": "A new internal concentration limit caps any single position at 15% of fund assets; Sofia just received this in this morning's compliance memo but hasn't circulated it to portfolio managers yet."
           },
           "PF2": {
             "owner": "A3",
-            "text": "Selling down the position in a single trade would move the market price; a staged sell-down over three days avoids meaningful slippage."
+            "text": "Selling down the position in a single trade would move the market price; Marco confirmed with the desk's liquidity model this morning that a staged sell-down over three days avoids meaningful slippage."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The client's investment management agreement requires 5 business days' advance notice before any position exceeding 10% of the fund is reduced by more than a third; Priya found this clause while reviewing the agreement this week but hasn't flagged it to the desk yet."
           }
         },
         "views": {
@@ -1614,6 +1638,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -1621,15 +1652,17 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "rebalance_position": "boolean",
             "staged_sell_down": "boolean",
-            "sell_down_days": "integer"
+            "sell_down_days": "integer",
+            "client_notice_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1647,15 +1680,16 @@
         },
         "acceptance_conditions": [
           "The position must be rebalanced down to comply with the new 15% limit.",
-          "The sell-down must be staged over at least 3 days rather than executed in a single trade.",
-          "The staging should not drag on unreasonably long either.",
+          "The sell-down must be staged over 3-7 days rather than executed in a single trade.",
+          "The client must be given at least 5 business days' notice before the reduction.",
           "The new concentration limit must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['rebalance_position'] == True",
           "C2": "decisions['staged_sell_down'] == True",
           "C3": "any(c['type'] == 'staged_execution' for c in commitments)",
-          "C4": "decisions['sell_down_days'] >= 3 and decisions['sell_down_days'] <= 7"
+          "C4": "decisions['sell_down_days'] >= 3 and decisions['sell_down_days'] <= 7",
+          "C5": "decisions['client_notice_days'] >= 5 and decisions['client_notice_days'] <= 7"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -1675,9 +1709,194 @@
             "owner": "A3",
             "flips": [
               "C2",
+              "C3",
               "C4"
             ],
-            "why": "Without knowing about slippage risk and the specific 3-day staging window, a generic rebalancing decision would not specify staging the trade at all, let alone over that particular timeframe."
+            "why": "Without knowing about slippage risk and the specific 3-day staging window, a generic rebalancing decision would not specify staging the trade at all, let alone over that timeframe."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing about the 5-day notice clause in the client's agreement, a generic plan would execute the trade without any client notice period."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_finance_004",
+        "scenario_type": "hedging_decision",
+        "description": "A treasury director must decide whether to execute a foreign-currency hedge for a large customer receivable and finalize the counterparty split, tenor, and disclosure plan, with input from a credit risk analyst, a corporate treasury analyst, a sales relationship manager, and a compliance officer.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renata",
+            "role": "Treasury Director"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Owen",
+            "role": "Credit Risk Analyst"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ines",
+            "role": "Corporate Treasury Analyst"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Marcus",
+            "role": "Sales Relationship Manager"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Dana",
+            "role": "Compliance Officer"
+          }
+        ],
+        "shared_context": {
+          "S1": "The customer receivable is $2,000,000, denominated in euros, due in 90 days.",
+          "S2": "Renata makes the final hedge decision.",
+          "S3": "The company's standard hedge ratio for receivables like this is 100% of notional, typically placed with Meridian Bank for its favorable rate.",
+          "S4": "Before finalizing, Renata checks with credit risk, treasury, sales, and compliance for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Owen flagged this morning that Meridian Bank has a credit rating downgrade under review, and internal policy caps hedge notional with any counterparty under review at $1,000,000; he hasn't logged this in the counterparty risk system yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Ines confirmed with the customer's AP team this morning that payment will likely arrive 15 days early, changing the effective hedge tenor from 90 to 75 days; this hasn't been updated in the treasury system yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "The customer specifically asked, in a call last week, that the hedge counterparty not be Cascade Bank due to a prior billing dispute; Marcus has this in his call notes but hasn't flagged it to treasury yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Dana confirmed this week that hedges tied to receivables from this customer's jurisdiction require a regulatory disclosure filed within 2 business days of execution, under a rule that took effect last month; she flagged this internally but hasn't updated the compliance checklist yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "meridian_bank_notional_usd": "integer",
+            "hedge_tenor_days": "integer",
+            "counterparty_excludes_cascade": "boolean",
+            "regulatory_disclosure_filed_within_days": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Notional placed with Meridian Bank must be between $500,000 and $1,000,000, given the rating review.",
+          "The hedge tenor must be set to 75 days, given the early-payment update.",
+          "Cascade Bank must be excluded as a counterparty, given the customer's request.",
+          "A regulatory disclosure must be filed within 1-2 business days of execution."
+        ],
+        "content_checks": {
+          "C1": "decisions['meridian_bank_notional_usd'] >= 500000 and decisions['meridian_bank_notional_usd'] <= 1000000",
+          "C2": "decisions['hedge_tenor_days'] == 75",
+          "C3": "decisions['counterparty_excludes_cascade'] == True",
+          "C4": "decisions['regulatory_disclosure_filed_within_days'] >= 1 and decisions['regulatory_disclosure_filed_within_days'] <= 2",
+          "C5": "any(c['type'] == 'regulatory_disclosure' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The standard practice is 100% notional with Meridian Bank at its favorable rate; without PF1, there is no reason to cap notional there instead of placing the full $2,000,000."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about the early payment, a generic hedge would use the standard 90-day tenor instead of 75."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing about the customer's objection, there is no reason to exclude Cascade Bank as a counterparty option."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C4",
+              "C5"
+            ],
+            "why": "Without knowing about the new disclosure rule, a generic hedge execution would not file any regulatory disclosure at all."
           }
         ]
       }
