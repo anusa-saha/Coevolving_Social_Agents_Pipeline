@@ -1,0 +1,170 @@
+{
+  "scenario_id": "scenario_41",
+  "scenario_type": "maintenance_prioritization",
+  "description": "A maintenance control officer must publish the next-workday priority order and work windows for three routine backup-power work orders, assigning the responsible section and recording the operational control for each job.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "WO1 Grant",
+      "role": "Maintenance Control Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morales",
+      "role": "Facilities NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Capt. Shah",
+      "role": "Clinic Operations Officer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Lt. Okafor",
+      "role": "Signal Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The next-workday maintenance board has open work orders for GEN-2, GEN-4, and UPS-1.",
+    "S2": "GEN-2 supports the facilities area, GEN-4 supports the clinic, and UPS-1 supports the communications shelter.",
+    "S3": "WO1 Grant signs the binding maintenance board, and the board must identify a priority order, work window, responsible section, and operational control for each work order.",
+    "S4": "Power Section, the Generator Team, and Signal Section can work separate assigned jobs during the day.",
+    "S5": "As part of the normal morning maintenance-board review, WO1 Grant checks each supported section for schedule restrictions before signing the board."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "SFC Morales confirmed during the 0600 facilities inspection that GEN-2 has a coolant leak requiring lockout and repair in the exact 0800-1100 work window, with Power Section responsible; the inspection entry is still being entered into the maintenance system and is not on the draft board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Capt. Shah confirmed that the clinic will run a vaccine-refrigerator validation from 0900 through 1300, so GEN-4 must remain online until 1300 and its maintenance window must be exactly 1300-1500. Generator Team is responsible for GEN-4, and the board must include a clinic-service deconfliction control; the clinic schedule was finalized after the draft board was circulated."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Lt. Okafor confirmed that UPS-1 battery replacement requires an uninterrupted communications-shelter bypass test from exactly 1400 through 1600, with Signal Section responsible and a bypass-test control recorded; the signal work package has not yet been attached to the maintenance board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "priority_order": "list of strings",
+      "GEN-2_window": "string",
+      "GEN-2_section": "string",
+      "GEN-4_window": "string",
+      "GEN-4_section": "string",
+      "UPS-1_window": "string",
+      "UPS-1_section": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "GEN-2 must be first in the priority order because it requires lockout and repair in the 0800-1100 window.",
+    "GEN-2 must be scheduled for exactly 0800-1100 and assigned to Power Section.",
+    "GEN-4 must be scheduled for exactly 1300-1500 and assigned to the Generator Team.",
+    "UPS-1 must be scheduled for exactly 1400-1600 and assigned to Signal Section.",
+    "A lockout control for GEN-2 must be recorded.",
+    "A clinic-service deconfliction control for GEN-4 must be recorded.",
+    "A bypass-test control for UPS-1 must be recorded.",
+    "The GEN-2 coolant-leak fact must be cited in the justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['priority_order'][0] == 'GEN-2'",
+    "C2": "decisions['GEN-2_window'] == '0800-1100' and decisions['GEN-2_section'] == 'Power Section'",
+    "C3": "decisions['GEN-4_window'] == '1300-1500' and decisions['GEN-4_section'] == 'Generator Team'",
+    "C4": "decisions['UPS-1_window'] == '1400-1600' and decisions['UPS-1_section'] == 'Signal Section'",
+    "C5": "any(c['target'] == 'GEN-2' and (c['type'] == 'equipment_lockout' or ('lockout' in c['detail']) or ('Lockout' in c['detail'])) for c in commitments)",
+    "C6": "any(c['target'] == 'GEN-4' and (c['type'] == 'clinic_service_deconfliction' or ('clinic' in c['detail']) or ('Clinic' in c['detail'])) for c in commitments)",
+    "C7": "any(c['target'] == 'UPS-1' and (c['type'] == 'bypass_test' or c['type'] == 'bypass_test_control' or ('bypass-test' in c['detail']) or ('bypass test' in c['detail'])) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The confirmed coolant leak changes GEN-2 to first priority, fixes its work window at exactly 0800-1100, assigns Power Section, and requires the GEN-2 lockout control."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The 0900-1300 clinic validation fixes GEN-4's maintenance window at exactly 1300-1500, assigns the Generator Team, and requires a clinic-service deconfliction control."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C7"
+      ],
+      "why": "The exact 1400-1600 uninterrupted bypass-test period fixes UPS-1's work window, assigns Signal Section, and requires the bypass-test control."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 4
+}
