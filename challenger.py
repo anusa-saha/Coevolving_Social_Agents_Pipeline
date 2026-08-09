@@ -87,7 +87,7 @@ def generate_scenario(scenario_type: str = None, num_agents: int = None) -> dict
         model=config.CHALLENGER_MODEL,
         messages=messages,
         temperature=0.5,
-        max_tokens=4000,
+        max_tokens=9000,
         json_mode=True,
     )
     scenario = extract_json(raw)
@@ -132,7 +132,7 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
         model=config.CHALLENGER_MODEL,
         messages=messages,
         temperature=0.2,
-        max_tokens=7000,
+        max_tokens=10000,
         json_mode=True,
     )
     scenario = extract_json(raw)

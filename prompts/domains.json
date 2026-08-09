@@ -1904,12 +1904,12 @@
   },
   "education": {
     "display_name": "Education",
-    "domain_context": "Scenarios happen inside a school or district: student placement, discipline, field-trip logistics, resource requests. Decision-makers are typically principals, department heads, or counselors. Private facts should read like ordinary school-administration details: an IEP requirement, a behavioral-fit note from a teacher, a budget cap from the office, a safety concern from a chaperone. Commitments often take the form of accommodations, staffing changes, or budget conditions.",
+    "domain_context": "Scenarios happen inside a school or district. Vary the decision-maker role rather than defaulting to the same one -- principals, department heads, counselors, special education coordinators, assistant principals, and curriculum directors all plausibly make binding calls here. Vary the decision type too: student placement, discipline and behavior plans, field-trip or activity logistics, IEP/504 accommodation decisions, resource or budget requests, staffing/substitute coverage, facility or room scheduling, and testing-accommodation approval are all fair game -- avoid defaulting to the same 'choose between two options' shape every time. Vary the KIND of hidden lever as well: an IEP or 504 requirement, a behavioral-fit note from a teacher, a budget cap from the office, a safety or medical concern, a scheduling conflict, a compliance or legal deadline, a family circumstance, or a staffing certification gap -- do not let every scenario's secret be 'a hidden accessibility need.' Private facts should read like ordinary school-administration knowledge someone would plausibly have from their own role -- a teacher's own classroom observation or a counselor's own file review needs no extra explanation, but a fact that required active checking (calling a vendor, reviewing a compliance calendar, confirming with a family) should say so briefly, and always give a concrete reason it hasn't reached the decision-maker yet if it easily could have. Commitments often take the form of accommodations, staffing changes, or budget conditions. Scenarios in this domain commonly involve 3 to 5 agents -- as the count grows, add more distinct hidden-fact holders and school functions (e.g. teaching, counseling, health, family liaison, specialist services) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_education_001",
         "scenario_type": "student_placement",
-        "description": "A principal must decide which class a transferring student joins, with input from a teacher and a school counselor.",
+        "description": "A principal must decide which class a transferring student joins and finalize the accommodation plan, with input from a teacher and a school counselor.",
         "agents": [
           {
             "agent_id": "A1",
@@ -1930,17 +1930,21 @@
         "shared_context": {
           "S1": "A transferring student needs to be placed in one of two 5th-grade classes.",
           "S2": "Ms. Alvarez makes the final placement decision.",
-          "S3": "Both classes currently have similar enrollment numbers.",
+          "S3": "Mr. Doyle's class has a strong track record integrating students with support needs, based on last year's parent feedback.",
           "S4": "Before deciding, Ms. Alvarez asks the teacher and counselor for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Mr. Doyle's class already has two students with significant behavioral support needs, and adding a third would exceed what one aide can manage."
+            "text": "Mr. Doyle's class already has two students with significant behavioral support needs, and adding a third would exceed what one aide can manage; he raised this at this week's team meeting but it hasn't been noted in the placement tracker yet."
           },
           "PF2": {
             "owner": "A3",
             "text": "The transferring student's file includes an active IEP requiring a classroom aide be present at all times."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "The IEP also specifies the aide must be confirmed and in place within 5 school days of enrollment, per the district's special-education compliance calendar; Ms. Freeman found this while reviewing the timeline this week but hasn't flagged the deadline to the office yet."
           }
         },
         "views": {
@@ -1962,7 +1966,8 @@
             "S2",
             "S3",
             "S4",
-            "PF2"
+            "PF2",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -1977,7 +1982,8 @@
         "settlement_schema": {
           "decisions": {
             "placed_in_class": "string",
-            "aide_coverage": "string"
+            "aide_coverage": "string",
+            "aide_confirmed_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -1995,15 +2001,17 @@
         },
         "acceptance_conditions": [
           "The student must be placed in the other class, given Mr. Doyle's aide capacity.",
-          "Aide coverage must be full-day, not partial, given the IEP requirement that an aide be present at all times.",
+          "Aide coverage must be full-day, given the IEP requirement.",
           "A formal aide-assignment commitment must be logged.",
-          "A record confirming IEP compliance must be logged."
+          "A record confirming IEP compliance must be logged.",
+          "The aide must be confirmed within 1-5 school days, per the compliance timeline."
         ],
         "content_checks": {
           "C1": "decisions['placed_in_class'] != 'Doyle'",
           "C2": "decisions['aide_coverage'] == 'full_day'",
           "C3": "any(c['type'] == 'aide_assignment' for c in commitments)",
-          "C4": "any(c['type'] == 'iep_compliance_log' for c in commitments)"
+          "C4": "any(c['type'] == 'iep_compliance_log' for c in commitments)",
+          "C5": "decisions['aide_confirmed_within_days'] >= 1 and decisions['aide_confirmed_within_days'] <= 5"
         },
         "provenance_checks": {
           "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
@@ -2015,7 +2023,7 @@
             "flips": [
               "C1"
             ],
-            "why": "Without knowing Mr. Doyle's class is already at aide capacity, a generic even-split placement could still send the student there."
+            "why": "Doyle's class looks like the stronger placement given its track record; without PF1, there is no reason to place the student elsewhere."
           },
           {
             "fact_id": "PF2",
@@ -2026,14 +2034,22 @@
               "C4",
               "P1"
             ],
-            "why": "Without the IEP requirement, there is no reason to assign any aide, let alone full-day coverage or a formal compliance log, at all."
+            "why": "Without the IEP requirement, there is no reason to assign any aide, let alone full-day coverage or a formal compliance log."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing about the 5-day compliance deadline, a generic aide-assignment plan would not set a specific confirmation timeline."
           }
         ]
       },
       {
         "scenario_id": "domain_education_002",
         "scenario_type": "field_trip_logistics",
-        "description": "A department head must approve the vendor and budget for an upcoming field trip, with input from the lead teacher and the school's business office liaison.",
+        "description": "A department head must approve the vendor, budget, and medical-staffing plan for an upcoming field trip, with input from the lead teacher, the school's business office liaison, and the school nurse.",
         "agents": [
           {
             "agent_id": "A1",
@@ -2049,22 +2065,31 @@
             "agent_id": "A3",
             "name": "Devon",
             "role": "Business Office Liaison"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Nurse Patel",
+            "role": "School Nurse"
           }
         ],
         "shared_context": {
           "S1": "Two bus vendors have submitted quotes for the trip.",
-          "S2": "Mr. Suarez gives final approval on vendor and budget.",
+          "S2": "Mr. Suarez gives final approval on vendor, budget, and staffing.",
           "S3": "Vendor A's quote is $200 cheaper than Vendor B's.",
-          "S4": "Before approving, Mr. Suarez asks the lead teacher and business office for anything relevant."
+          "S4": "Before approving, Mr. Suarez asks the lead teacher, business office, and school nurse for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Vendor A's buses lack the wheelchair lift needed for a student on this trip."
+            "text": "Vendor A's buses lack the wheelchair lift needed for a student on this trip; Ms. Whitfield called the vendor's dispatcher this week to confirm accessibility features and learned this, but hasn't updated the trip planning sheet yet."
           },
           "PF2": {
             "owner": "A3",
             "text": "The trip's total budget, including Vendor B's higher quote, is already approved and does not need additional sign-off."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "One student on the trip carries an EpiPen for a severe allergy, and district policy requires a staff member trained in epinephrine administration to ride on the same bus; Nurse Patel confirmed this with the student's health plan this week but hasn't flagged it to the trip organizers yet."
           }
         },
         "views": {
@@ -2087,6 +2112,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -2094,15 +2126,17 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "vendor_selected": "string",
             "additional_budget_approval_needed": "boolean",
-            "wheelchair_lift_confirmed": "boolean"
+            "wheelchair_lift_confirmed": "boolean",
+            "epipen_trained_staff_assigned": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -2121,14 +2155,17 @@
         "acceptance_conditions": [
           "Vendor B must be selected, given Vendor A's lack of accessibility.",
           "No additional budget approval should be flagged as needed.",
-          "Wheelchair-lift availability must be explicitly confirmed before approval.",
+          "Wheelchair-lift availability must be explicitly confirmed.",
+          "A trained staff member must be assigned to the student's bus, given the EpiPen need.",
           "The accessibility gap must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['vendor_selected'] == 'Vendor B'",
           "C2": "decisions['additional_budget_approval_needed'] == False",
           "C3": "decisions['wheelchair_lift_confirmed'] == True",
-          "C4": "any(c['type'] == 'accessibility_confirmation' for c in commitments)"
+          "C4": "any(c['type'] == 'accessibility_confirmation' for c in commitments)",
+          "C5": "decisions['epipen_trained_staff_assigned'] == True",
+          "C6": "any(c['type'] == 'medical_staffing' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2143,7 +2180,7 @@
               "C4",
               "P1"
             ],
-            "why": "Vendor A looks like the obvious cheaper pick; without PF1, there is no reason to pay more for Vendor B, confirm a wheelchair lift, or log an accessibility commitment at all."
+            "why": "Vendor A looks like the obvious cheaper pick; without PF1, there is no reason to pay more for Vendor B or confirm a wheelchair lift."
           },
           {
             "fact_id": "PF2",
@@ -2151,7 +2188,198 @@
             "flips": [
               "C2"
             ],
-            "why": "Without knowing the higher quote is already covered, a cautious generic response would flag needing more budget approval before picking the pricier vendor."
+            "why": "Without knowing the higher quote is already covered, a cautious generic response would flag needing more budget approval."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5",
+              "C6"
+            ],
+            "why": "Without knowing about the EpiPen requirement, there is no reason to assign a trained staff member to that specific bus."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_education_004",
+        "scenario_type": "iep_services_review",
+        "description": "A special education coordinator must finalize a student's annual IEP placement and services plan, with input from the general education teacher, the school psychologist, the speech-language pathologist, and the parent liaison.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Ms. Chen",
+            "role": "Special Education Coordinator"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Mr. Alvarez",
+            "role": "General Education Teacher"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Dr. Osei",
+            "role": "School Psychologist"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Ms. Reyes",
+            "role": "Speech-Language Pathologist"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Mr. Kim",
+            "role": "Parent Liaison"
+          }
+        ],
+        "shared_context": {
+          "S1": "The student's annual IEP review is scheduled for this week.",
+          "S2": "Ms. Chen finalizes the placement and services plan.",
+          "S3": "The student has been performing at grade level in general education classes with periodic support.",
+          "S4": "The current IEP specifies 30 minutes of daily one-on-one support and weekly speech therapy.",
+          "S5": "Before finalizing, Ms. Chen asks the teacher, psychologist, speech-language pathologist, and parent liaison for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Mr. Alvarez has noticed the student needs about 15 minutes more one-on-one redirection during transitions than the current plan accounts for; he mentioned this informally to a colleague but hasn't documented it in the IEP progress notes yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Dr. Osei's recent testing shows the student's processing speed score dropped into a range that newly qualifies for extended time on assessments; the report is finalized but hasn't been entered into the IEP system yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Ms. Reyes recommends increasing speech therapy from once to twice weekly, based on this semester's slower-than-expected progress data; she finalized this recommendation this week but hasn't submitted the service-minutes change yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "The family has a work schedule conflict that makes the currently proposed Tuesday/Thursday after-school therapy slot impossible, but confirmed this week that Monday/Wednesday would work; Mr. Kim hasn't updated the scheduling system yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "daily_support_minutes": "integer",
+            "extended_time_accommodation": "boolean",
+            "speech_therapy_sessions_per_week": "integer",
+            "therapy_schedule_days": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Daily one-on-one support must increase to 45 minutes.",
+          "Extended time on assessments must be added as an accommodation.",
+          "Speech therapy must increase to twice weekly.",
+          "The therapy schedule must move to Monday/Wednesday.",
+          "A formal IEP documentation commitment must exist."
+        ],
+        "content_checks": {
+          "C1": "decisions['daily_support_minutes'] == 45",
+          "C2": "decisions['extended_time_accommodation'] == True",
+          "C3": "decisions['speech_therapy_sessions_per_week'] == 2",
+          "C4": "decisions['therapy_schedule_days'] == 'Monday/Wednesday'",
+          "C5": "any(c['type'] == 'iep_documentation' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing about the extra 15 minutes of transition support needed, the plan would keep the current 30-minute baseline."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "P1"
+            ],
+            "why": "Without the new processing-speed finding, there is no basis to add extended time as an accommodation."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without the therapist's updated recommendation, the plan would keep speech therapy at once weekly."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without knowing about the family's schedule conflict and the confirmed alternative, the plan would keep the unworkable Tuesday/Thursday slot."
           }
         ]
       }
@@ -2411,7 +2639,7 @@
   },
   "legal": {
     "display_name": "Legal",
-    "domain_context": "Scenarios happen inside a law firm or in-house legal team: settlement authority, contract renewal, litigation strategy. Decision-makers are typically lead attorneys or general counsel. Private facts should read like ordinary case-file or business detail: a precedent not yet briefed, a client's non-monetary priority, an audit finding, a pricing benchmark. Commitments often take the form of settlement terms, contract clauses, or compliance actions rather than bare dollar figures alone.",
+    "domain_context": "Scenarios happen inside a law firm or in-house legal team. Vary the decision-maker role rather than defaulting to the same one -- lead attorneys, general counsel, deputy general counsel, litigation directors, and chief legal officers all plausibly make binding calls here. Vary the decision type too: settlement authority, contract renewal, litigation strategy, IP licensing, employment dispute resolution, M&A due diligence go/no-go, and regulatory filing decisions are all fair game -- avoid defaulting to the same 'settle or renew' shape every time. Vary the KIND of hidden lever as well: a precedent not yet briefed, a client's non-monetary priority, an audit finding, a pricing benchmark, a privilege/conflict-of-interest issue, a filing or statute-of-limitations deadline, a discovery finding, or an insurance-coverage detail -- do not let every scenario's secret be 'a case-law finding.' Private facts should read like ordinary case-file or business detail someone would plausibly have from their own coverage area -- an attorney's own legal research or a liaison's own conversation with the client needs no extra explanation, but a fact that required active checking (reviewing a document set, confirming with another department) should say so briefly, and always give a concrete reason it hasn't reached the decision-maker yet if it easily could have. Commitments often take the form of settlement terms, contract clauses, or compliance actions rather than bare dollar figures alone. Scenarios in this domain commonly involve 3 to 5 agents -- as the count grows, add more distinct hidden-fact holders and legal/business functions (e.g. compliance, tax, HR, IP) rather than padding with agents who don't hold a decisive fact.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_legal_001",
@@ -2437,17 +2665,21 @@
         "shared_context": {
           "S1": "The dispute involves a claimed $80,000 in damages.",
           "S2": "Ms. Patel sets the final settlement offer.",
-          "S3": "The opposing party has signaled openness to settling out of court.",
+          "S3": "The opposing party's initial counteroffer was $65,000, and they've signaled general openness to settling out of court.",
           "S4": "Before finalizing the offer, Ms. Patel asks the associate and client liaison for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "A recent appellate ruling in a near-identical case caps recoverable damages at $50,000 in this jurisdiction."
+            "text": "A recent appellate ruling in a near-identical case caps recoverable damages at $50,000 in this jurisdiction; Jon found this while researching a related motion this week but hasn't circulated it in a memo yet."
           },
           "PF2": {
+            "owner": "A2",
+            "text": "The same ruling requires any settlement relying on the cap to explicitly cite the case by name in the agreement to preserve its legal protection; Jon noted this in his research but hasn't flagged it as a drafting requirement yet."
+          },
+          "PF3": {
             "owner": "A3",
-            "text": "The client has privately said a public non-disparagement clause matters more to them than the exact settlement amount."
+            "text": "The client mentioned directly to Renata during this week's check-in call that a public non-disparagement clause matters more to them than the exact settlement amount."
           }
         },
         "views": {
@@ -2462,14 +2694,15 @@
             "S2",
             "S3",
             "S4",
-            "PF1"
+            "PF1",
+            "PF2"
           ],
           "A3": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF2"
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -2485,7 +2718,8 @@
           "decisions": {
             "offer_amount": "integer",
             "nondisparagement_clause_included": "boolean",
-            "nondisparagement_clause_public_scope": "boolean"
+            "nondisparagement_clause_public_scope": "boolean",
+            "appellate_case_cited": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -2502,15 +2736,17 @@
           ]
         },
         "acceptance_conditions": [
-          "The offer amount must be set at exactly the $50,000 appellate cap, not needlessly lower.",
+          "The offer amount must be set at exactly the $50,000 appellate cap.",
           "A non-disparagement clause must be included, with public scope specifically.",
+          "The settlement agreement must cite the appellate case by name to preserve the cap.",
           "The appellate ruling must be cited as justification for the offer amount."
         ],
         "content_checks": {
           "C1": "decisions['offer_amount'] == 50000",
           "C2": "decisions['nondisparagement_clause_included'] == True",
           "C3": "any(c['type'] == 'nondisparagement' for c in commitments)",
-          "C4": "decisions['nondisparagement_clause_public_scope'] == True"
+          "C4": "decisions['nondisparagement_clause_public_scope'] == True",
+          "C5": "decisions['appellate_case_cited'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2523,23 +2759,31 @@
               "C1",
               "P1"
             ],
-            "why": "Without the appellate cap, a generic offer would either sit near the full $80,000 claim or be an arbitrary lower guess -- not the precise $50,000 ceiling."
+            "why": "With the opposing party's $65,000 counteroffer as the anchor, a generic negotiation would land somewhere between $65,000 and $80,000; without PF1, there is no reason to offer the much lower $50,000 cap."
           },
           {
             "fact_id": "PF2",
+            "owner": "A2",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing the citation requirement, a generic settlement at the correct amount would still fail to preserve the cap's legal protection."
+          },
+          {
+            "fact_id": "PF3",
             "owner": "A3",
             "flips": [
               "C2",
               "C4"
             ],
-            "why": "Without knowing the client's real priority is public non-disparagement specifically, a generic settlement focused only on the dollar amount would omit the clause, or include a private-only version that doesn't match what the client actually wants."
+            "why": "Without knowing the client's real priority is public non-disparagement specifically, a generic settlement focused only on the dollar amount would omit the clause or include a private-only version."
           }
         ]
       },
       {
         "scenario_id": "domain_legal_002",
         "scenario_type": "contract_renewal",
-        "description": "A general counsel must decide whether to renew a vendor contract, with input from a compliance counsel and a procurement lead.",
+        "description": "A general counsel must decide whether to renew a vendor contract and finalize the compliance and pricing conditions, with input from a compliance counsel, a procurement lead, and a data privacy officer.",
         "agents": [
           {
             "agent_id": "A1",
@@ -2555,13 +2799,18 @@
             "agent_id": "A3",
             "name": "Ravi",
             "role": "Procurement Lead"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Priya",
+            "role": "Data Privacy Officer"
           }
         ],
         "shared_context": {
           "S1": "The vendor's current contract expires in two weeks.",
           "S2": "Mr. Osei decides whether to renew.",
           "S3": "The vendor has met all delivery deadlines this year.",
-          "S4": "Before deciding, Mr. Osei asks compliance and procurement for anything relevant."
+          "S4": "Before deciding, Mr. Osei asks compliance, procurement, and data privacy for anything relevant."
         },
         "private_facts": {
           "PF1": {
@@ -2570,7 +2819,11 @@
           },
           "PF2": {
             "owner": "A3",
-            "text": "A competing vendor has quoted 12% lower pricing for equivalent service, contingent on switching within 30 days."
+            "text": "A competing vendor has quoted 12% lower pricing for equivalent service, contingent on switching within 30 days; Ravi received this in a vendor email this week but hasn't logged it in the procurement system yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "A new data-processing addendum must be signed with any vendor handling this data category within 15 days of contract renewal, under a regulatory deadline that took effect this month; Priya flagged this internally but hasn't updated the contract checklist yet."
           }
         },
         "views": {
@@ -2593,6 +2846,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -2600,15 +2860,17 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "certification_remediation_required": "boolean",
             "price_renegotiation_requested": "boolean",
-            "renegotiation_deadline_days": "integer"
+            "renegotiation_deadline_days": "integer",
+            "dpa_signed_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -2626,14 +2888,16 @@
         },
         "acceptance_conditions": [
           "Certification remediation must be required given the audit finding.",
-          "A price renegotiation must be requested given the competing quote, before the 30-day switching window closes.",
+          "A price renegotiation must be requested within 1-30 days, given the competing quote.",
+          "The data-processing addendum must be signed within 1-15 days, given the regulatory deadline.",
           "The audit finding must be cited as justification."
         ],
         "content_checks": {
           "C1": "decisions['certification_remediation_required'] == True",
           "C2": "any(c['type'] == 'certification_remediation' for c in commitments)",
           "C3": "decisions['renegotiation_deadline_days'] >= 1 and decisions['renegotiation_deadline_days'] <= 30",
-          "C4": "decisions['price_renegotiation_requested'] == True"
+          "C4": "decisions['price_renegotiation_requested'] == True",
+          "C5": "decisions['dpa_signed_within_days'] >= 1 and decisions['dpa_signed_within_days'] <= 15"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -2656,7 +2920,191 @@
               "C3",
               "C4"
             ],
-            "why": "Without the competing 12%-cheaper quote and its 30-day window, there is no leverage or deadline pressure to request a price renegotiation from the current vendor at all."
+            "why": "Without the competing 12%-cheaper quote and its 30-day window, there is no leverage or deadline pressure to request a price renegotiation."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing about the new regulatory deadline, a generic renewal would not set any specific timeline for signing the data-processing addendum."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_legal_004",
+        "scenario_type": "ma_due_diligence",
+        "description": "A deputy general counsel must decide whether to proceed with signing an acquisition agreement as scheduled and finalize the deal structure and closing conditions, with input from an M&A associate, tax counsel, employment counsel, and IP counsel.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Deputy General Counsel"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "M&A Associate"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "Tax Counsel"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Employment Counsel"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Lucia",
+            "role": "IP Counsel"
+          }
+        ],
+        "shared_context": {
+          "S1": "The acquisition agreement is scheduled for signature this Friday.",
+          "S2": "Renee gives final sign-off on whether to proceed as scheduled.",
+          "S3": "Due diligence has cleared all financial and operational checks reviewed so far.",
+          "S4": "Before sign-off, Renee asks M&A, tax, employment, and IP counsel for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus found, while reviewing a supplemental document set delivered late last night, that the target company is a defendant in an undisclosed breach-of-contract suit filed three weeks ago; he hasn't added it to the diligence summary yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Aisha confirmed this week that the deal structure as drafted would trigger an unfavorable tax treatment costing approximately $400,000 more than necessary, fixable by restructuring as an asset purchase instead of a stock purchase, but this analysis hasn't been shared with the deal team yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "David learned this week that the target's VP of Engineering, considered essential to post-acquisition integration, has an outstanding competing job offer and no retention agreement is in place; he flagged this internally but hasn't raised it with the deal team yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Lucia found during her IP review this week that a key patent listed in the target's disclosure schedule is co-owned with a former contractor who was never assigned full rights, creating a title gap that must be resolved before signing; she hasn't escalated it yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "proceed_with_signing_friday": "boolean",
+            "deal_structure": "string",
+            "retention_agreement_required": "boolean",
+            "ip_title_resolved_before_signing": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Signing must not proceed Friday as scheduled, given the undisclosed litigation.",
+          "The deal structure must change to an asset purchase, given the tax analysis.",
+          "A retention agreement must be required for the essential VP of Engineering.",
+          "The IP title gap must be resolved before signing.",
+          "A diligence-update commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['proceed_with_signing_friday'] == False",
+          "C2": "decisions['deal_structure'] == 'asset_purchase'",
+          "C3": "decisions['retention_agreement_required'] == True",
+          "C4": "decisions['ip_title_resolved_before_signing'] == True",
+          "C5": "any(c['type'] == 'diligence_update' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Diligence has cleared everything reviewed so far; without PF1, there is no reason to delay Friday's signing at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without the tax analysis, the deal would proceed with the originally drafted stock-purchase structure."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing about the VP of Engineering's competing offer, there is no reason to require a retention agreement before closing."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without knowing about the co-ownership gap, the disclosed patent would be treated as clean and the title issue would go unresolved."
           }
         ]
       }
