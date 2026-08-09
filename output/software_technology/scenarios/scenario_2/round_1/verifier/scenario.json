@@ -1,0 +1,163 @@
+{
+  "scenario_id": "scenario_2",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A tech lead must approve the initial production rollout policy for a new authorization-cache path, setting the rollout size, cache lifetime, invalidation behavior, and customer handling after the normal preflight review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Backend Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Tessa",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The new authorization-cache path passed its planned unit, integration, and staging tests.",
+    "S2": "The production feature flag is scheduled for its first customer traffic on Monday morning.",
+    "S3": "Riley has final authority over the rollout policy and its required operating safeguards.",
+    "S4": "The team's standard preflight practice is for backend engineering, site reliability, and customer support to report any relevant operational constraints before Riley finalizes the flag settings."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing a separate permissions bug yesterday, Mina found that 23 legacy admin endpoints update permissions without emitting the invalidation event consumed by the new cache; she has not yet filed the adapter work because she was confirming which endpoints still use that path."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Owen's load rehearsal this morning measured invalidation-queue propagation at a 9-minute p95 and showed that the queue remains within its safe operating limit only when the first rollout cohort is capped at 10 percent; he has not updated the rollout ticket because the rehearsal finished after the change-control review began."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Tessa confirmed during a support-case review that all 11 SCIM-managed enterprise accounts use an admin workflow that cannot yet explain delayed permission changes, so those accounts must be excluded from the first rollout and a support playbook must be prepared before they are enabled; she has not posted the finding because the cases were being reassigned between support queues."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A4",
+      "A1"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "initial_rollout_percentage": "integer",
+      "cache_ttl_seconds": "integer",
+      "legacy_invalidation_adapter_enabled": "boolean",
+      "revocation_kill_switch_enabled": "boolean",
+      "excluded_customer_segment": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The initial rollout must be capped at exactly 10 percent.",
+    "The authorization cache TTL must be exactly 300 seconds.",
+    "The legacy permission-update path must have its invalidation adapter enabled before rollout.",
+    "The revocation kill switch must be enabled.",
+    "SCIM-managed enterprise accounts must be excluded from the first rollout.",
+    "A support playbook commitment for SCIM-managed enterprise accounts must be recorded.",
+    "A legacy invalidation adapter commitment covering the 23 endpoints must be recorded.",
+    "Mina's discovery about the 23 legacy endpoints must be spoken aloud and cited by Riley as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['initial_rollout_percentage'] == 10",
+    "C2": "decisions['cache_ttl_seconds'] == 300",
+    "C3": "decisions['legacy_invalidation_adapter_enabled'] == True",
+    "C4": "decisions['revocation_kill_switch_enabled'] == True",
+    "C5": "decisions['excluded_customer_segment'] == 'SCIM-managed enterprise accounts'",
+    "C6": "any(c['type'] == 'support_playbook' for c in commitments)",
+    "C7": "any(c['type'] == 'legacy_invalidation_adapter' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C7",
+        "P1"
+      ],
+      "why": "The passing tests do not expose the 23 legacy endpoints, and PF1 changes the plan from ordinary cache enablement to enabling and committing to a legacy invalidation adapter."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2",
+        "C4"
+      ],
+      "why": "PF2 changes the initial cohort to exactly 10 percent, the cache lifetime to exactly 300 seconds, and the operating plan to require an enabled revocation kill switch because propagation reaches a 9-minute p95."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "PF3 changes the first-rollout customer assignment to exclude SCIM-managed enterprise accounts and adds the required support-playbook commitment for those 11 accounts."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

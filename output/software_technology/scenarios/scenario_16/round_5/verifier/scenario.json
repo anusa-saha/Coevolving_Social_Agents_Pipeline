@@ -1,0 +1,167 @@
+{
+  "scenario_id": "scenario_16",
+  "scenario_type": "artifact_registry_migration",
+  "description": "A VP of Developer Infrastructure must approve the operating plan for moving production build artifacts from the legacy registry to a new OCI registry, including the compatibility path, retention controls, and transfer limits, after the routine architecture review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "VP of Developer Infrastructure"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Riley",
+      "role": "Developer Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "Compliance Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Drew",
+      "role": "Infrastructure Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The organization plans to move production build artifacts from the legacy registry to the new OCI registry during the July 12 maintenance window.",
+    "S2": "Morgan makes the final decision on the migration operating plan.",
+    "S3": "The new registry has passed the planned upload, download, and restore tests using the standard build pipelines.",
+    "S4": "During the architecture review, Morgan routinely asks developer platform, compliance, and infrastructure to report any operational requirements before the plan is approved."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While testing an unrelated build-plugin change yesterday, Riley found that 14 production repositories still pull from the legacy registry through hardcoded URLs and cannot be updated before July 12. They require a compatibility proxy and dual-write period, but Riley has not updated the migration document yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Casey confirmed this morning that signed release artifacts must be retained for exactly 180 days under the current audit control, and the retained copies must be immutable. Casey confirmed this while reviewing an audit sample and has not attached the control evidence to the migration ticket yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Drew measured the cross-region transfer path during a separate capacity exercise and confirmed that transfers above exactly 2 terabytes per day trigger a sharply higher egress charge. The migration must therefore use same-region sources and a 2-terabyte-per-day transfer cap, but Drew has not added those limits to the runbook."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "migration_strategy_dual_write": "boolean",
+      "legacy_proxy_enabled": "boolean",
+      "legacy_artifact_retention_days": "integer",
+      "immutable_retention_enabled": "boolean",
+      "transfer_rate_tb_per_day": "integer",
+      "same_region_sources_only": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The migration must use a dual-write-then-cutover strategy.",
+    "The legacy compatibility proxy must be enabled.",
+    "Artifacts must be retained for exactly 180 days.",
+    "Retained artifacts must be immutable.",
+    "Transfer volume must be capped at exactly 2 terabytes per day.",
+    "Migration sources must remain in the same region.",
+    "The plan must include a compatibility commitment, a signed-artifact retention commitment, and a transfer-cost control commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['migration_strategy_dual_write'] == True",
+    "C2": "decisions['legacy_proxy_enabled'] == True",
+    "C3": "decisions['legacy_artifact_retention_days'] == 180",
+    "C4": "decisions['immutable_retention_enabled'] == True",
+    "C5": "decisions['transfer_rate_tb_per_day'] == 2",
+    "C6": "decisions['same_region_sources_only'] == True",
+    "C7": "any(c['target'] == 'Riley' and 'proxy' in c['detail'] and 'dual-write' in c['detail'] for c in commitments)",
+    "C8": "any(c['target'] == 'Casey' and '180-day' in c['detail'] and ('immutable' in c['detail'] or 'immutability' in c['detail']) for c in commitments)",
+    "C9": "any(c['target'] == 'Drew' and 'transfer' in c['detail'] and '2' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7"
+      ],
+      "why": "The 14 hardcoded repositories change the migration strategy to dual-write, require the legacy proxy to be enabled, and require Riley's compatibility commitment to mention both the proxy and dual-write period."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C8",
+        "P1"
+      ],
+      "why": "The audit control changes artifact retention to exactly 180 days, requires immutable copies, and adds Casey's signed-artifact retention commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "The measured egress threshold changes the transfer setting to exactly 2 terabytes per day, restricts sources to the same region, and requires Drew's transfer commitment to specify the 2-unit transfer control."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

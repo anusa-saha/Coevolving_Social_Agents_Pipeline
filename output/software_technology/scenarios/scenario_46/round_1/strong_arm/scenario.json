@@ -1,0 +1,166 @@
+{
+  "scenario_id": "scenario_46",
+  "scenario_type": "data_backfill_operating_plan",
+  "description": "An engineering manager must approve the production operating plan for a customer-data backfill, deciding whether to run it overnight and setting its safeguards, throughput, pause window, and customer communications, with input from data engineering, infrastructure, and customer operations.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Data Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Infrastructure Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Tara",
+      "role": "Customer Operations Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The customer-data backfill is scheduled for tonight from 10:00 PM to 4:00 AM UTC.",
+    "S2": "Riley makes the binding decision on the production backfill plan.",
+    "S3": "The current runbook proposes starting at 10:00 PM, processing 300 records per second, using the primary database for reads, and running continuously through the window.",
+    "S4": "The backfill has completed successfully in staging, and the production runbook is reviewed in the regular release-readiness check before execution."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While investigating a separate replay issue this afternoon, Mina confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts; she has not yet updated the runbook because the replay investigation is still open."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Owen measured the production read replica during a comparable load this morning and confirmed that it sustains exactly 180 records per second; above 180, replication lag grows, so the plan must throttle to exactly 180 records per second and pause after 20 seconds of lag; he recorded the result in a capacity notebook but has not attached it to the release ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While checking tonight's customer schedules, Tara confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries then; she has not sent the required notification because the backfill plan is not yet approved."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "backfill_runs_tonight": "boolean",
+      "idempotency_and_dedupe_enabled": "boolean",
+      "throughput_records_per_second": "integer",
+      "lag_pause_seconds": "integer",
+      "customer_report_pause_start": "string",
+      "customer_report_pause_end": "string",
+      "protected_tenants": [
+        "string"
+      ]
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The backfill must run tonight.",
+    "Idempotency-key enforcement and a deduplication gate must be enabled before the backfill starts.",
+    "The backfill throughput must be exactly 180 records per second.",
+    "The run must pause after exactly 20 seconds of replication lag.",
+    "The backfill must pause from exactly 1:00 AM through exactly 3:00 AM UTC.",
+    "The protected-tenant list must contain exactly Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview.",
+    "A customer-notification commitment for the six protected tenants must exist.",
+    "The duplicate-row risk must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['backfill_runs_tonight'] == True",
+    "C2": "decisions['idempotency_and_dedupe_enabled'] == True",
+    "C3": "decisions['throughput_records_per_second'] == 180",
+    "C4": "decisions['lag_pause_seconds'] == 20",
+    "C5": "decisions['customer_report_pause_start'] == '1:00 AM UTC' and decisions['customer_report_pause_end'] == '3:00 AM UTC'",
+    "C6": "decisions['protected_tenants'] == ['Acme', 'Bluebird', 'Cobalt', 'DeltaWorks', 'Evergreen', 'Fairview']",
+    "C7": "any(c['type'] == 'customer_notification' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The staging run appears ready without this finding; PF1 changes the safeguard from the draft's unspecified behavior to enabling both idempotency-key enforcement and a deduplication gate before production."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The draft's 300-record rate and continuous operation change to exactly 180 records per second with a pause after exactly 20 seconds of lag because PF2 identifies the measured replica limit."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "PF3 changes the schedule to a 1:00-3:00 AM UTC pause, names exactly six protected tenants, and requires a notification commitment for those tenants."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

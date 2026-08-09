@@ -1,0 +1,170 @@
+{
+  "arm": "strong",
+  "temperature": 0.255,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Hi everyone. Since the recommendation API is launching tomorrow morning, I'd like to get the caching and failover policy finalized and signed off today. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before I make any changes or sign off, I want to make sure we've got application and reliability perspectives weighed in. Does anyone have concerns with the current draft, or are we comfortable proceeding with sign-off?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. Since the recommendation API is launching tomorrow morning, I'd like to get the caching and failover policy finalized and signed off today. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before I make any changes or sign off, I want to make sure we've got application and reliability perspectives weighed in. Does anyone have concerns with the current draft, or are we comfortable proceeding with sign-off?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I have a serious concern. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. That means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I haven't filed the security finding yet, but this is a cross-tenant data leakage risk that needs to be addressed before we sign off on the caching policy.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I have a serious concern. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. That means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I haven't filed the security finding yet, but this is a cross-tenant data leakage risk that needs to be addressed before we sign off on the caching policy.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I have a reliability concern I need to put on the table. During a failover rehearsal this morning, I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I haven't updated the launch runbook with this yet. The good news is that 20 minutes of cache capacity exceeds the 12-minute recovery time, so there's a viable window to serve cached responses during an origin outage rather than failing closed immediately. But we need to decide whether to adjust the failover policy to serve cached responses during that window, and I need to update the runbook regardless.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I have a reliability concern I need to put on the table. During a failover rehearsal this morning, I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I haven't updated the launch runbook with this yet. The good news is that 20 minutes of cache capacity exceeds the 12-minute recovery time, so there's a viable window to serve cached responses during an origin outage rather than failing closed immediately. But we need to decide whether to adjust the failover policy to serve cached responses during that window, and I need to update the runbook regardless.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you both for surfacing these concerns \u2014 they're both critical and need to be addressed before sign-off. Devon, the cross-tenant data leakage risk from duplicate project slugs with an unscoped cache key is a blocker. We need to scope the cache key to include tenant ID so that two tenants with the same project slug can never receive each other's cached responses. Riley, the failover timing analysis is exactly what I needed. Since recovery takes 12 minutes and we have 20 minutes of cache capacity, failing closed immediately would be unnecessarily disruptive. I'd like to adjust the failover policy to serve cached responses during an origin outage, with a max stale window of 20 minutes to stay within the database protection limit. Here's what I'm proposing for the final policy: (1) Cache key scoped to tenant ID + project key, not just project key. (2) Failover mode: serve cached responses during origin outage rather than failing closed. (3) Max stale: 20 minutes, matching the origin database protection limit. (4) Devon, can you file the security finding and confirm that tenant-scoped cache keys resolve the leakage risk? (5) Riley, can you update the runbook with the failover timing and the new serve-cached policy? Once those are done and both of you confirm, I can sign off on the updated policy. Does this work for everyone?",
+      "speaker": "A1",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you both for surfacing these concerns \u2014 they're both critical and need to be addressed before sign-off. Devon, the cross-tenant data leakage risk from duplicate project slugs with an unscoped cache key is a blocker. We need to scope the cache key to include tenant ID so that two tenants with the same project slug can never receive each other's cached responses. Riley, the failover timing analysis is exactly what I needed. Since recovery takes 12 minutes and we have 20 minutes of cache capacity, failing closed immediately would be unnecessarily disruptive. I'd like to adjust the failover policy to serve cached responses during an origin outage, with a max stale window of 20 minutes to stay within the database protection limit. Here's what I'm proposing for the final policy: (1) Cache key scoped to tenant ID + project key, not just project key. (2) Failover mode: serve cached responses during origin outage rather than failing closed. (3) Max stale: 20 minutes, matching the origin database protection limit. (4) Devon, can you file the security finding and confirm that tenant-scoped cache keys resolve the leakage risk? (5) Riley, can you update the runbook with the failover timing and the new serve-cached policy? Once those are done and both of you confirm, I can sign off on the updated policy. Does this work for everyone?\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Morgan. That plan works for me. To confirm on my end: (1) I'll file the security finding documenting the duplicate project slug issue and the cross-tenant data leakage risk with the unscoped cache key. (2) Yes, scoping the cache key to tenant ID + project key resolves the leakage risk \u2014 since the cache lookup will now include tenant ID, two tenants with the same project slug will have distinct cache keys and cannot receive each other's cached responses. I'll get the security finding filed today and confirm back here once it's done. One question: should I also flag the duplicate project slug issue itself as a separate concern beyond caching, since it could have implications for other systems that rely on project slug uniqueness?",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Morgan. That plan works for me. To confirm on my end: (1) I'll file the security finding documenting the duplicate project slug issue and the cross-tenant data leakage risk with the unscoped cache key. (2) Yes, scoping the cache key to tenant ID + project key resolves the leakage risk \u2014 since the cache lookup will now include tenant ID, two tenants with the same project slug will have distinct cache keys and cannot receive each other's cached responses. I'll get the security finding filed today and confirm back here once it's done. One question: should I also flag the duplicate project slug issue itself as a separate concern beyond caching, since it could have implications for other systems that rely on project slug uniqueness?\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Morgan \u2014 the plan works for me. To confirm on my end: (1) I'll update the runbook with the failover timing data \u2014 12-minute DNS and service recovery, 20-minute origin database protection limit \u2014 and document the new serve-cached failover policy with the 20-minute max stale window. (2) I'll confirm back here once the runbook is updated. On Devon's question about flagging the duplicate project slug issue separately \u2014 I'd say yes, that's worth tracking as its own concern beyond caching. From a reliability perspective, if other systems also assume project slug uniqueness, they could have similar issues under failover or degraded conditions. Better to have it documented so it can be assessed holistically. Once Devon confirms the security finding is filed and I confirm the runbook is updated, we should be clear for sign-off.",
+      "speaker": "A3",
+      "turn": 5,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Morgan \u2014 the plan works for me. To confirm on my end: (1) I'll update the runbook with the failover timing data \u2014 12-minute DNS and service recovery, 20-minute origin database protection limit \u2014 and document the new serve-cached failover policy with the 20-minute max stale window. (2) I'll confirm back here once the runbook is updated. On Devon's question about flagging the duplicate project slug issue separately \u2014 I'd say yes, that's worth tracking as its own concern beyond caching. From a reliability perspective, if other systems also assume project slug uniqueness, they could have similar issues under failover or degraded conditions. Better to have it documented so it can be assessed holistically. Once Devon confirms the security finding is filed and I confirm the runbook is updated, we should be clear for sign-off.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Great, I'm glad we're aligned. To close out Devon's question \u2014 yes, please do flag the duplicate project slug issue as a separate concern beyond caching. Riley's point is well taken: other systems that assume project slug uniqueness could have similar issues under failover or degraded conditions, and it should be documented so it can be assessed holistically. So to summarize the full set of action items before sign-off: (1) Devon files the security finding for the cross-tenant cache leakage risk and confirms tenant-scoped cache keys resolve it, (2) Devon also flags the duplicate project slug issue as a separate broader concern, (3) Riley updates the runbook with the failover timing data and the new serve-cached failover policy with the 20-minute max stale window. Once Devon confirms both items are filed and Riley confirms the runbook is updated, I'll sign off on the final policy: tenant ID + project key scoped cache, serve-cached failover mode, 20-minute max stale. We're on track to get this done today ahead of tomorrow morning's launch.",
+      "speaker": "A1",
+      "turn": 6,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Great, I'm glad we're aligned. To close out Devon's question \u2014 yes, please do flag the duplicate project slug issue as a separate concern beyond caching. Riley's point is well taken: other systems that assume project slug uniqueness could have similar issues under failover or degraded conditions, and it should be documented so it can be assessed holistically. So to summarize the full set of action items before sign-off: (1) Devon files the security finding for the cross-tenant cache leakage risk and confirms tenant-scoped cache keys resolve it, (2) Devon also flags the duplicate project slug issue as a separate broader concern, (3) Riley updates the runbook with the failover timing data and the new serve-cached failover policy with the 20-minute max stale window. Once Devon confirms both items are filed and Riley confirms the runbook is updated, I'll sign off on the final policy: tenant ID + project key scoped cache, serve-cached failover mode, 20-minute max stale. We're on track to get this done today ahead of tomorrow morning's launch.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Sounds like we're fully aligned. I'll get both items filed today \u2014 the security finding for the cross-tenant cache leakage risk with the tenant-scoped cache key fix, and a separate flag for the duplicate project slug issue as a broader concern. I'll confirm back here once both are filed. Riley, once you've got the runbook updated, we should be all set for Morgan to sign off. Good collaboration, everyone \u2014 this could have been a rough launch morning if these had surfaced later.",
+      "speaker": "A2",
+      "turn": 7,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Sounds like we're fully aligned. I'll get both items filed today \u2014 the security finding for the cross-tenant cache leakage risk with the tenant-scoped cache key fix, and a separate flag for the duplicate project slug issue as a broader concern. I'll confirm back here once both are filed. Riley, once you've got the runbook updated, we should be all set for Morgan to sign off. Good collaboration, everyone \u2014 this could have been a rough launch morning if these had surfaced later.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Agreed, Devon \u2014 good collaboration. I'll get the runbook updated with the failover timing data and the new serve-cached policy today and confirm back here once it's done. Once you've confirmed both items are filed and I've confirmed the runbook update, Morgan can sign off and we're clear for tomorrow morning's launch.",
+      "speaker": "A3",
+      "turn": 8,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Agreed, Devon \u2014 good collaboration. I'll get the runbook updated with the failover timing data and the new serve-cached policy today and confirm back here once it's done. Once you've confirmed both items are filed and I've confirmed the runbook update, Morgan can sign off and we're clear for tomorrow morning's launch.\"}\n```"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "cache_key_scope": "tenant ID + project key",
+          "security_isolation_test_required": true,
+          "failover_mode": "serve cached responses during origin outage",
+          "max_stale_minutes": 20
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "security_finding",
+            "target": "Devon",
+            "detail": "File the security finding documenting the cross-tenant cache leakage risk from duplicate project slugs with unscoped cache keys, and confirm that tenant-scoped cache keys resolve the leakage risk."
+          },
+          {
+            "type": "broader_concern_flag",
+            "target": "Devon",
+            "detail": "Flag the duplicate project slug issue as a separate broader concern beyond caching, since other systems may rely on project slug uniqueness and could have similar issues under failover or degraded conditions."
+          },
+          {
+            "type": "runbook_update",
+            "target": "Riley",
+            "detail": "Update the launch runbook with the failover timing data (12-minute DNS and service recovery, 20-minute origin database protection limit) and document the new serve-cached failover policy with the 20-minute max stale window."
+          },
+          {
+            "type": "sign_off",
+            "target": "Morgan",
+            "detail": "Sign off on the final caching and failover policy once Devon confirms both items are filed and Riley confirms the runbook is updated."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 9,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cache_key_scope\": \"tenant ID + project key\",\n      \"security_isolation_test_required\": true,\n      \"failover_mode\": \"serve cached responses during origin outage\",\n      \"max_stale_minutes\": 20\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"security_finding\",\n        \"target\": \"Devon\",\n        \"detail\": \"File the security finding documenting the cross-tenant cache leakage risk from duplicate project slugs with unscoped cache keys, and confirm that tenant-scoped cache keys resolve the leakage risk.\"\n      },\n      {\n        \"type\": \"broader_concern_flag\",\n        \"target\": \"Devon\",\n        \"detail\": \"Flag the duplicate project slug issue as a separate broader concern beyond caching, since other systems may rely on project slug uniqueness and could have similar issues under failover or degraded conditions.\"\n      },\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Riley\",\n        \"detail\": \"Update the launch runbook with the failover timing data (12-minute DNS and service recovery, 20-minute origin database protection limit) and document the new serve-cached failover policy with the 20-minute max stale window.\"\n      },\n      {\n        \"type\": \"sign_off\",\n        \"target\": \"Morgan\",\n        \"detail\": \"Sign off on the final caching and failover policy once Devon confirms both items are filed and Riley confirms the runbook is updated.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "cache_key_scope": "tenant ID + project key",
+      "security_isolation_test_required": true,
+      "failover_mode": "serve cached responses during origin outage",
+      "max_stale_minutes": 20
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2"
+    ],
+    "commitments": [
+      {
+        "type": "security_finding",
+        "target": "Devon",
+        "detail": "File the security finding documenting the cross-tenant cache leakage risk from duplicate project slugs with unscoped cache keys, and confirm that tenant-scoped cache keys resolve the leakage risk."
+      },
+      {
+        "type": "broader_concern_flag",
+        "target": "Devon",
+        "detail": "Flag the duplicate project slug issue as a separate broader concern beyond caching, since other systems may rely on project slug uniqueness and could have similar issues under failover or degraded conditions."
+      },
+      {
+        "type": "runbook_update",
+        "target": "Riley",
+        "detail": "Update the launch runbook with the failover timing data (12-minute DNS and service recovery, 20-minute origin database protection limit) and document the new serve-cached failover policy with the 20-minute max stale window."
+      },
+      {
+        "type": "sign_off",
+        "target": "Morgan",
+        "detail": "Sign off on the final caching and failover policy once Devon confirms both items are filed and Riley confirms the runbook is updated."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": false,
+    "C4": true,
+    "C5": false,
+    "C6": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2"
+  ],
+  "passed": false
+}

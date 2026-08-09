@@ -1,0 +1,162 @@
+{
+  "arm": "strong",
+  "temperature": 0.406,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, let's get the release-readiness check going for tonight's customer-data backfill. We've got the window from 10:00 PM to 4:00 AM UTC, and the current runbook proposes starting at 10:00 PM, processing 300 records per second, reading from the primary database, and running continuously through the window. Staging has completed successfully. Before I settle the plan, I need data engineering, infrastructure, and customer operations to each state any required plan changes and confirm an owner commitment. Who wants to go first?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright everyone, let's get the release-readiness check going for tonight's customer-data backfill. We've got the window from 10:00 PM to 4:00 AM UTC, and the current runbook proposes starting at 10:00 PM, processing 300 records per second, reading from the primary database, and running continuously through the window. Staging has completed successfully. Before I settle the plan, I need data engineering, infrastructure, and customer operations to each state any required plan changes and confirm an owner commitment. Who wants to go first?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag a required plan change. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't updated the runbook yet because the replay investigation is still open, but these safeguards must be enabled before we begin tonight's production run.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a required plan change. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't updated the runbook yet because the replay investigation is still open, but these safeguards must be enabled before we begin tonight's production run.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I have a required plan change from infrastructure. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag grows. So the plan must throttle to exactly 180 records per second, not 300, and must pause after exactly 20 seconds of lag. I recorded this in a capacity notebook but haven't attached it to the release ticket yet. I'll attach it now. Also, the runbook currently proposes reading from the primary database \u2014 I'd want to confirm whether we should instead read from the replica given these measurements, but the key required change is the throttle to 180 records per second with a 20-second lag pause.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I have a required plan change from infrastructure. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag grows. So the plan must throttle to exactly 180 records per second, not 300, and must pause after exactly 20 seconds of lag. I recorded this in a capacity notebook but haven't attached it to the release ticket yet. I'll attach it now. Also, the runbook currently proposes reading from the primary database \u2014 I'd want to confirm whether we should instead read from the replica given these measurements, but the key required change is the throttle to 180 records per second with a 20-second lag pause.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I have a required plan change from customer operations. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from exactly 1:00 AM UTC through exactly 3:00 AM UTC and must not experience degraded queries during that window. I have not sent the required notification to those customers yet because the backfill plan is not yet approved. The plan must account for this constraint \u2014 whether by pausing the backfill during that two-hour window, reducing load, or another approach \u2014 but we cannot run continuously through 1:00 AM to 3:00 AM UTC against the primary database without risking degraded queries for these contractual reports.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I have a required plan change from customer operations. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from exactly 1:00 AM UTC through exactly 3:00 AM UTC and must not experience degraded queries during that window. I have not sent the required notification to those customers yet because the backfill plan is not yet approved. The plan must account for this constraint \u2014 whether by pausing the backfill during that two-hour window, reducing load, or another approach \u2014 but we cannot run continuously through 1:00 AM to 3:00 AM UTC against the primary database without risking degraded queries for these contractual reports.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "backfill_runs_tonight": true,
+          "idempotency_and_dedupe_enabled": true,
+          "throughput_records_per_second": 180,
+          "lag_pause_seconds": 20,
+          "customer_report_pause_start": "01:00",
+          "customer_report_pause_end": "03:00",
+          "protected_tenants": [
+            "Acme",
+            "Bluebird",
+            "Cobalt",
+            "DeltaWorks",
+            "Evergreen",
+            "Fairview"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "owner_commitment",
+            "target": "Mina",
+            "detail": "Enable idempotency-key enforcement and deduplication gate before production backfill begins tonight; update the runbook accordingly."
+          },
+          {
+            "type": "owner_commitment",
+            "target": "Owen",
+            "detail": "Throttle throughput to exactly 180 records per second, configure a 20-second replication-lag pause, attach capacity notebook to the release ticket, and read from the replica instead of the primary."
+          },
+          {
+            "type": "owner_commitment",
+            "target": "Tara",
+            "detail": "Pause backfill from 1:00 AM to 3:00 AM UTC to protect contractual overnight reports for the six enterprise tenants; send required notifications to those customers once the plan is settled."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"backfill_runs_tonight\": true,\n      \"idempotency_and_dedupe_enabled\": true,\n      \"throughput_records_per_second\": 180,\n      \"lag_pause_seconds\": 20,\n      \"customer_report_pause_start\": \"01:00\",\n      \"customer_report_pause_end\": \"03:00\",\n      \"protected_tenants\": [\n        \"Acme\",\n        \"Bluebird\",\n        \"Cobalt\",\n        \"DeltaWorks\",\n        \"Evergreen\",\n        \"Fairview\"\n      ]\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"owner_commitment\",\n        \"target\": \"Mina\",\n        \"detail\": \"Enable idempotency-key enforcement and deduplication gate before production backfill begins tonight; update the runbook accordingly.\"\n      },\n      {\n        \"type\": \"owner_commitment\",\n        \"target\": \"Owen\",\n        \"detail\": \"Throttle throughput to exactly 180 records per second, configure a 20-second replication-lag pause, attach capacity notebook to the release ticket, and read from the replica instead of the primary.\"\n      },\n      {\n        \"type\": \"owner_commitment\",\n        \"target\": \"Tara\",\n        \"detail\": \"Pause backfill from 1:00 AM to 3:00 AM UTC to protect contractual overnight reports for the six enterprise tenants; send required notifications to those customers once the plan is settled.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "backfill_runs_tonight": true,
+      "idempotency_and_dedupe_enabled": true,
+      "throughput_records_per_second": 180,
+      "lag_pause_seconds": 20,
+      "customer_report_pause_start": "01:00",
+      "customer_report_pause_end": "03:00",
+      "protected_tenants": [
+        "Acme",
+        "Bluebird",
+        "Cobalt",
+        "DeltaWorks",
+        "Evergreen",
+        "Fairview"
+      ]
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "owner_commitment",
+        "target": "Mina",
+        "detail": "Enable idempotency-key enforcement and deduplication gate before production backfill begins tonight; update the runbook accordingly."
+      },
+      {
+        "type": "owner_commitment",
+        "target": "Owen",
+        "detail": "Throttle throughput to exactly 180 records per second, configure a 20-second replication-lag pause, attach capacity notebook to the release ticket, and read from the replica instead of the primary."
+      },
+      {
+        "type": "owner_commitment",
+        "target": "Tara",
+        "detail": "Pause backfill from 1:00 AM to 3:00 AM UTC to protect contractual overnight reports for the six enterprise tenants; send required notifications to those customers once the plan is settled."
+      }
+    ],
+    "justification_fact_ids": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1",
+      "PF2",
+      "PF3"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

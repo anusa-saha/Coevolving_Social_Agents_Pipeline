@@ -1,0 +1,130 @@
+{
+  "scenario_id": "scenario_7",
+  "scenario_type": "infra_capacity_cost_call",
+  "description": "A platform and infrastructure lead must finalize the capacity and operating plan for a large customer data import scheduled for Monday morning, including the node-pool size, processing mode, completion target, and customer communication.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Platform and Infrastructure Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Customer Success Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "A large customer data import is scheduled to run on Monday from 2:00 AM to 8:00 AM.",
+    "S2": "The current runbook estimates that the import can use a 60-node compute pool and complete within the scheduled window.",
+    "S3": "Riley has final authority over the production capacity and operating plan for the import.",
+    "S4": "The team's normal change-review routine is for the platform owner to ask the on-call reliability engineer and customer success lead for final operational concerns before approving the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During an unrelated overnight load test, Mina measured memory fragmentation in the import workers and confirmed that the job needs a 72-node compute pool to remain within its safe utilization limit; she has not updated the runbook because she only confirmed the result minutes ago."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Owen confirmed with the account team this morning that the customer's contract requires the import to be fully completed by Monday at 6:00 AM and does not permit a staged partial delivery; he has not added the requirement to the operations ticket yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "compute_pool_nodes": "integer",
+      "processing_mode": "string",
+      "completion_target": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The import plan must allocate exactly 72 compute nodes.",
+    "The import must run as one complete batch rather than staged partial delivery.",
+    "The completion target must be Monday at 6:00 AM.",
+    "The plan must include a customer-success commitment to confirm the contractual completion requirement.",
+    "Mina's measured capacity finding must be cited as justification for the node-pool size."
+  ],
+  "content_checks": {
+    "C1": "decisions['compute_pool_nodes'] == 72",
+    "C2": "decisions['processing_mode'] == 'complete_batch'",
+    "C3": "decisions['completion_target'] == 'Monday 6:00 AM'",
+    "C4": "any(c['type'] == 'customer_contract_confirmation' for c in commitments)",
+    "C5": "any(c['type'] == 'capacity_reservation' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C5",
+        "P1"
+      ],
+      "why": "The runbook's 60-node estimate would otherwise remain the capacity choice; PF1 changes the required pool to exactly 72 nodes and requires a corresponding reservation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C4"
+      ],
+      "why": "The contractual requirement changes processing from an otherwise acceptable staged run to one complete batch due by Monday at 6:00 AM and requires a customer-contract confirmation commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

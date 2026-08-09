@@ -1,0 +1,178 @@
+{
+  "arm": "strong",
+  "temperature": 0.488,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Hi everyone. Since the recommendation API launch is tomorrow morning and I own the final production caching and failover policy, I'd like to walk through where we stand. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before we can sign off, I want to make sure we've got explicit application and reliability sign-off on this policy as required by the launch checklist. Who's representing application and reliability here, and do you have any concerns with the current draft?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. Since the recommendation API launch is tomorrow morning and I own the final production caching and failover policy, I'd like to walk through where we stand. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before we can sign off, I want to make sure we've got explicit application and reliability sign-off on this policy as required by the launch checklist. Who's representing application and reliability here, and do you have any concerns with the current draft?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to raise a serious concern before we sign off. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. This means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I have not filed the security finding yet, but this directly affects the caching policy Morgan is asking us to sign off on.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to raise a serious concern before we sign off. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. This means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I have not filed the security finding yet, but this directly affects the caching policy Morgan is asking us to sign off on.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to share something from the failover rehearsal I ran this morning. I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I have not updated the launch runbook yet with these numbers.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share something from the failover rehearsal I ran this morning. I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I have not updated the launch runbook yet with these numbers.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you both. These are exactly the kinds of issues we need to surface before sign-off. Devon, the tenant isolation problem you've identified is a blocker \u2014 the unscoped project-key cache policy cannot go to production as-is if two tenants can share a project slug. We need to scope cache keys by tenant ID at minimum, and I'd want a security isolation test to confirm that before launch. Riley, your failover numbers are critical too: if recovery takes 12 minutes and the database protection limit allows serving cached responses for exactly 20 minutes, then fail-closed is the wrong mode \u2014 we should fail open and serve stale cache for up to 20 minutes to bridge the recovery window. But we also need the runbook updated with those numbers. Given all this, I don't think we can sign off on the current draft. Here's what I'm proposing as the revised policy: (1) cache keys scoped by tenant ID plus project key, (2) a security isolation test confirming no cross-tenant cache leakage, (3) fail-open mode during origin outage, (4) max stale serving window of 20 minutes. Devon, can you file the security finding and confirm whether tenant-scoped keys fully address the isolation risk? Riley, can you update the runbook with the 12-minute recovery and 20-minute stale-serving numbers? If we can agree on this revised policy and get those updates done, I can sign off on my end.",
+      "speaker": "A1",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you both. These are exactly the kinds of issues we need to surface before sign-off. Devon, the tenant isolation problem you've identified is a blocker \u2014 the unscoped project-key cache policy cannot go to production as-is if two tenants can share a project slug. We need to scope cache keys by tenant ID at minimum, and I'd want a security isolation test to confirm that before launch. Riley, your failover numbers are critical too: if recovery takes 12 minutes and the database protection limit allows serving cached responses for exactly 20 minutes, then fail-closed is the wrong mode \u2014 we should fail open and serve stale cache for up to 20 minutes to bridge the recovery window. But we also need the runbook updated with those numbers. Given all this, I don't think we can sign off on the current draft. Here's what I'm proposing as the revised policy: (1) cache keys scoped by tenant ID plus project key, (2) a security isolation test confirming no cross-tenant cache leakage, (3) fail-open mode during origin outage, (4) max stale serving window of 20 minutes. Devon, can you file the security finding and confirm whether tenant-scoped keys fully address the isolation risk? Riley, can you update the runbook with the 12-minute recovery and 20-minute stale-serving numbers? If we can agree on this revised policy and get those updates done, I can sign off on my end.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Agreed, Morgan. I'll file the security finding today. Regarding whether tenant-scoped keys fully address the isolation risk: scoping cache keys by tenant ID plus project key should prevent the cross-tenant leakage I observed, since even if two tenants share the same project slug, their tenant IDs would differ and produce distinct cache entries. However, I'd want the security isolation test you mentioned to actually confirm that in practice before I sign off on application side \u2014 I don't want to assert it's fully resolved based on theory alone. Once I've filed the finding and the isolation test passes, I can give explicit application sign-off on the revised policy.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Agreed, Morgan. I'll file the security finding today. Regarding whether tenant-scoped keys fully address the isolation risk: scoping cache keys by tenant ID plus project key should prevent the cross-tenant leakage I observed, since even if two tenants share the same project slug, their tenant IDs would differ and produce distinct cache entries. However, I'd want the security isolation test you mentioned to actually confirm that in practice before I sign off on application side \u2014 I don't want to assert it's fully resolved based on theory alone. Once I've filed the finding and the isolation test passes, I can give explicit application sign-off on the revised policy.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Agreed, Morgan. I'll update the runbook today with the 12-minute DNS and service recovery measurement and the 20-minute origin database protection limit for stale serving. One thing I want to flag for the reliability sign-off: the revised policy sets the max stale serving window at exactly 20 minutes, which matches the database protection limit exactly. That leaves zero margin \u2014 if recovery takes even a minute longer than the 12 minutes I measured this morning, or if there's any drift in the database protection timer, we'd hit the hard stop with no buffer. I'd recommend we either set the stale serving window slightly below 20 minutes \u2014 say 18 minutes \u2014 to give ourselves a safety margin, or we document explicitly that 20 minutes is a hard ceiling with no tolerance for overrun. I'm comfortable signing off on reliability once the runbook is updated and we've agreed on how to handle that margin question. Otherwise the revised policy direction looks sound to me.",
+      "speaker": "A3",
+      "turn": 5,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Agreed, Morgan. I'll update the runbook today with the 12-minute DNS and service recovery measurement and the 20-minute origin database protection limit for stale serving. One thing I want to flag for the reliability sign-off: the revised policy sets the max stale serving window at exactly 20 minutes, which matches the database protection limit exactly. That leaves zero margin \u2014 if recovery takes even a minute longer than the 12 minutes I measured this morning, or if there's any drift in the database protection timer, we'd hit the hard stop with no buffer. I'd recommend we either set the stale serving window slightly below 20 minutes \u2014 say 18 minutes \u2014 to give ourselves a safety margin, or we document explicitly that 20 minutes is a hard ceiling with no tolerance for overrun. I'm comfortable signing off on reliability once the runbook is updated and we've agreed on how to handle that margin question. Otherwise the revised policy direction looks sound to me.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Good catch, Riley. I agree that matching the database protection limit exactly with no margin is risky. Let's set the max stale serving window at 18 minutes \u2014 that gives us a 6-minute buffer above the 12-minute recovery time you measured, and a 2-minute safety margin below the 20-minute hard ceiling. We'll document in the runbook that 20 minutes is the absolute hard ceiling from the database protection limit and that 18 minutes is our operational target to preserve margin. So the final revised policy is: (1) cache keys scoped by tenant ID plus project key, (2) security isolation test required and must pass before application sign-off, (3) fail-open mode during origin outage, (4) max stale serving window of 18 minutes with 20 minutes documented as the hard ceiling. Devon, you'll file the security finding today and give application sign-off once the isolation test passes. Riley, you'll update the runbook today with the 12-minute recovery measurement, the 20-minute database protection limit, and the 18-minute operational stale-serving target, then give reliability sign-off. If everyone agrees on this, I'm ready to settle the final policy.",
+      "speaker": "A1",
+      "turn": 6,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Good catch, Riley. I agree that matching the database protection limit exactly with no margin is risky. Let's set the max stale serving window at 18 minutes \u2014 that gives us a 6-minute buffer above the 12-minute recovery time you measured, and a 2-minute safety margin below the 20-minute hard ceiling. We'll document in the runbook that 20 minutes is the absolute hard ceiling from the database protection limit and that 18 minutes is our operational target to preserve margin. So the final revised policy is: (1) cache keys scoped by tenant ID plus project key, (2) security isolation test required and must pass before application sign-off, (3) fail-open mode during origin outage, (4) max stale serving window of 18 minutes with 20 minutes documented as the hard ceiling. Devon, you'll file the security finding today and give application sign-off once the isolation test passes. Riley, you'll update the runbook today with the 12-minute recovery measurement, the 20-minute database protection limit, and the 18-minute operational stale-serving target, then give reliability sign-off. If everyone agrees on this, I'm ready to settle the final policy.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "I agree with the final revised policy as stated. To confirm my commitments: I'll file the security finding today documenting the tenant slug collision issue and the cross-tenant cache leakage risk with the unscoped project-key cache policy. I'll give explicit application sign-off on the revised policy once the security isolation test passes, confirming that tenant ID plus project key scoping prevents cross-tenant cache leakage in practice. The policy as settled \u2014 tenant-scoped cache keys, required isolation test, fail-open mode, and 18-minute max stale serving window with 20 minutes as the documented hard ceiling \u2014 fully addresses the concerns I raised.",
+      "speaker": "A2",
+      "turn": 7,
+      "raw_output": "{\"type\":\"say\",\"text\":\"I agree with the final revised policy as stated. To confirm my commitments: I'll file the security finding today documenting the tenant slug collision issue and the cross-tenant cache leakage risk with the unscoped project-key cache policy. I'll give explicit application sign-off on the revised policy once the security isolation test passes, confirming that tenant ID plus project key scoping prevents cross-tenant cache leakage in practice. The policy as settled \u2014 tenant-scoped cache keys, required isolation test, fail-open mode, and 18-minute max stale serving window with 20 minutes as the documented hard ceiling \u2014 fully addresses the concerns I raised.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I agree with the final revised policy as stated. To confirm my commitments: I'll update the runbook today with the 12-minute DNS and service recovery measurement, the 20-minute origin database protection limit as the hard ceiling, and the 18-minute operational stale-serving target. I'll give explicit reliability sign-off once the runbook is updated. The policy as settled \u2014 tenant-scoped cache keys, required isolation test, fail-open mode, and 18-minute max stale serving window with 20 minutes as the documented hard ceiling \u2014 fully addresses the reliability concerns I raised.",
+      "speaker": "A3",
+      "turn": 8,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"I agree with the final revised policy as stated. To confirm my commitments: I'll update the runbook today with the 12-minute DNS and service recovery measurement, the 20-minute origin database protection limit as the hard ceiling, and the 18-minute operational stale-serving target. I'll give explicit reliability sign-off once the runbook is updated. The policy as settled \u2014 tenant-scoped cache keys, required isolation test, fail-open mode, and 18-minute max stale serving window with 20 minutes as the documented hard ceiling \u2014 fully addresses the reliability concerns I raised.\"}\n```"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "cache_key_scope": "tenant ID plus project key",
+          "security_isolation_test_required": true,
+          "failover_mode": "fail-open",
+          "max_stale_minutes": 18
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "security_finding",
+            "target": "Devon",
+            "detail": "File the security finding today documenting the tenant slug collision issue and cross-tenant cache leakage risk with the unscoped project-key cache policy."
+          },
+          {
+            "type": "application_signoff",
+            "target": "Devon",
+            "detail": "Give explicit application sign-off on the revised policy once the security isolation test passes, confirming that tenant ID plus project key scoping prevents cross-tenant cache leakage in practice."
+          },
+          {
+            "type": "runbook_update",
+            "target": "Riley",
+            "detail": "Update the runbook today with the 12-minute DNS and service recovery measurement, the 20-minute origin database protection limit as the hard ceiling, and the 18-minute operational stale-serving target."
+          },
+          {
+            "type": "reliability_signoff",
+            "target": "Riley",
+            "detail": "Give explicit reliability sign-off once the runbook is updated."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S3",
+          "S4",
+          "S5"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 9,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cache_key_scope\": \"tenant ID plus project key\",\n      \"security_isolation_test_required\": true,\n      \"failover_mode\": \"fail-open\",\n      \"max_stale_minutes\": 18\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"security_finding\",\n        \"target\": \"Devon\",\n        \"detail\": \"File the security finding today documenting the tenant slug collision issue and cross-tenant cache leakage risk with the unscoped project-key cache policy.\"\n      },\n      {\n        \"type\": \"application_signoff\",\n        \"target\": \"Devon\",\n        \"detail\": \"Give explicit application sign-off on the revised policy once the security isolation test passes, confirming that tenant ID plus project key scoping prevents cross-tenant cache leakage in practice.\"\n      },\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Riley\",\n        \"detail\": \"Update the runbook today with the 12-minute DNS and service recovery measurement, the 20-minute origin database protection limit as the hard ceiling, and the 18-minute operational stale-serving target.\"\n      },\n      {\n        \"type\": \"reliability_signoff\",\n        \"target\": \"Riley\",\n        \"detail\": \"Give explicit reliability sign-off once the runbook is updated.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "cache_key_scope": "tenant ID plus project key",
+      "security_isolation_test_required": true,
+      "failover_mode": "fail-open",
+      "max_stale_minutes": 18
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2"
+    ],
+    "commitments": [
+      {
+        "type": "security_finding",
+        "target": "Devon",
+        "detail": "File the security finding today documenting the tenant slug collision issue and cross-tenant cache leakage risk with the unscoped project-key cache policy."
+      },
+      {
+        "type": "application_signoff",
+        "target": "Devon",
+        "detail": "Give explicit application sign-off on the revised policy once the security isolation test passes, confirming that tenant ID plus project key scoping prevents cross-tenant cache leakage in practice."
+      },
+      {
+        "type": "runbook_update",
+        "target": "Riley",
+        "detail": "Update the runbook today with the 12-minute DNS and service recovery measurement, the 20-minute origin database protection limit as the hard ceiling, and the 18-minute operational stale-serving target."
+      },
+      {
+        "type": "reliability_signoff",
+        "target": "Riley",
+        "detail": "Give explicit reliability sign-off once the runbook is updated."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "S1",
+      "S3",
+      "S4",
+      "S5"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": false,
+    "C4": false,
+    "C5": false,
+    "C6": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2"
+  ],
+  "passed": false
+}

@@ -1,0 +1,187 @@
+{
+  "arm": "strong",
+  "temperature": 0.449,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright, let's get started. We're here to review the draft policy on automatic deletion of inactive project artifacts after 90 days. Before I can approve this, I need to hear from each of the required teams. Data governance, storage infrastructure, customer success, and security engineering \u2014 please go ahead and state any constraints or concerns you have with the policy as drafted. For reference, the current draft includes a 14-day recovery window after deletion is requested, applies to all projects, and retains deletion logs for 30 days.",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright, let's get started. We're here to review the draft policy on automatic deletion of inactive project artifacts after 90 days. Before I can approve this, I need to hear from each of the required teams. Data governance, storage infrastructure, customer success, and security engineering \u2014 please go ahead and state any constraints or concerns you have with the policy as drafted. For reference, the current draft includes a 14-day recovery window after deletion is requested, applies to all projects, and retains deletion logs for 30 days.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\":\" \"say\", \"text\": \"Thanks, Morgan. I do have a constraint to raise. During a records-classification review this morning, I confirmed that EU-regulated project artifacts must remain recoverable for exactly 365 days from their last activity. The current draft's 90-day automatic deletion with only a 14-day recovery window would put us out of compliance for those artifacts. I hadn't updated the policy draft yet because the classification review was still being reconciled, but I need to flag this now before approval.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to flag something important from my testing. While testing the deletion worker against a full production snapshot, I confirmed that the restore index is actually reliable for exactly 45 days after a deletion request \u2014 not the 14 days stated in the draft policy. I found this during a separate capacity test and haven't updated the runbook yet, but it's directly relevant here: the 14-day recovery window in the draft is shorter than what our infrastructure can actually support.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something important from my testing. While testing the deletion worker against a full production snapshot, I confirmed that the restore index is actually reliable for exactly 45 days after a deletion request \u2014 not the 14 days stated in the draft policy. I found this during a separate capacity test and haven't updated the runbook yet, but it's directly relevant here: the 14-day recovery window in the draft is shorter than what our infrastructure can actually support.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to raise a constraint from customer success. After our formal review concluded, I confirmed with the account team that the twelve customers on the legacy enterprise plan require exactly 30 days' notice before their inactive artifacts can be queued for deletion. This confirmation arrived after the customer-success review and hasn't been added to the change ticket yet, so it wasn't reflected in our initial sign-off. This means the policy as drafted \u2014 which allows deletion after 90 days of inactivity without a specific notice period \u2014 would need a 30-day advance notice mechanism for those twelve legacy enterprise customers before their artifacts are queued for deletion.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to raise a constraint from customer success. After our formal review concluded, I confirmed with the account team that the twelve customers on the legacy enterprise plan require exactly 30 days' notice before their inactive artifacts can be queued for deletion. This confirmation arrived after the customer-success review and hasn't been added to the change ticket yet, so it wasn't reflected in our initial sign-off. This means the policy as drafted \u2014 which allows deletion after 90 days of inactivity without a specific notice period \u2014 would need a 30-day advance notice mechanism for those twelve legacy enterprise customers before their artifacts are queued for deletion.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF4",
+      "text": "I need to raise a security engineering constraint. My security review \u2014 which I confirmed just minutes ago while examining a different security finding, and which I haven't yet filed as a control change \u2014 found that build artifacts can contain credentials embedded in generated logs. This means the deletion worker must run a secret-scrub step before erasure to prevent credential exposure. Additionally, the current draft policy retains deletion logs for only 30 days, but for security audit purposes we need tamper-evident deletion audit records retained for exactly 400 days. These two requirements \u2014 the secret-scrub step and the 400-day tamper-evident audit retention \u2014 are hard constraints from security engineering before this policy can be approved.",
+      "speaker": "A5",
+      "turn": 4,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to raise a security engineering constraint. My security review \u2014 which I confirmed just minutes ago while examining a different security finding, and which I haven't yet filed as a control change \u2014 found that build artifacts can contain credentials embedded in generated logs. This means the deletion worker must run a secret-scrub step before erasure to prevent credential exposure. Additionally, the current draft policy retains deletion logs for only 30 days, but for security audit purposes we need tamper-evident deletion audit records retained for exactly 400 days. These two requirements \u2014 the secret-scrub step and the 400-day tamper-evident audit retention \u2014 are hard constraints from security engineering before this policy can be approved.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "general_inactivity_days": 90,
+          "regulated_inactivity_days": 90,
+          "regulated_scope": "legacy enterprise plan customers (12 customers)",
+          "recovery_window_days": 14,
+          "legacy_plan_notice_days": 30,
+          "secret_scrub_before_erasure": true,
+          "audit_retention_days": 400
+        },
+        "credited_facts": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "policy_update",
+            "target": "all teams",
+            "detail": "Add a 30-day advance notice mechanism for the twelve legacy enterprise plan customers before their inactive artifacts are queued for deletion."
+          },
+          {
+            "type": "policy_update",
+            "target": "all teams",
+            "detail": "Add a mandatory secret-scrub step that the deletion worker must run before erasure to prevent credential exposure from embedded secrets in build artifacts."
+          },
+          {
+            "type": "policy_update",
+            "target": "all teams",
+            "detail": "Update deletion audit log retention from 30 days to 400 days with tamper-evident records for security audit purposes."
+          },
+          {
+            "type": "follow_up",
+            "target": "Owen",
+            "detail": "Owen to update the runbook to reflect the tested 45-day restore index reliability, even though we are keeping the 14-day recovery window as the policy commitment."
+          },
+          {
+            "type": "follow_up",
+            "target": "Ravi",
+            "detail": "Ravi to formally file the secret-scrub and 400-day audit retention requirements as a control change."
+          },
+          {
+            "type": "follow_up",
+            "target": "Maya",
+            "detail": "Maya to add the 30-day legacy enterprise notice requirement to the change ticket."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "revealed": []
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\"type\": \"settle\", \"settlement\": {\"decisions\": {\"general_inactivity_days\": 90, \"regulated_inactivity_days\": 90, \"regulated_scope\": \"legacy enterprise plan customers (12 customers)\", \"recovery_window_days\": 14, \"legacy_plan_notice_days\": 30, \"secret_scrub_before_erasure\": true, \"audit_retention_days\": 400}, \"credited_facts\": [\"PF2\", \"PF3\", \"PF4\"], \"commitments\": [{\"type\": \"policy_update\", \"target\": \"all teams\", \"detail\": \"Add a 30-day advance notice mechanism for the twelve legacy enterprise plan customers before their inactive artifacts are queued for deletion.\"}, {\"type\": \"policy_update\", \"target\": \"all teams\", \"detail\": \"Add a mandatory secret-scrub step that the deletion worker must run before erasure to prevent credential exposure from embedded secrets in build artifacts.\"}, {\"type\": \"policy_update\", \"target\": \"all teams\", \"detail\": \"Update deletion audit log retention from 30 days to 400 days with tamper-evident records for security audit purposes.\"}, {\"type\": \"follow_up\", \"target\": \"Owen\", \"detail\": \"Owen to update the runbook to reflect the tested 45-day restore index reliability, even though we are keeping the 14-day recovery window as the policy commitment.\"}, {\"type\": \"follow_up\", \"target\": \"Ravi\", \"detail\": \"Ravi to formally file the secret-scrub and 400-day audit retention requirements as a control change.\"}, {\"type\": \"follow_up\", \"target\": \"Maya\", \"detail\": \"Maya to add the 30-day legacy enterprise notice requirement to the change ticket.\"}], \"justification_fact_ids\": [\"S1\", \"S2\", \"S3\", \"S4\", \"PF2\", \"PF3\", \"PF4\"], \"revealed\": []}}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "general_inactivity_days": 90,
+      "regulated_inactivity_days": 90,
+      "regulated_scope": "legacy enterprise plan customers (12 customers)",
+      "recovery_window_days": 14,
+      "legacy_plan_notice_days": 30,
+      "secret_scrub_before_erasure": true,
+      "audit_retention_days": 400
+    },
+    "credited_facts": [
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "commitments": [
+      {
+        "type": "policy_update",
+        "target": "all teams",
+        "detail": "Add a 30-day advance notice mechanism for the twelve legacy enterprise plan customers before their inactive artifacts are queued for deletion."
+      },
+      {
+        "type": "policy_update",
+        "target": "all teams",
+        "detail": "Add a mandatory secret-scrub step that the deletion worker must run before erasure to prevent credential exposure from embedded secrets in build artifacts."
+      },
+      {
+        "type": "policy_update",
+        "target": "all teams",
+        "detail": "Update deletion audit log retention from 30 days to 400 days with tamper-evident records for security audit purposes."
+      },
+      {
+        "type": "follow_up",
+        "target": "Owen",
+        "detail": "Owen to update the runbook to reflect the tested 45-day restore index reliability, even though we are keeping the 14-day recovery window as the policy commitment."
+      },
+      {
+        "type": "follow_up",
+        "target": "Ravi",
+        "detail": "Ravi to formally file the secret-scrub and 400-day audit retention requirements as a control change."
+      },
+      {
+        "type": "follow_up",
+        "target": "Maya",
+        "detail": "Maya to add the 30-day legacy enterprise notice requirement to the change ticket."
+      }
+    ],
+    "justification_fact_ids": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "revealed": []
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": false,
+    "C3": false,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": false,
+    "C8": false,
+    "C9": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF2",
+    "PF3",
+    "PF4"
+  ],
+  "passed": false
+}

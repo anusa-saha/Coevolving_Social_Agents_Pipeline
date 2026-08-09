@@ -1,0 +1,170 @@
+{
+  "scenario_id": "scenario_1",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A product director must decide whether and how to launch a new search-ranking service into production, including the launch time, initial traffic level, security gating, and rollback safeguards, after the final pre-launch review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Product Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mateo",
+      "role": "Platform Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lena",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The new search-ranking service is scheduled for its first production rollout on Thursday, June 12, at 14:00 UTC.",
+    "S2": "Riley makes the binding decision on whether and how the rollout proceeds.",
+    "S3": "The service passed the planned staging tests, and the current launch plan starts with 25% of production search traffic.",
+    "S4": "The production launch checklist requires an explicit initial traffic percentage, a p99 latency rollback threshold, and clearance of any critical dependency findings before production traffic is enabled.",
+    "S5": "As part of the normal pre-launch review, Riley conducts a round-robin sign-off with platform engineering, customer support, and security before finalizing the launch checklist."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During an unrelated capacity investigation this morning, Mateo measured the new service at 820 ms p99 latency under the planned 25% load. Under the platform rollout policy, he must change the initial exposure to exactly 5% and set the automatic rollback threshold to exactly 750 ms; he has not filed the performance finding or updated the launch checklist yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Lena confirmed with the account team today that a major enterprise customer's contract requires 48 hours of advance notice and blocks search changes from 14:00 to 16:00 UTC. Notice was sent Wednesday at 10:00 UTC, so the first compliant launch slot is Friday, June 13, at exactly 16:00 UTC; this has not been added to the launch calendar yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing a separate dependency audit minutes ago, Owen confirmed that the new service includes a critical vulnerability in its ranking-library version. The security patch is available and security policy requires it to be deployed before the service receives any production traffic, but Owen has not opened the finding ticket yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_approved": "boolean",
+      "rollout_start_utc": "string",
+      "security_patch_before_rollout": "boolean",
+      "initial_traffic_percent": "integer",
+      "rollback_p99_threshold_ms": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must be approved.",
+    "The rollout must start Friday, June 13, at exactly 16:00 UTC.",
+    "The security patch must be deployed before the rollout.",
+    "Initial production exposure must be exactly 5%.",
+    "The automatic rollback threshold must be exactly 750 ms p99 latency.",
+    "The settlement must include a customer-window confirmation commitment.",
+    "The settlement must include a security-patch commitment.",
+    "The settlement must include a progressive-rollout-guardrail commitment.",
+    "The performance finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['rollout_approved'] == True",
+    "C2": "decisions['rollout_start_utc'] == '2025-06-13T16:00:00Z' or decisions['rollout_start_utc'] == 'Friday, June 13, 2025 at 16:00 UTC'",
+    "C3": "decisions['security_patch_before_rollout'] == True",
+    "C4": "decisions['initial_traffic_percent'] == 5",
+    "C5": "decisions['rollback_p99_threshold_ms'] == 750",
+    "C6": "any((c['target'] == 'Lena' or c['target'] == 'Customer Support') and ('Friday' in c['detail'] or '16:00 UTC' in c['detail'] or 'calendar' in c['detail'] or 'notice' in c['detail']) for c in commitments)",
+    "C7": "any((c['type'] == 'security_patch' or c['type'] == 'security' or c['type'] == 'action_item') and ('patch' in c['detail'] or 'Patch' in c['detail']) and ('production traffic' in c['detail'] or 'production' in c['detail']) for c in commitments)",
+    "C8": "any('5%' in c['detail'] and '750 ms' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C4",
+        "C5",
+        "C8",
+        "P1"
+      ],
+      "why": "The measured 820 ms p99 result changes the initial exposure from the planned 25% to exactly 5% and sets the rollback threshold to exactly 750 ms, requiring a commitment that records both values."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C6"
+      ],
+      "why": "The 48-hour notice and 14:00-16:00 customer blackout change the launch time from Thursday at 14:00 UTC to Friday at exactly 16:00 UTC and require a customer-window or calendar commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C7"
+      ],
+      "why": "The confirmed critical ranking-library vulnerability changes the security decision from no required pre-launch patch to a patch-before-rollout requirement and requires a commitment to deploy the patch before production traffic."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

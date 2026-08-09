@@ -1,0 +1,199 @@
+{
+  "scenario_id": "scenario_28",
+  "scenario_type": "on_call_staffing",
+  "description": "An engineering manager must publish the production on-call roster and escalation policy for a three-day holiday period, incorporating service-specific coverage, customer response obligations, and a scheduled security operation.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Riley",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "Payments Tech Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Taylor",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Jordan",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The production on-call roster must cover December 24, December 25, and December 26.",
+    "S2": "Morgan has authority to publish the binding roster and escalation policy.",
+    "S3": "The draft roster assigns Riley as primary on-call for all three days, Casey as secondary on-call for all three days, and uses a standard 30-minute escalation target.",
+    "S4": "Before Morgan publishes the roster, the regular holiday-readiness process requires SRE, payments engineering, customer support, and security to read back their coverage and any exceptions."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Riley's approved leave covers December 25, so Riley cannot be primary or secondary on-call that day; Riley confirmed the leave while handling a separate HR scheduling task, but the roster spreadsheet has not been updated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The payments service's enterprise response agreement requires a named payments engineer to acknowledge a production alert within exactly 10 minutes on all three dates, rather than the draft's 30-minute target; Casey confirmed the clause with account operations this morning but has not updated the on-call ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The customer Meridian has a contractual requirement for a support liaison to contact its administrators during any December 26 production incident, so Taylor must be named as the December 26 customer liaison; Taylor found this in an account-notes review yesterday, but the holiday handoff document still has the default unassigned value."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "A certificate rotation for the production identity service is scheduled for December 26 from 21:00 to 23:00 and requires Jordan as the security escalation contact and secondary on-call during that window; Jordan confirmed the timing during a certificate inventory, but the change ticket has not yet been linked to the holiday roster."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "roster": {
+        "December 24": {
+          "primary": "string",
+          "secondary": "string"
+        },
+        "December 25": {
+          "primary": "string",
+          "secondary": "string"
+        },
+        "December 26": {
+          "primary": "string",
+          "secondary": "string"
+        }
+      },
+      "payment_ack_minutes": "integer",
+      "customer_liaison_agent": "string",
+      "customer_liaison_date": "string",
+      "security_escalation_agent": "string",
+      "security_escalation_date": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Riley must not be assigned to either on-call role on December 25, and Casey must be primary that day.",
+    "The payments alert acknowledgment target must be exactly 10 minutes.",
+    "Taylor must be named as Meridian's customer liaison for December 26.",
+    "Jordan must be the security escalation contact for December 26.",
+    "Jordan must be secondary on-call on December 26.",
+    "The published plan must include a holiday-roster commitment.",
+    "The payments response requirement must be cited by the decision-maker as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['roster']['December 25']['primary'] == 'A3'",
+    "C2": "decisions['roster']['December 25']['secondary'] != 'A2'",
+    "C3": "decisions['payment_ack_minutes'] == 10",
+    "C4": "decisions['customer_liaison_agent'] == 'A4' and decisions['customer_liaison_date'] == 'December 26'",
+    "C5": "decisions['security_escalation_agent'] == 'A5' and decisions['security_escalation_date'] == 'December 26'",
+    "C6": "decisions['roster']['December 26']['secondary'] == 'A5'",
+    "C7": "any(c['type'] == 'holiday_roster_published' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in revealed and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2"
+      ],
+      "why": "Riley's December 25 leave changes the primary assignment to Casey and removes Riley from the secondary assignment that appears in the draft."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "P1"
+      ],
+      "why": "The payments agreement changes the acknowledgment target from exactly 30 minutes to exactly 10 minutes and requires the decision-maker to cite that requirement."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4"
+      ],
+      "why": "Meridian's December 26 contract changes the customer-liaison field from unassigned to Taylor, specifically on December 26."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The December 26 certificate rotation changes the security contact to Jordan and changes the December 26 secondary assignment to Jordan."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

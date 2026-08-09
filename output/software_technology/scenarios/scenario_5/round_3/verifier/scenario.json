@@ -1,0 +1,167 @@
+{
+  "scenario_id": "scenario_5",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A tech lead must approve the initial rollout plan for an internal AI assistant beta, including the eligible audience, concurrency cap, and required review workflow, after the final engineering readiness check.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Privacy Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Tessa",
+      "role": "Customer Success Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The internal AI assistant beta is scheduled to open next Tuesday to employees who use the company's support and operations tools.",
+    "S2": "Riley has final authority over the beta rollout configuration.",
+    "S3": "The assistant passed the planned functional, authentication, and basic prompt-safety tests in the staging environment.",
+    "S4": "As part of the normal go/no-go process, Riley checks in with reliability, privacy, and customer success before enabling the feature flag. Once all three area owners have reported their findings and no new blocker is raised, Riley records the rollout decision within the next two turns rather than opening another investigation."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While investigating an unrelated staging latency alert this morning, Mina confirmed that the production inference gateway can sustain exactly 100 concurrent assistant requests during the beta window; above 100, queue time rises sharply and the gateway's fail-safe is not configured. She has not updated the rollout ticket because the capacity result was confirmed only after the last load-test report was posted."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a privacy review of the support-tool connector yesterday, Owen confirmed that European tenant records can appear in assistant prompts unless the EU tenant group is excluded from the first release. The required region filter is implemented but not yet documented in the launch checklist because he was waiting for the connector team to confirm the tenant-group identifier."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Tessa confirmed in a customer-success call this afternoon that the two pilot operations teams require a human review step for every assistant-generated external response and the Customer Success beta escalation channel as the named escalation channel during the beta. She has not added this to the launch ticket because the teams finalized their pilot conditions after the product review."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "beta_enabled_next_tuesday": "boolean",
+      "eligible_tenant_group": "string",
+      "max_concurrent_requests": "integer",
+      "human_review_required": "boolean",
+      "external_response_escalation_channel": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The beta must be enabled next Tuesday.",
+    "Only the non-European tenant group may participate in the first release.",
+    "The concurrency cap must be exactly 100 requests.",
+    "Human review must be required for every external response.",
+    "The Customer Success beta escalation channel must be recorded as the named escalation channel.",
+    "A capacity guardrail commitment must be recorded.",
+    "A tenant-region-filter commitment must be recorded.",
+    "A human-review commitment must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['beta_enabled_next_tuesday'] == True",
+    "C2": "'non-EU' in decisions['eligible_tenant_group'] and 'EU' in decisions['eligible_tenant_group']",
+    "C3": "decisions['max_concurrent_requests'] == 100",
+    "C4": "decisions['human_review_required'] == True",
+    "C5": "decisions['external_response_escalation_channel'] in ['CS beta escalation channel', 'Customer Success beta escalation channel']",
+    "C6": "any(c['type'] in ['capacity_guardrail', 'configuration', 'rollout_configuration', 'enforcement'] or '100' in c['detail'] or 'fail-safe' in c['detail'] or 'rate-limit' in c['detail'] or 'rate limit' in c['detail'] for c in commitments)",
+    "C7": "any(c['type'] in ['tenant-region-filter', 'verification', 'rollout_configuration', 'documentation'] or 'EU tenant' in c['detail'] or 'region filter' in c['detail'] or 'tenant-group identifier' in c['detail'] for c in commitments)",
+    "C8": "any(c['type'] in ['human-review', 'configuration', 'rollout_configuration', 'documentation', 'briefing'] or 'human review' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The standard rollout has no exact gateway limit; PF1 changes the concurrency setting to exactly 100 and requires a commitment covering the 100-request cap or its fail-safe and rate-limiting guardrails."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C7"
+      ],
+      "why": "The ordinary employee audience includes European tenants; PF2 changes the first-release audience to non-EU tenants with the EU tenant group excluded and requires a commitment covering the region filter or tenant-group confirmation."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C8"
+      ],
+      "why": "The default assistant workflow permits direct external responses; PF3 changes it to mandatory human review, specifically names the Customer Success beta escalation channel, and requires a commitment covering human review."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

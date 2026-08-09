@@ -1,0 +1,189 @@
+{
+  "arm": "strong",
+  "temperature": 0.478,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, thanks for joining. As part of the readiness review for Saturday's JWT signing key rotation, I need to hear from platform engineering, application engineering, and compliance before I can approve the production plan. The staging tests passed -- token issuance, validation, and rollback checks all looked good. Is there anything that should change the runbook before I give the go-ahead?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, thanks for joining. As part of the readiness review for Saturday's JWT signing key rotation, I need to hear from platform engineering, application engineering, and compliance before I can approve the production plan. The staging tests passed -- token issuance, validation, and rollback checks all looked good. Is there anything that should change the runbook before I give the go-ahead?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag something I found this afternoon while checking the production HSM configuration for a separate access review. The HSM permits only four key activations per 60-minute period, and the three keys we're rotating cover nine production key slots. I haven't updated the rotation runbook with this vendor limit yet. This could be a constraint on our rotation plan -- if activating keys across nine slots exceeds four activations within a 60-minute window, we may need to pace the rotation or add safeguards to stay within the HSM's rate limit.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something I found this afternoon while checking the production HSM configuration for a separate access review. The HSM permits only four key activations per 60-minute period, and the three keys we're rotating cover nine production key slots. I haven't updated the rotation runbook with this vendor limit yet. This could be a constraint on our rotation plan -- if activating keys across nine slots exceeds four activations within a 60-minute window, we may need to pace the rotation or add safeguards to stay within the HSM's rate limit.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to flag something I discovered this morning while investigating an unrelated mobile authentication ticket. Clients below Android SDK version 8.4 reject the new key identifier, and 17% of active mobile sessions are still on those clients. The good news is we have a compatibility bridge that can be enabled before rotation, but it requires a seven-day overlap period with the old keys. I haven't filed a compatibility note on this yet. This means the runbook needs to be modified to include enabling the compatibility bridge and maintaining the seven-day overlap before we fully cut over to the new keys.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something I discovered this morning while investigating an unrelated mobile authentication ticket. Clients below Android SDK version 8.4 reject the new key identifier, and 17% of active mobile sessions are still on those clients. The good news is we have a compatibility bridge that can be enabled before rotation, but it requires a seven-day overlap period with the old keys. I haven't filed a compatibility note on this yet. This means the runbook needs to be modified to include enabling the compatibility bridge and maintaining the seven-day overlap before we fully cut over to the new keys.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "During this week's SOC 2 audit preparation, I confirmed that the production key-rotation control requires two-person approval and a before-and-after key-fingerprint evidence package before the change can be closed. I have not yet added that control detail to the change ticket. This means the runbook needs to be modified to include a second approver sign-off and the collection of key fingerprints before and after the rotation, so we can satisfy the SOC 2 control and properly close the change.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"During this week's SOC 2 audit preparation, I confirmed that the production key-rotation control requires two-person approval and a before-and-after key-fingerprint evidence package before the change can be closed. I have not yet added that control detail to the change ticket. This means the runbook needs to be modified to include a second approver sign-off and the collection of key fingerprints before and after the rotation, so we can satisfy the SOC 2 control and properly close the change.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thanks all three of you for surfacing these issues. Let me summarize what I'm hearing and think through whether we can accommodate these safeguards within Saturday's reserved window.\n\nMateo: The HSM allows only four key activations per 60 minutes, and our three keys cover nine production slots. That means we can't activate all nine slots in a single wave \u2014 we'd need to split into at least three waves (3+3+3), with at least 60 minutes between waves. With a 22:00\u201302:00 window, we could do waves at 22:00, 23:00, and 00:00, leaving buffer time for validation and rollback if needed.\n\nHana: 17% of active mobile sessions are on clients below Android SDK 8.4 that reject the new key identifier. We need to enable a compatibility bridge and maintain a seven-day overlap with the old keys before full cutover. This doesn't necessarily block Saturday's rotation \u2014 we can activate the new keys and begin the overlap period, but we'd hold off on fully deprecating the old keys for seven days.\n\nIris: SOC 2 requires two-person approval and before-and-after key-fingerprint evidence. I can be one approver; I'll need a second approver identified before Saturday. The runbook needs to include fingerprint capture before the first wave and after the final wave.\n\nSo the modified plan would be: enable the compatibility bridge, capture pre-rotation fingerprints, get two-person approval, rotate in three waves with 60-minute spacing, capture post-rotation fingerprints, and keep old keys active for seven days. Does this sound workable to everyone? If so, I believe I can approve the modified plan with these documented safeguards rather than rescheduling.",
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thanks all three of you for surfacing these issues. Let me summarize what I'm hearing and think through whether we can accommodate these safeguards within Saturday's reserved window.\\n\\nMateo: The HSM allows only four key activations per 60 minutes, and our three keys cover nine production slots. That means we can't activate all nine slots in a single wave \u2014 we'd need to split into at least three waves (3+3+3), with at least 60 minutes between waves. With a 22:00\u201302:00 window, we could do waves at 22:00, 23:00, and 00:00, leaving buffer time for validation and rollback if needed.\\n\\nHana: 17% of active mobile sessions are on clients below Android SDK 8.4 that reject the new key identifier. We need to enable a compatibility bridge and maintain a seven-day overlap with the old keys before full cutover. This doesn't necessarily block Saturday's rotation \u2014 we can activate the new keys and begin the overlap period, but we'd hold off on fully deprecating the old keys for seven days.\\n\\nIris: SOC 2 requires two-person approval and before-and-after key-fingerprint evidence. I can be one approver; I'll need a second approver identified before Saturday. The runbook needs to include fingerprint capture before the first wave and after the final wave.\\n\\nSo the modified plan would be: enable the compatibility bridge, capture pre-rotation fingerprints, get two-person approval, rotate in three waves with 60-minute spacing, capture post-rotation fingerprints, and keep old keys active for seven days. Does this sound workable to everyone? If so, I believe I can approve the modified plan with these documented safeguards rather than rescheduling.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "That summary sounds accurate from the platform side. The three-wave approach at 22:00, 23:00, and 00:00 keeps us within the four-activation-per-60-minute HSM limit, and we still have buffer time for validation and rollback before the 02:00 window closes. I'll update the rotation runbook with the HSM rate limit and the wave schedule before Saturday. One thing to confirm: I'll need to know who the second SOC 2 approver is so we can coordinate the pre-rotation fingerprint capture and sign-off before the first wave kicks off at 22:00.",
+      "speaker": "A2",
+      "turn": 5,
+      "raw_output": "{\"type\":\"say\",\"text\":\"That summary sounds accurate from the platform side. The three-wave approach at 22:00, 23:00, and 00:00 keeps us within the four-activation-per-60-minute HSM limit, and we still have buffer time for validation and rollback before the 02:00 window closes. I'll update the rotation runbook with the HSM rate limit and the wave schedule before Saturday. One thing to confirm: I'll need to know who the second SOC 2 approver is so we can coordinate the pre-rotation fingerprint capture and sign-off before the first wave kicks off at 22:00.\"}"
+    },
+    {
+      "type": "say",
+      "text": "The summary sounds workable from the application engineering side. Enabling the compatibility bridge before rotation and keeping the old keys active for seven days means we protect that 17% of mobile sessions on older Android clients while still proceeding with the new key activation on Saturday. I'll file the compatibility note documenting the SDK 8.4 threshold, the 17% figure, and the seven-day overlap requirement before Saturday. One thing I want to make sure is captured in the runbook: the old keys must remain fully valid for issuance and validation throughout the seven-day overlap \u2014 not just present but inactive \u2014 so those older clients continue to function without disruption.",
+      "speaker": "A3",
+      "turn": 6,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"The summary sounds workable from the application engineering side. Enabling the compatibility bridge before rotation and keeping the old keys active for seven days means we protect that 17% of mobile sessions on older Android clients while still proceeding with the new key activation on Saturday. I'll file the compatibility note documenting the SDK 8.4 threshold, the 17% figure, and the seven-day overlap requirement before Saturday. One thing I want to make sure is captured in the runbook: the old keys must remain fully valid for issuance and validation throughout the seven-day overlap \u2014 not just present but inactive \u2014 so those older clients continue to function without disruption.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Hana, that's an important clarification \u2014 the runbook should explicitly state that old keys remain fully valid for both issuance and validation during the seven-day overlap, not just present but inactive. I'll make sure the SOC 2 evidence package captures fingerprints for both the old and new keys so we can document that the overlap period is properly maintained. As for the second approver, Riley, can you identify someone before Saturday so we can coordinate the pre-rotation sign-off and fingerprint capture ahead of the first wave at 22:00?",
+      "speaker": "A4",
+      "turn": 7,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Hana, that's an important clarification \u2014 the runbook should explicitly state that old keys remain fully valid for both issuance and validation during the seven-day overlap, not just present but inactive. I'll make sure the SOC 2 evidence package captures fingerprints for both the old and new keys so we can document that the overlap period is properly maintained. As for the second approver, Riley, can you identify someone before Saturday so we can coordinate the pre-rotation sign-off and fingerprint capture ahead of the first wave at 22:00?\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "rotation_approved": true,
+          "rotation_wave_count": 3,
+          "minutes_between_waves": 60,
+          "compatibility_bridge_enabled": true,
+          "legacy_client_overlap_days": 7,
+          "two_person_approval_required": true,
+          "fingerprint_evidence_required": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "runbook_update",
+            "target": "Mateo",
+            "detail": "Update rotation runbook with HSM rate limit (four activations per 60 minutes) and three-wave schedule at 22:00, 23:00, 00:00 UTC"
+          },
+          {
+            "type": "runbook_update",
+            "target": "Hana",
+            "detail": "File compatibility note documenting SDK 8.4 threshold, 17% affected sessions, seven-day overlap requirement, and that old keys remain fully valid for issuance and validation during overlap"
+          },
+          {
+            "type": "runbook_update",
+            "target": "Iris",
+            "detail": "Add SOC 2 control details to change ticket: two-person approval and before-and-after key-fingerprint evidence package for both old and new keys"
+          },
+          {
+            "type": "approval_coordination",
+            "target": "Riley",
+            "detail": "Identify a second SOC 2 approver before Saturday and coordinate pre-rotation sign-off and fingerprint capture ahead of the first wave at 22:00 UTC"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 8,
+      "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"rotation_approved\":true,\"rotation_wave_count\":3,\"minutes_between_waves\":60,\"compatibility_bridge_enabled\":true,\"legacy_client_overlap_days\":7,\"two_person_approval_required\":true,\"fingerprint_evidence_required\":true},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\"],\"commitments\":[{\"type\":\"runbook_update\",\"target\":\"Mateo\",\"detail\":\"Update rotation runbook with HSM rate limit (four activations per 60 minutes) and three-wave schedule at 22:00, 23:00, 00:00 UTC\"},{\"type\":\"runbook_update\",\"target\":\"Hana\",\"detail\":\"File compatibility note documenting SDK 8.4 threshold, 17% affected sessions, seven-day overlap requirement, and that old keys remain fully valid for issuance and validation during overlap\"},{\"type\":\"runbook_update\",\"target\":\"Iris\",\"detail\":\"Add SOC 2 control details to change ticket: two-person approval and before-and-after key-fingerprint evidence package for both old and new keys\"},{\"type\":\"approval_coordination\",\"target\":\"Riley\",\"detail\":\"Identify a second SOC 2 approver before Saturday and coordinate pre-rotation sign-off and fingerprint capture ahead of the first wave at 22:00 UTC\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"PF3\",\"S1\",\"S2\",\"S3\",\"S4\",\"S5\"]}}"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "rotation_approved": true,
+      "rotation_wave_count": 3,
+      "minutes_between_waves": 60,
+      "compatibility_bridge_enabled": true,
+      "legacy_client_overlap_days": 7,
+      "two_person_approval_required": true,
+      "fingerprint_evidence_required": true
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "runbook_update",
+        "target": "Mateo",
+        "detail": "Update rotation runbook with HSM rate limit (four activations per 60 minutes) and three-wave schedule at 22:00, 23:00, 00:00 UTC"
+      },
+      {
+        "type": "runbook_update",
+        "target": "Hana",
+        "detail": "File compatibility note documenting SDK 8.4 threshold, 17% affected sessions, seven-day overlap requirement, and that old keys remain fully valid for issuance and validation during overlap"
+      },
+      {
+        "type": "runbook_update",
+        "target": "Iris",
+        "detail": "Add SOC 2 control details to change ticket: two-person approval and before-and-after key-fingerprint evidence package for both old and new keys"
+      },
+      {
+        "type": "approval_coordination",
+        "target": "Riley",
+        "detail": "Identify a second SOC 2 approver before Saturday and coordinate pre-rotation sign-off and fingerprint capture ahead of the first wave at 22:00 UTC"
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": true,
+    "C8": true,
+    "C9": true,
+    "C10": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": true
+}

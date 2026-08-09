@@ -1,0 +1,135 @@
+{
+  "scenario_id": "scenario_35",
+  "scenario_type": "infra_capacity_cost",
+  "description": "A cloud infrastructure lead must finalize the operating policy for an image-moderation inference cluster during the weekly capacity and cost review, deciding its baseline capacity, peak limit, scaling behavior, and a related workload reassignment.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Cloud Infrastructure Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Casey",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Ravi",
+      "role": "ML Platform Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The image-moderation inference cluster currently runs eight GPU nodes in production.",
+    "S2": "The draft operating policy keeps eight nodes as the baseline, permits a maximum of ten nodes, and uses a 15-minute scale-up cooldown.",
+    "S3": "The cluster's monthly cloud-cost review is scheduled for this afternoon.",
+    "S4": "Morgan's normal review process is to hear from FinOps and ML platform engineering before publishing the capacity policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reconciling the latest cloud invoice against node-level billing, Casey confirmed that two of the eight GPU nodes charged to this cluster have actually been serving the batch-translation workload; the corrected policy should set this cluster's baseline to exactly six nodes and reassign exactly two nodes to batch translation. Casey found this during invoice reconciliation and has not yet updated the capacity review document."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a load rehearsal for the October 3 image campaign, Ravi measured a sustained requirement for exactly fourteen GPU nodes and confirmed that the inference queue breaches its latency target unless scale-up begins within exactly five minutes; he recorded the result in a test notebook but has not yet attached it to the capacity review."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "inference_baseline_nodes": "integer",
+      "inference_max_nodes": "integer",
+      "batch_translation_nodes_reassigned": "integer",
+      "scale_up_cooldown_minutes": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The inference cluster baseline must be exactly six GPU nodes.",
+    "Exactly two GPU nodes must be reassigned to batch translation.",
+    "The inference cluster maximum must be exactly fourteen GPU nodes.",
+    "The scale-up cooldown must be exactly five minutes.",
+    "A billing-reconciliation or capacity-review update commitment must be included.",
+    "A campaign-capacity or test-notebook documentation commitment must be included.",
+    "Casey's billing finding must be cited in the decision justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['inference_baseline_nodes'] == 6",
+    "C2": "decisions['batch_translation_nodes_reassigned'] == 2",
+    "C3": "decisions['inference_max_nodes'] == 14",
+    "C4": "decisions['scale_up_cooldown_minutes'] == 5",
+    "C5": "any(c['target'] == 'Casey' and c['type'] in ['billing_reconciliation', 'billing-reconciliation', 'invoice_reconciliation', 'cost_allocation_correction', 'document_update', 'document-update', 'documentation', 'follow-up'] for c in commitments)",
+    "C6": "any(c['target'] == 'Ravi' and c['type'] in ['campaign_capacity', 'campaign-capacity', 'load_rehearsal', 'test_notebook', 'document_update', 'document-update', 'documentation', 'follow-up'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The draft counts eight nodes as inference capacity; PF1 changes the baseline to exactly six, moves exactly two nodes to batch translation, and requires a billing-reconciliation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The draft maximum of ten nodes and 15-minute cooldown would fail the measured campaign load; PF2 changes them to exactly fourteen nodes and exactly five minutes and requires a campaign-capacity commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

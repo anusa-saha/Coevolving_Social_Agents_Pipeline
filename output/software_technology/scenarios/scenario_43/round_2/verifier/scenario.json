@@ -1,0 +1,199 @@
+{
+  "scenario_id": "scenario_43",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A VP of Engineering must approve the production rollout policy for a new customer-data redaction gateway, deciding its initial scope, rollout percentage, failure behavior, customer handling, and audit settings after the routine launch-readiness review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "VP of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "June",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Elena",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Kai",
+      "role": "Security and Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The new redaction gateway removes payment-card and government-ID fields from request logs before they reach the customer-support observability system.",
+    "S2": "The gateway passed its planned functional tests and synthetic traffic tests in staging.",
+    "S3": "The production rollout is scheduled to begin tomorrow morning, and Morgan makes the final approval decision.",
+    "S4": "The team's standard launch checklist requires backend engineering, reliability, customer support, and security to review the plan before Morgan signs off.",
+    "S5": "The launch-review routine requires each reviewer with a blocking finding to record that finding as a formal checklist finding before general discussion, and Morgan waits for all four review entries before settling the rollout policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While helping migrate an unrelated client SDK this afternoon, Ravi confirmed that exactly eight legacy clients\u2014Lark, Meridian, Osprey, Quill, Radian, Solace, Timber, and Vale\u2014still require the unredacted field format. The gateway must initially exclude exactly those clients, and Ravi has not updated the rollout ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "June's traffic replay this morning showed that the currently provisioned redaction workers can safely process exactly 25% of expected peak traffic, or about 450 requests per second, while preserving the team's 500-requests-per-second headroom target. She has not posted the result because the capacity dashboard is being rebuilt."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While checking an account escalation, Elena confirmed that Acme's contract requires 72 hours of notice before any production change that alters the format of data available to its support team. Acme has not been notified, and Elena has not added the clause to the launch checklist."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Kai confirmed during a compliance review today that redaction decisions for payment-related requests must be recorded in immutable storage for exactly 400 days, and the gateway must fail closed on payment endpoints if redaction is unavailable. The finding is still in her review notes rather than a filed ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "gateway_enabled": "boolean",
+      "initial_rollout_percent": "integer",
+      "excluded_client_ids": "list",
+      "acme_enabled": "boolean",
+      "customer_notice_due": "string",
+      "payment_endpoint_failure_mode": "string",
+      "immutable_decision_log_retention_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout policy must either enable a 25 percent initial rollout or defer the gateway with a zero percent initial rollout.",
+    "Exactly the eight named legacy clients must be excluded initially.",
+    "Acme must remain excluded until its required notice has been given.",
+    "The customer notice timing must state a 72-hour notice period.",
+    "Payment endpoints must use fail-closed behavior.",
+    "Redaction decisions must be retained in immutable storage for exactly 400 days.",
+    "The settlement must include a commitment to update or implement the exclusion list for the eight legacy clients.",
+    "The settlement must include a commitment mentioning Acme and its 72-hour notice."
+  ],
+  "content_checks": {
+    "C1": "(decisions['gateway_enabled'] == True and decisions['initial_rollout_percent'] == 25) or (decisions['gateway_enabled'] == False and decisions['initial_rollout_percent'] == 0)",
+    "C2": "decisions['initial_rollout_percent'] == 25 or (decisions['gateway_enabled'] == False and decisions['initial_rollout_percent'] == 0)",
+    "C3": "decisions['excluded_client_ids'] == ['Lark', 'Meridian', 'Osprey', 'Quill', 'Radian', 'Solace', 'Timber', 'Vale']",
+    "C4": "decisions['acme_enabled'] == False",
+    "C5": "'72' in decisions['customer_notice_due'] and ('hour' in decisions['customer_notice_due'] or 'Hour' in decisions['customer_notice_due'] or 'HOUR' in decisions['customer_notice_due'])",
+    "C6": "'fail_closed' in decisions['payment_endpoint_failure_mode'] or 'fail-closed' in decisions['payment_endpoint_failure_mode']",
+    "C7": "decisions['immutable_decision_log_retention_days'] == 400",
+    "C8": "any(c['target'] == 'Ravi' and ('Lark' in c['detail'] or 'legacy' in c['detail'] or 'exclusion' in c['detail'] or 'exclusion' in c['type']) for c in commitments)",
+    "C9": "any('Acme' in c['detail'] and '72' in c['detail'] and ('hour' in c['detail'] or 'Hour' in c['detail'] or 'HOUR' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C8"
+      ],
+      "why": "The exact eight legacy-client IDs change the initial exclusion list from an unrestricted rollout to those eight named clients and require an exclusion-list update commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2"
+      ],
+      "why": "The measured worker capacity changes the rollout choice to either an exactly 25 percent initial rollout or a zero-percent deferral instead of an arbitrary rollout size."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C9"
+      ],
+      "why": "Acme's contract changes Acme's initial enablement to false, establishes the exact 72-hour notice period, and requires an Acme notice commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C6",
+        "C7",
+        "P1"
+      ],
+      "why": "The compliance confirmation changes payment-endpoint failure behavior to fail_closed, sets immutable decision-log retention to exactly 400 days, and supplies the fact that must be cited with provenance."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

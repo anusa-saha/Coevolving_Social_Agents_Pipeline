@@ -1,0 +1,199 @@
+{
+  "scenario_id": "scenario_20",
+  "scenario_type": "architecture_decision",
+  "description": "A platform engineering lead must approve the production architecture and initial operating policy for a new event-ingestion service, including replication mode, partition limits, tenant routing, retention, and data-protection controls, after the routine architecture sign-off.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Platform Engineering Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Inez",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Ravi",
+      "role": "Infrastructure Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Clara",
+      "role": "Customer Success Operations Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Theo",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The new event-ingestion service is scheduled to enter production next Monday.",
+    "S2": "Morgan makes the binding architecture and operating-policy decision.",
+    "S3": "The prototype passed functional tests using tenants in both the US and EU regions.",
+    "S4": "The draft design proposes active-active replication, a 90-day event-retention period, and an initial limit of 96 partitions.",
+    "S5": "At architecture sign-off, Morgan follows the team's routine checklist by asking backend engineering, infrastructure, customer success operations, and security for blockers and required controls before recording the final design."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing an unrelated consumer integration this morning, Inez confirmed that the existing Ledger event consumer cannot preserve ordering across active-active replication; production compatibility requires active-passive replication plus an explicit per-aggregate ordering guardrail. She has not yet updated the architecture document."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Ravi confirmed from the current production load model ten minutes ago that the shared cluster can support at most 48 partitions for this service without starving the checkout stream, rather than the draft's 96. He was still reconciling the capacity worksheet and has not posted the number."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Clara found in a customer-success contract review this afternoon that the enterprise tenant Linden requires all event processing and storage to remain in the EU region; Linden is included in the proposed initial cohort, and she has not added the routing exception to the design ticket."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Theo's security scan, completed during a separate token-hardening task today, found personal data in the event payloads. The service therefore requires field-level encryption and a maximum 30-day retention period, but he has not opened the security finding yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "replication_mode": "string",
+      "ordering_guardrail_enabled": "boolean",
+      "max_partitions": "integer",
+      "eu_routing_tenants": "array",
+      "retention_days": "integer",
+      "field_level_encryption": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The service must use active-passive replication.",
+    "A per-aggregate ordering guardrail must be enabled.",
+    "The maximum partition count must be exactly 48.",
+    "Linden must be the only tenant explicitly routed to the EU region in the initial routing exception.",
+    "Event retention must be exactly 30 days.",
+    "Field-level encryption must be enabled.",
+    "The settlement must include commitments for the ordering guardrail, the 48-partition capacity limit, Linden's EU routing exception, and field-level encryption."
+  ],
+  "content_checks": {
+    "C1": "decisions['replication_mode'] == 'active-passive'",
+    "C2": "decisions['ordering_guardrail_enabled'] == True",
+    "C3": "decisions['max_partitions'] == 48",
+    "C4": "decisions['eu_routing_tenants'] == ['Linden']",
+    "C5": "decisions['retention_days'] == 30",
+    "C6": "decisions['field_level_encryption'] == True",
+    "C7": "any(c['type'] == 'ordering_guardrail' for c in commitments)",
+    "C8": "any(c['type'] == 'partition_capacity_limit' for c in commitments)",
+    "C9": "any(c['type'] == 'eu_routing_exception' and c['target'] == 'Linden' for c in commitments)",
+    "C10": "any(c['type'] == 'field_level_encryption' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The prototype's cross-region success leaves the replication choice open, while PF1 changes it to active-passive, enables the ordering guardrail, and requires an ordering-guardrail commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C8"
+      ],
+      "why": "The draft's 96-partition limit changes to exactly 48 partitions once PF2's shared-cluster capacity boundary is known, requiring a partition-capacity commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C9"
+      ],
+      "why": "The ordinary mixed-region cohort changes to an EU-routing exception containing exactly Linden once PF3's contract requirement is known, requiring a Linden routing commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5",
+        "C6",
+        "C10"
+      ],
+      "why": "The draft's 90-day retention changes to exactly 30 days and adds field-level encryption once PF4 identifies personal data in the payloads, requiring an encryption commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

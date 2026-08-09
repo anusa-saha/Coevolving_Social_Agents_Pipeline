@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_24",
+  "scenario_type": "infrastructure_failover_policy",
+  "description": "A Director of Reliability must approve the operating plan for Friday's production failover drill, including the failover method, write-pause duration, participating tenants, evidence retention, and follow-up commitments, after the standard readiness review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Director of Reliability"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Riley",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The production failover drill is scheduled for Friday from 22:00 to 23:00 UTC.",
+    "S2": "Morgan makes the final decision on the drill's operating plan.",
+    "S3": "The service completed the standard staging failover rehearsal successfully, including restoration of reads and writes after the simulated regional outage.",
+    "S4": "The reliability team's normal readiness procedure is for the decision-maker to ask reliability and compliance for any final operational or control requirements before approving the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking production replication metrics for an unrelated alert this afternoon, Riley found that the largest tenant's replica can accumulate 18 minutes of lag during a regional switchover; automatic failover could therefore accept stale writes, so the drill must use manual failover with a 15-minute write pause. Riley has not yet updated the drill runbook because the metric was confirmed only minutes ago."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Casey confirmed during a compliance evidence review this morning that the drill may include only EU production tenants because regulated tenant data must remain within the EU, and the drill record must be retained for exactly 365 days. Casey has not added these requirements to the readiness ticket because the compliance review was completed in a separate audit workspace."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "drill_approved": "boolean",
+      "failover_mode": "string",
+      "write_pause_minutes": "integer",
+      "tenant_scope": "string",
+      "evidence_retention_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The drill must be approved.",
+    "The failover mode must be manual.",
+    "The production write pause must be exactly 15 minutes.",
+    "The participating tenant scope must be EU production tenants only.",
+    "The drill evidence must be retained for exactly 365 days.",
+    "A manual-failover runbook commitment must exist.",
+    "A compliance-evidence commitment must exist.",
+    "The replication-lag finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['drill_approved'] == True",
+    "C2": "decisions['failover_mode'] == 'manual'",
+    "C3": "decisions['write_pause_minutes'] == 15",
+    "C4": "decisions['tenant_scope'] == 'EU production tenants only'",
+    "C5": "decisions['evidence_retention_days'] == 365",
+    "C6": "any(c['type'] == 'manual_failover_runbook' for c in commitments)",
+    "C7": "any(c['type'] == 'compliance_evidence' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The successful staging rehearsal leaves the failover method and pause duration open; PF1 changes them to manual failover and exactly 15 minutes and requires the manual-failover runbook commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "why": "The general drill plan does not specify a regional tenant restriction or evidence lifetime; PF2 changes the scope to EU production tenants only, sets retention to exactly 365 days, and requires the compliance-evidence commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

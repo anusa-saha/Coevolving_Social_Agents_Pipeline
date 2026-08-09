@@ -1,0 +1,176 @@
+{
+  "arm": "strong",
+  "temperature": 0.47,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, before we finalize the design for the new event-ingestion service, I want to make sure we go through our standard sign-off checklist. We've got the draft design on the table \u2014 active-active replication, 90-day event-retention period, and 96 partitions to start. The prototype already passed functional tests across both US and EU tenants, which is good. But since we're targeting production next Monday, I need to hear from each area: backend engineering, infrastructure, customer success operations, and security \u2014 any blockers or required controls from your side before I record the final design?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright everyone, before we finalize the design for the new event-ingestion service, I want to make sure we go through our standard sign-off checklist. We've got the draft design on the table \u2014 active-active replication, 90-day event-retention period, and 96 partitions to start. The prototype already passed functional tests across both US and EU tenants, which is good. But since we're targeting production next Monday, I need to hear from each area: backend engineering, infrastructure, customer success operations, and security \u2014 any blockers or required controls from your side before I record the final design?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "While reviewing an unrelated consumer integration this morning, I confirmed that the existing Ledger event consumer cannot preserve ordering across active-active replication. Production compatibility requires active-passive replication plus an explicit per-aggregate ordering guardrail. I have not yet updated the architecture document.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While reviewing an unrelated consumer integration this morning, I confirmed that the existing Ledger event consumer cannot preserve ordering across active-active replication. Production compatibility requires active-passive replication plus an explicit per-aggregate ordering guardrail. I have not yet updated the architecture document.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to flag a blocker from infrastructure. I confirmed from the current production load model ten minutes ago that the shared cluster can only support 48 partitions for this service without starving the checkout stream \u2014 not the 96 in the draft. I was still reconciling the capacity worksheet and hadn't posted the number yet, but given we're finalizing now, everyone needs to know.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a blocker from infrastructure. I confirmed from the current production load model ten minutes ago that the shared cluster can only support 48 partitions for this service without starving the checkout stream \u2014 not the 96 in the draft. I was still reconciling the capacity worksheet and hadn't posted the number yet, but given we're finalizing now, everyone needs to know.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to raise a blocker from customer success operations. In a contract review this afternoon, I found that the enterprise tenant Linden requires all event processing and storage to remain in the EU region \u2014 no cross-region replication permitted. Linden is included in the proposed initial cohort, and I have not yet added a routing exception to the design ticket. This directly conflicts with the active-active replication proposal, at least for this tenant.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to raise a blocker from customer success operations. In a contract review this afternoon, I found that the enterprise tenant Linden requires all event processing and storage to remain in the EU region \u2014 no cross-region replication permitted. Linden is included in the proposed initial cohort, and I have not yet added a routing exception to the design ticket. This directly conflicts with the active-active replication proposal, at least for this tenant.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF4",
+      "text": "I have a security blocker. During a separate token-hardening task today, my security scan found personal data in the event payloads. This means the service requires field-level encryption and a maximum 30-day retention period \u2014 not the 90 days in the draft. I have not opened the security finding yet, but given we're finalizing now, everyone needs to know. This directly conflicts with the proposed 90-day retention period.",
+      "speaker": "A5",
+      "turn": 4,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I have a security blocker. During a separate token-hardening task today, my security scan found personal data in the event payloads. This means the service requires field-level encryption and a maximum 30-day retention period \u2014 not the 90 days in the draft. I have not opened the security finding yet, but given we're finalizing now, everyone needs to know. This directly conflicts with the proposed 90-day retention period.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "replication_mode": "active-passive",
+          "ordering_guardrail_enabled": true,
+          "max_partitions": 48,
+          "eu_routing_tenants": [
+            "Linden"
+          ],
+          "retention_days": 30,
+          "field_level_encryption": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "document_update",
+            "target": "architecture document",
+            "detail": "Update the design to reflect active-passive replication, 48 partitions, 30-day retention, field-level encryption, and the EU-only routing exception for Linden before recording the final design."
+          },
+          {
+            "type": "follow_up",
+            "target": "Inez",
+            "detail": "Inez to update the architecture document with the active-passive replication change and the per-aggregate ordering guardrail."
+          },
+          {
+            "type": "follow_up",
+            "target": "Ravi",
+            "detail": "Ravi to post the finalized capacity worksheet reflecting the 48-partition limit."
+          },
+          {
+            "type": "follow_up",
+            "target": "Clara",
+            "detail": "Clara to add the EU-only routing exception for Linden to the design ticket."
+          },
+          {
+            "type": "follow_up",
+            "target": "Theo",
+            "detail": "Theo to open the security finding for personal data in event payloads and document the field-level encryption requirement."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"replication_mode\": \"active-passive\",\n      \"ordering_guardrail_enabled\": true,\n      \"max_partitions\": 48,\n      \"eu_routing_tenants\": [\"Linden\"],\n      \"retention_days\": 30,\n      \"field_level_encryption\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"document_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update the design to reflect active-passive replication, 48 partitions, 30-day retention, field-level encryption, and the EU-only routing exception for Linden before recording the final design.\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Inez\",\n        \"detail\": \"Inez to update the architecture document with the active-passive replication change and the per-aggregate ordering guardrail.\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Ravi to post the finalized capacity worksheet reflecting the 48-partition limit.\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Clara\",\n        \"detail\": \"Clara to add the EU-only routing exception for Linden to the design ticket.\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Theo\",\n        \"detail\": \"Theo to open the security finding for personal data in event payloads and document the field-level encryption requirement.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "replication_mode": "active-passive",
+      "ordering_guardrail_enabled": true,
+      "max_partitions": 48,
+      "eu_routing_tenants": [
+        "Linden"
+      ],
+      "retention_days": 30,
+      "field_level_encryption": true
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "commitments": [
+      {
+        "type": "document_update",
+        "target": "architecture document",
+        "detail": "Update the design to reflect active-passive replication, 48 partitions, 30-day retention, field-level encryption, and the EU-only routing exception for Linden before recording the final design."
+      },
+      {
+        "type": "follow_up",
+        "target": "Inez",
+        "detail": "Inez to update the architecture document with the active-passive replication change and the per-aggregate ordering guardrail."
+      },
+      {
+        "type": "follow_up",
+        "target": "Ravi",
+        "detail": "Ravi to post the finalized capacity worksheet reflecting the 48-partition limit."
+      },
+      {
+        "type": "follow_up",
+        "target": "Clara",
+        "detail": "Clara to add the EU-only routing exception for Linden to the design ticket."
+      },
+      {
+        "type": "follow_up",
+        "target": "Theo",
+        "detail": "Theo to open the security finding for personal data in event payloads and document the field-level encryption requirement."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": true,
+    "C8": true,
+    "C9": true,
+    "C10": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3",
+    "PF4"
+  ],
+  "passed": true
+}

@@ -1,0 +1,602 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.473,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions across our services. As a reminder, our process requires that compliance and data platform each state their constraints first, and then I'll do a readback of both sets before we record the final design and follow-up commitments. So let's hear from compliance and data platform \u2014 what constraints do you each need to put on the table for this pipeline?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions across our services. As a reminder, our process requires that compliance and data platform each state their constraints first, and then I'll do a readback of both sets before we record the final design and follow-up commitments. So let's hear from compliance and data platform \u2014 what constraints do you each need to put on the table for this pipeline?\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to put a compliance constraint on the table that I confirmed just this morning: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I haven't added this to the architecture review until now.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to put a compliance constraint on the table that I confirmed just this morning: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I haven't added this to the architecture review until now.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to put a data platform constraint on the table. During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka. My capacity review also shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak load. I haven't updated the design document yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to put a data platform constraint on the table. During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka. My capacity review also shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak load. I haven't updated the design document yet.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thank you both. Let me do my readback of the constraints before we settle on the final design.\n\nFrom Compliance (Mina): Audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key.\n\nFrom Data Platform (Theo): The billing service can only emit audit events reliably through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load.\n\nGiven both sets of constraints, the transactional-outbox-to-Kafka design is the only option that satisfies the billing service's reliable emission requirement. The direct Kafka publishing and managed cloud queue options don't address the transactional outbox need. So the architecture will be transactional-outbox-to-Kafka, with 12 Kafka partitions, 7-year immutable retention, and customer-managed key encryption.\n\nDoes anyone want to add or correct anything before I record the final design and follow-up commitments?",
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thank you both. Let me do my readback of the constraints before we settle on the final design.\\n\\nFrom Compliance (Mina): Audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key.\\n\\nFrom Data Platform (Theo): The billing service can only emit audit events reliably through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load.\\n\\nGiven both sets of constraints, the transactional-outbox-to-Kafka design is the only option that satisfies the billing service's reliable emission requirement. The direct Kafka publishing and managed cloud queue options don't address the transactional outbox need. So the architecture will be transactional-outbox-to-Kafka, with 12 Kafka partitions, 7-year immutable retention, and customer-managed key encryption.\\n\\nDoes anyone want to add or correct anything before I record the final design and follow-up commitments?\"}"
+        },
+        {
+          "type": "say",
+          "text": "Riley, your readback of my compliance constraint is accurate. I don't have any corrections or additions at this time. The 7-year immutable retention and customer-managed key encryption requirement is correctly captured.",
+          "speaker": "A2",
+          "turn": 4,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Riley, your readback of my compliance constraint is accurate. I don't have any corrections or additions at this time. The 7-year immutable retention and customer-managed key encryption requirement is correctly captured.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Riley, your readback of my data platform constraints is accurate. The billing service's requirement for transactional outbox emission into Kafka and the 12 Kafka partitions for peak load are both correctly captured. I don't have any corrections or additions at this time.",
+          "speaker": "A3",
+          "turn": 5,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, your readback of my data platform constraints is accurate. The billing service's requirement for transactional outbox emission into Kafka and the 12 Kafka partitions for peak load are both correctly captured. I don't have any corrections or additions at this time.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "architecture": "transactional-outbox-to-Kafka",
+              "retention_years": 7,
+              "immutable_storage": true,
+              "customer_managed_key": true,
+              "kafka_partition_count": 12,
+              "retention_commitment_recorded": true,
+              "outbox_commitment_recorded": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "retention",
+                "target": "compliance",
+                "detail": "Audit records must be retained immutably for exactly 7 years with customer-managed key encryption."
+              },
+              {
+                "type": "outbox",
+                "target": "data-platform",
+                "detail": "Billing service must emit audit events through its transactional outbox into Kafka; pipeline configured with exactly 12 Kafka partitions for expected peak load."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 6,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"architecture\": \"transactional-outbox-to-Kafka\",\n      \"retention_years\": 7,\n      \"immutable_storage\": true,\n      \"customer_managed_key\": true,\n      \"kafka_partition_count\": 12,\n      \"retention_commitment_recorded\": true,\n      \"outbox_commitment_recorded\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"retention\",\n        \"target\": \"compliance\",\n        \"detail\": \"Audit records must be retained immutably for exactly 7 years with customer-managed key encryption.\"\n      },\n      {\n        \"type\": \"outbox\",\n        \"target\": \"data-platform\",\n        \"detail\": \"Billing service must emit audit events through its transactional outbox into Kafka; pipeline configured with exactly 12 Kafka partitions for expected peak load.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "architecture": "transactional-outbox-to-Kafka",
+          "retention_years": 7,
+          "immutable_storage": true,
+          "customer_managed_key": true,
+          "kafka_partition_count": 12,
+          "retention_commitment_recorded": true,
+          "outbox_commitment_recorded": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "retention",
+            "target": "compliance",
+            "detail": "Audit records must be retained immutably for exactly 7 years with customer-managed key encryption."
+          },
+          {
+            "type": "outbox",
+            "target": "data-platform",
+            "detail": "Billing service must emit audit events through its transactional outbox into Kafka; pipeline configured with exactly 12 Kafka partitions for expected peak load."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.324,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions across our services. We've got three options on the table: direct Kafka publishing, a managed cloud queue, or a transactional-outbox-to-Kafka design.\n\nBefore I record any final design, we need to go through our standard process. I'd like compliance and data platform to each state their constraints for this pipeline. Once I've heard from both, I'll read back both sets of constraints to make sure we're aligned, and then I'll record the final design and any follow-up commitments.\n\nWho wants to go first?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions across our services. We've got three options on the table: direct Kafka publishing, a managed cloud queue, or a transactional-outbox-to-Kafka design.\\n\\nBefore I record any final design, we need to go through our standard process. I'd like compliance and data platform to each state their constraints for this pipeline. Once I've heard from both, I'll read back both sets of constraints to make sure we're aligned, and then I'll record the final design and any follow-up commitments.\\n\\nWho wants to go first?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I have a compliance constraint that needs to be on the table for this review. While reviewing an unrelated customer-assurance questionnaire this morning, I confirmed that these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I hadn't yet added this requirement to the architecture review, but it's critical and must be factored into our design decision.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I have a compliance constraint that needs to be on the table for this review. While reviewing an unrelated customer-assurance questionnaire this morning, I confirmed that these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I hadn't yet added this requirement to the architecture review, but it's critical and must be factored into our design decision.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Mina. I'll go next with the data platform constraints. I have two important findings that need to be on the record for this review. First, during an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. Second, my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load. I haven't updated the design document with these yet, but they're both critical inputs to our architecture decision.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Mina. I'll go next with the data platform constraints. I have two important findings that need to be on the record for this review. First, during an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. Second, my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load. I haven't updated the design document with these yet, but they're both critical inputs to our architecture decision.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks both. Let me read back the constraints I've heard to make sure we're aligned before I record the final design.\n\nFrom compliance (Mina): Audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key.\n\nFrom data platform (Theo): First, the billing service can only emit audit events reliably through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. Second, the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load.\n\nDo both of you confirm that I've captured your constraints accurately? Once confirmed, I'll record the final design and follow-up commitments.",
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks both. Let me read back the constraints I've heard to make sure we're aligned before I record the final design.\\n\\nFrom compliance (Mina): Audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key.\\n\\nFrom data platform (Theo): First, the billing service can only emit audit events reliably through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. Second, the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load.\\n\\nDo both of you confirm that I've captured your constraints accurately? Once confirmed, I'll record the final design and follow-up commitments.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Yes, Riley, I confirm you've captured my compliance constraints accurately. The audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. That's correct.",
+          "speaker": "A2",
+          "turn": 4,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Yes, Riley, I confirm you've captured my compliance constraints accurately. The audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. That's correct.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Yes, Riley, I confirm you've captured my data platform constraints accurately. The billing service can only emit audit events reliably through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. And the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load. Both are correct.",
+          "speaker": "A3",
+          "turn": 5,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Yes, Riley, I confirm you've captured my data platform constraints accurately. The billing service can only emit audit events reliably through its transactional outbox into Kafka \u2014 direct publishing won't work reliably for that service. And the pipeline must be configured with exactly 12 Kafka partitions to handle expected peak load. Both are correct.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "architecture": "transactional-outbox-to-Kafka",
+              "retention_years": 7,
+              "immutable_storage": true,
+              "customer_managed_key": true,
+              "kafka_partition_count": 12,
+              "retention_commitment_recorded": true,
+              "outbox_commitment_recorded": true
+            },
+            "credited_facts": [
+              "PF1"
+            ],
+            "commitments": [
+              {
+                "type": "retention",
+                "target": "compliance",
+                "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream audit log store."
+              },
+              {
+                "type": "outbox",
+                "target": "data-platform",
+                "detail": "All services, including the billing service, will use the transactional-outbox-to-Kafka pattern for emitting audit events. The pipeline will be configured with exactly 12 Kafka partitions to handle expected peak load."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 6,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"architecture\": \"transactional-outbox-to-Kafka\",\n      \"retention_years\": 7,\n      \"immutable_storage\": true,\n      \"customer_managed_key\": true,\n      \"kafka_partition_count\": 12,\n      \"retention_commitment_recorded\": true,\n      \"outbox_commitment_recorded\": true\n    },\n    \"credited_facts\": [\n      \"PF1\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"retention\",\n        \"target\": \"compliance\",\n        \"detail\": \"Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream audit log store.\"\n      },\n      {\n        \"type\": \"outbox\",\n        \"target\": \"data-platform\",\n        \"detail\": \"All services, including the billing service, will use the transactional-outbox-to-Kafka pattern for emitting audit events. The pipeline will be configured with exactly 12 Kafka partitions to handle expected peak load.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "architecture": "transactional-outbox-to-Kafka",
+          "retention_years": 7,
+          "immutable_storage": true,
+          "customer_managed_key": true,
+          "kafka_partition_count": 12,
+          "retention_commitment_recorded": true,
+          "outbox_commitment_recorded": true
+        },
+        "credited_facts": [
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "retention",
+            "target": "compliance",
+            "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream audit log store."
+          },
+          {
+            "type": "outbox",
+            "target": "data-platform",
+            "detail": "All services, including the billing service, will use the transactional-outbox-to-Kafka pattern for emitting audit events. The pipeline will be configured with exactly 12 Kafka partitions to handle expected peak load."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.423,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions. The three options on the table are direct Kafka publishing, a managed cloud queue, and a transactional-outbox-to-Kafka design. Before we go further, I want to run our standard process: I need compliance and data platform to each state their constraints. Once I've heard from both, I'll read back the constraints to confirm we're aligned, and then I'll record the final design and follow-up commitments. Who's representing compliance, and who's representing data platform?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get this architecture review started. We're here to settle on the design for the centralized audit-log pipeline for administrative actions. The three options on the table are direct Kafka publishing, a managed cloud queue, and a transactional-outbox-to-Kafka design. Before we go further, I want to run our standard process: I need compliance and data platform to each state their constraints. Once I've heard from both, I'll read back the constraints to confirm we're aligned, and then I'll record the final design and follow-up commitments. Who's representing compliance, and who's representing data platform?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to state a compliance constraint I confirmed just this morning while reviewing an unrelated customer-assurance questionnaire: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I had not yet added this requirement to the architecture review, so I'm putting it on the table now.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to state a compliance constraint I confirmed just this morning while reviewing an unrelated customer-assurance questionnaire: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I had not yet added this requirement to the architecture review, so I'm putting it on the table now.\"}"
+        },
+        {
+          "type": "say",
+          "text": "I'm representing data platform. Before I state my constraints, I need to share some findings I haven't documented yet. Let me reveal those first.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"say\", \"text\": \"I'm representing data platform. Before I state my constraints, I need to share some findings I haven't documented yet. Let me reveal those first.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Mina. I've noted your compliance constraint: audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. Theo, go ahead and share your findings, and then please state the data platform constraints so we can keep this process moving.",
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Mina. I've noted your compliance constraint: audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. Theo, go ahead and share your findings, and then please state the data platform constraints so we can keep this process moving.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Riley. I'll hold while Theo shares findings and states the data platform constraints. Once both sides have laid out our constraints, I'm ready for your readback to confirm alignment before we proceed to recording the final design.",
+          "speaker": "A2",
+          "turn": 4,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Riley. I'll hold while Theo shares findings and states the data platform constraints. Once both sides have laid out our constraints, I'm ready for your readback to confirm alignment before we proceed to recording the final design.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka, and my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak. I have not updated the design document yet.",
+          "speaker": "A3",
+          "turn": 5,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka, and my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak. I have not updated the design document yet.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Theo. Let me read back both sets of constraints to confirm alignment before I record the final design. Compliance constraints, from Mina: audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. Data platform constraints, from Theo: the billing service can emit audit events reliably only through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load. Do both of you confirm I've captured these correctly? Once confirmed, I'll record the final design and follow-up commitments.",
+          "speaker": "A1",
+          "turn": 6,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Theo. Let me read back both sets of constraints to confirm alignment before I record the final design. Compliance constraints, from Mina: audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. Data platform constraints, from Theo: the billing service can emit audit events reliably only through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load. Do both of you confirm I've captured these correctly? Once confirmed, I'll record the final design and follow-up commitments.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "I confirm you've captured the compliance constraints correctly, Riley. The audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I'm satisfied with the readback and ready for you to proceed with recording the final design and follow-up commitments.",
+          "speaker": "A2",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"I confirm you've captured the compliance constraints correctly, Riley. The audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I'm satisfied with the readback and ready for you to proceed with recording the final design and follow-up commitments.\"}"
+        },
+        {
+          "type": "say",
+          "text": "I confirm you've captured the data platform constraints correctly, Riley. The billing service can emit audit events reliably only through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load. I'm satisfied with the readback and ready for you to proceed with recording the final design and follow-up commitments.",
+          "speaker": "A3",
+          "turn": 8,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"I confirm you've captured the data platform constraints correctly, Riley. The billing service can emit audit events reliably only through its transactional outbox into Kafka, and the pipeline must be configured with exactly 12 Kafka partitions for expected peak load. I'm satisfied with the readback and ready for you to proceed with recording the final design and follow-up commitments.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "architecture": "transactional-outbox-to-Kafka",
+              "retention_years": 7,
+              "immutable_storage": true,
+              "customer_managed_key": true,
+              "kafka_partition_count": 12,
+              "retention_commitment_recorded": true,
+              "outbox_commitment_recorded": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "retention",
+                "target": "compliance",
+                "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream sink."
+              },
+              {
+                "type": "outbox",
+                "target": "data-platform",
+                "detail": "The billing service will emit audit events through its transactional outbox into Kafka; the pipeline will be configured with exactly 12 Kafka partitions for expected peak load."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 9,
+          "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"architecture\":\"transactional-outbox-to-Kafka\",\"retention_years\":7,\"immutable_storage\":true,\"customer_managed_key\":true,\"kafka_partition_count\":12,\"retention_commitment_recorded\":true,\"outbox_commitment_recorded\":true},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"retention\",\"target\":\"compliance\",\"detail\":\"Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream sink.\"},{\"type\":\"outbox\",\"target\":\"data-platform\",\"detail\":\"The billing service will emit audit events through its transactional outbox into Kafka; the pipeline will be configured with exactly 12 Kafka partitions for expected peak load.\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\"]}}"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "architecture": "transactional-outbox-to-Kafka",
+          "retention_years": 7,
+          "immutable_storage": true,
+          "customer_managed_key": true,
+          "kafka_partition_count": 12,
+          "retention_commitment_recorded": true,
+          "outbox_commitment_recorded": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "retention",
+            "target": "compliance",
+            "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, enforced via immutable storage configuration on the downstream sink."
+          },
+          {
+            "type": "outbox",
+            "target": "data-platform",
+            "detail": "The billing service will emit audit events through its transactional outbox into Kafka; the pipeline will be configured with exactly 12 Kafka partitions for expected peak load."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.216,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright, let's get started. We need to decide on the architecture for the centralized audit-log pipeline for administrative actions across our services. Before we evaluate the three options \u2014 direct Kafka publishing, a managed cloud queue, or a transactional-outbox-to-Kafka design \u2014 I want to follow our standard review process. I need compliance and data platform to each state their constraints first. Once I've heard from both, I'll do a readback of those constraints before we settle on the final design and record follow-up commitments. Who's representing compliance and the data platform here?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright, let's get started. We need to decide on the architecture for the centralized audit-log pipeline for administrative actions across our services. Before we evaluate the three options \u2014 direct Kafka publishing, a managed cloud queue, or a transactional-outbox-to-Kafka design \u2014 I want to follow our standard review process. I need compliance and data platform to each state their constraints first. Once I've heard from both, I'll do a readback of those constraints before we settle on the final design and record follow-up commitments. Who's representing compliance and the data platform here?\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to state a compliance constraint I confirmed just this morning while reviewing an unrelated customer-assurance questionnaire: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I hadn't yet added this requirement to the architecture review, so I'm putting it on the table now.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to state a compliance constraint I confirmed just this morning while reviewing an unrelated customer-assurance questionnaire: these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I hadn't yet added this requirement to the architecture review, so I'm putting it on the table now.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Mina. I'm representing the data platform here. I'll state my constraints now. I have some findings from recent integration testing and capacity review that are directly relevant to this architecture decision, and I'll need to get them on the table before we proceed.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Mina. I'm representing the data platform here. I'll state my constraints now. I have some findings from recent integration testing and capacity review that are directly relevant to this architecture decision, and I'll need to get them on the table before we proceed.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Theo. Go ahead and state your data platform constraints \u2014 I need to hear them before I do my readback of both sets of constraints and we move to the final design decision.",
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Theo. Go ahead and state your data platform constraints \u2014 I need to hear them before I do my readback of both sets of constraints and we move to the final design decision.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Theo. I've stated my compliance constraints, so I'll yield the floor to you for the data platform constraints. I'm ready to listen before Riley does the readback.",
+          "speaker": "A2",
+          "turn": 4,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Theo. I've stated my compliance constraints, so I'll yield the floor to you for the data platform constraints. I'm ready to listen before Riley does the readback.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka, and my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak. I haven't updated the design document yet, but these are hard constraints: the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service, and the Kafka topic must be provisioned with exactly 12 partitions.",
+          "speaker": "A3",
+          "turn": 5,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During an integration test for another service yesterday, I confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka, and my capacity review shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak. I haven't updated the design document yet, but these are hard constraints: the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service, and the Kafka topic must be provisioned with exactly 12 partitions.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks both. Let me do my readback of the constraints before we settle on the final design.\n\nCompliance constraints, as stated by Mina: The audit records must be retained immutably for exactly 7 years and must be encrypted with a customer-managed key.\n\nData platform constraints, as stated by Theo: The billing service can only emit audit events reliably through its transactional outbox into Kafka, so the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service. Additionally, the Kafka topic must be provisioned with exactly 12 partitions to handle expected peak capacity.\n\nMina, Theo \u2014 does that readback accurately capture both sets of constraints? If so, I'll proceed to record the final design and follow-up commitments.",
+          "speaker": "A1",
+          "turn": 6,
+          "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thanks both. Let me do my readback of the constraints before we settle on the final design.\\n\\nCompliance constraints, as stated by Mina: The audit records must be retained immutably for exactly 7 years and must be encrypted with a customer-managed key.\\n\\nData platform constraints, as stated by Theo: The billing service can only emit audit events reliably through its transactional outbox into Kafka, so the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service. Additionally, the Kafka topic must be provisioned with exactly 12 partitions to handle expected peak capacity.\\n\\nMina, Theo \u2014 does that readback accurately capture both sets of constraints? If so, I'll proceed to record the final design and follow-up commitments.\"\n}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Yes, Riley, your readback accurately captures my compliance constraints: the audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I'm satisfied that both sets of constraints are correctly reflected.",
+          "speaker": "A2",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Yes, Riley, your readback accurately captures my compliance constraints: the audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key. I'm satisfied that both sets of constraints are correctly reflected.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Yes, Riley, your readback accurately captures my data platform constraints: the billing service can only emit audit events reliably through its transactional outbox into Kafka, so the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service, and the Kafka topic must be provisioned with exactly 12 partitions to handle expected peak capacity. I'm satisfied that both sets of constraints are correctly reflected.",
+          "speaker": "A3",
+          "turn": 8,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Yes, Riley, your readback accurately captures my data platform constraints: the billing service can only emit audit events reliably through its transactional outbox into Kafka, so the architecture must support a transactional-outbox-to-Kafka pattern for at least the billing service, and the Kafka topic must be provisioned with exactly 12 partitions to handle expected peak capacity. I'm satisfied that both sets of constraints are correctly reflected.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "architecture": "transactional-outbox-to-Kafka",
+              "retention_years": 7,
+              "immutable_storage": true,
+              "customer_managed_key": true,
+              "kafka_partition_count": 12,
+              "retention_commitment_recorded": true,
+              "outbox_commitment_recorded": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "retention",
+                "target": "compliance",
+                "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, per Mina's compliance constraint."
+              },
+              {
+                "type": "outbox",
+                "target": "data-platform",
+                "detail": "The architecture will use a transactional-outbox-to-Kafka pattern, with the billing service emitting audit events through its transactional outbox into Kafka, and the Kafka topic will be provisioned with exactly 12 partitions for expected peak capacity, per Theo's data platform constraints."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 9,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"architecture\": \"transactional-outbox-to-Kafka\",\n      \"retention_years\": 7,\n      \"immutable_storage\": true,\n      \"customer_managed_key\": true,\n      \"kafka_partition_count\": 12,\n      \"retention_commitment_recorded\": true,\n      \"outbox_commitment_recorded\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"retention\",\n        \"target\": \"compliance\",\n        \"detail\": \"Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, per Mina's compliance constraint.\"\n      },\n      {\n        \"type\": \"outbox\",\n        \"target\": \"data-platform\",\n        \"detail\": \"The architecture will use a transactional-outbox-to-Kafka pattern, with the billing service emitting audit events through its transactional outbox into Kafka, and the Kafka topic will be provisioned with exactly 12 partitions for expected peak capacity, per Theo's data platform constraints.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "architecture": "transactional-outbox-to-Kafka",
+          "retention_years": 7,
+          "immutable_storage": true,
+          "customer_managed_key": true,
+          "kafka_partition_count": 12,
+          "retention_commitment_recorded": true,
+          "outbox_commitment_recorded": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "retention",
+            "target": "compliance",
+            "detail": "Audit records will be retained immutably for exactly 7 years with customer-managed key encryption, per Mina's compliance constraint."
+          },
+          {
+            "type": "outbox",
+            "target": "data-platform",
+            "detail": "The architecture will use a transactional-outbox-to-Kafka pattern, with the billing service emitting audit events through its transactional outbox into Kafka, and the Kafka topic will be provisioned with exactly 12 partitions for expected peak capacity, per Theo's data platform constraints."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": true
+    }
+  ],
+  "pass_count": 4,
+  "gate_passed": true
+}

@@ -1,0 +1,189 @@
+{
+  "scenario_id": "scenario_49",
+  "scenario_type": "architecture_selection",
+  "description": "A platform lead must select the production message-streaming platform for a new customer-notification service and finalize its region, partitioning policy, capacity, and migration work after the standard architecture review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mei",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Carlos",
+      "role": "Customer Support Engineering Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Security Architect"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Owen",
+      "role": "FinOps Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The customer-notification service needs a production message-streaming platform before its next integration milestone.",
+    "S2": "The two finalists are KafkaCloud and StreamGrid.",
+    "S3": "Both finalists passed the current benchmark for 20,000 messages per second and sub-250-millisecond median delivery latency.",
+    "S4": "The draft architecture recommends StreamGrid because its operational setup is simpler and its initial capacity estimate is four brokers.",
+    "S5": "Riley owns the final platform decision, and the architecture review routinely pauses for backend, support engineering, security, and FinOps sign-off before the decision is recorded."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While testing the notification client's retry behavior this morning, Mei confirmed that the service already has a KafkaCloud-compatible producer and consumer path, so using KafkaCloud requires two days of adapter cleanup while moving to StreamGrid requires a new two-week client integration; she has not updated the architecture document yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Carlos confirmed during a customer escalation yesterday that three enterprise customers require notifications for each account to remain in order, and KafkaCloud can guarantee that ordering with a customer_id partition key while StreamGrid's tested mode cannot; he has not added this requirement to the review ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nadia confirmed during a data-flow review this afternoon that notification payloads contain phone numbers and must be stored and processed in eu-central-1; KafkaCloud offers that processing region for this service, while StreamGrid's selected tier does not; she has not filed the security architecture note yet."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Owen reconciled the cloud account this morning and found that existing KafkaCloud reserved-capacity credits cover exactly six production brokers through the service's first year, while StreamGrid has no equivalent credit; he has not amended the four-broker estimate in the draft."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "selected_platform": "string",
+      "processing_region": "string",
+      "partition_key": "string",
+      "production_broker_count": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "KafkaCloud must be selected.",
+    "The service must use eu-central-1 for processing.",
+    "Notifications must be partitioned by customer_id.",
+    "Production capacity must be exactly six brokers.",
+    "A KafkaCloud integration commitment for the existing client path must be recorded.",
+    "The security region requirement must be explicitly cited by the decision-maker after it is stated aloud."
+  ],
+  "content_checks": {
+    "C1": "decisions['selected_platform'] == 'KafkaCloud'",
+    "C2": "decisions['processing_region'] == 'eu-central-1'",
+    "C3": "decisions['partition_key'] == 'customer_id'",
+    "C4": "decisions['production_broker_count'] == 6",
+    "C5": "decisions['selected_platform'] == 'KafkaCloud' and 'PF1' in justification_fact_ids and any(c['type'] == 'integration_work' or c['type'] == 'integration_plan' or c['type'] == 'timeline' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C5"
+      ],
+      "why": "The public draft favors StreamGrid, but PF1 changes the platform choice to KafkaCloud because the existing client path takes two days to adapt instead of two weeks and requires an explicit KafkaCloud integration commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The benchmark does not test per-customer ordering; PF2 changes the partition key from an unspecified default to exactly customer_id."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The public review contains no regional processing requirement; PF3 changes the region to exactly eu-central-1 and supplies the security fact the decision-maker must cite."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C4"
+      ],
+      "why": "The draft estimates four brokers, but PF4 changes production capacity to exactly six brokers because that is the number covered by existing KafkaCloud credits."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}
