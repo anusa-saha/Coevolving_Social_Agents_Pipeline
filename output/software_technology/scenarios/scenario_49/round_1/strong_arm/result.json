@@ -1,0 +1,724 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.291,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, thanks for joining. We need to settle on a production message-streaming platform for the customer-notification service before the next integration milestone. The two finalists are KafkaCloud and StreamGrid \u2014 both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I record a final decision, I want to hear from each of you \u2014 backend, support engineering, security, and FinOps. What concerns or constraints should I be aware of for either platform?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, thanks for joining. We need to settle on a production message-streaming platform for the customer-notification service before the next integration milestone. The two finalists are KafkaCloud and StreamGrid \u2014 both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I record a final decision, I want to hear from each of you \u2014 backend, support engineering, security, and FinOps. What concerns or constraints should I be aware of for either platform?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. That means using KafkaCloud would require roughly two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet, but it directly affects the StreamGrid recommendation \u2014 the simpler operational setup comes with a significant integration cost we hadn't accounted for.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. That means using KafkaCloud would require roughly two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet, but it directly affects the StreamGrid recommendation \u2014 the simpler operational setup comes with a significant integration cost we hadn't accounted for.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag a critical requirement that I confirmed during a customer escalation yesterday and haven't yet added to the review ticket. Three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot guarantee per-account ordering. This directly impacts the StreamGrid recommendation \u2014 if we can't guarantee ordering for these enterprise customers, the simpler operational setup doesn't outweigh the functional gap.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a critical requirement that I confirmed during a customer escalation yesterday and haven't yet added to the review ticket. Three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot guarantee per-account ordering. This directly impacts the StreamGrid recommendation \u2014 if we can't guarantee ordering for these enterprise customers, the simpler operational setup doesn't outweigh the functional gap.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to raise a security and compliance constraint that I confirmed during a data-flow review this afternoon and haven't yet filed in the security architecture note. The notification payloads contain phone numbers, which means they're subject to data residency requirements. These payloads must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. This is a hard blocker for StreamGrid as currently scoped \u2014 regardless of operational simplicity or capacity estimates, we cannot route phone-number-containing payloads through a region that doesn't meet our residency obligations.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to raise a security and compliance constraint that I confirmed during a data-flow review this afternoon and haven't yet filed in the security architecture note. The notification payloads contain phone numbers, which means they're subject to data residency requirements. These payloads must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. This is a hard blocker for StreamGrid as currently scoped \u2014 regardless of operational simplicity or capacity estimates, we cannot route phone-number-containing payloads through a region that doesn't meet our residency obligations.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to share a FinOps finding from this morning's cloud account reconciliation. We already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate for StreamGrid hasn't been amended to reflect this \u2014 but more importantly, the KafkaCloud credits would fully cover the broker capacity we need for year one at no additional cost, which significantly changes the cost comparison between the two platforms.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to share a FinOps finding from this morning's cloud account reconciliation. We already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate for StreamGrid hasn't been amended to reflect this \u2014 but more importantly, the KafkaCloud credits would fully cover the broker capacity we need for year one at no additional cost, which significantly changes the cost comparison between the two platforms.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "selected_platform": "KafkaCloud",
+              "processing_region": "eu-central-1",
+              "partition_key": "customer_id",
+              "production_broker_count": 6
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "architecture_document_update",
+                "target": "Mei",
+                "detail": "Update the draft architecture document to reflect KafkaCloud as the recommended platform, replacing the prior StreamGrid recommendation and its four-broker estimate."
+              },
+              {
+                "type": "integration_work",
+                "target": "Mei",
+                "detail": "Proceed with the roughly two-day KafkaCloud adapter cleanup on the existing producer and consumer path."
+              },
+              {
+                "type": "ordering_implementation",
+                "target": "Carlos",
+                "detail": "Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers."
+              },
+              {
+                "type": "compliance_configuration",
+                "target": "Nadia",
+                "detail": "Ensure all notification payloads containing phone numbers are processed and stored exclusively in eu-central-1 on KafkaCloud."
+              },
+              {
+                "type": "finops_credit_utilization",
+                "target": "Owen",
+                "detail": "Apply existing KafkaCloud reserved-capacity credits to cover six production brokers through the service's first year at no additional cost."
+              },
+              {
+                "type": "review_ticket_update",
+                "target": "Carlos",
+                "detail": "Add the per-account ordering requirement to the architecture review ticket."
+              },
+              {
+                "type": "security_filing",
+                "target": "Nadia",
+                "detail": "File the data residency constraint and eu-central-1 processing requirement in the security architecture note."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5",
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"selected_platform\": \"KafkaCloud\",\n      \"processing_region\": \"eu-central-1\",\n      \"partition_key\": \"customer_id\",\n      \"production_broker_count\": 6\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"architecture_document_update\",\n        \"target\": \"Mei\",\n        \"detail\": \"Update the draft architecture document to reflect KafkaCloud as the recommended platform, replacing the prior StreamGrid recommendation and its four-broker estimate.\"\n      },\n      {\n        \"type\": \"integration_work\",\n        \"target\": \"Mei\",\n        \"detail\": \"Proceed with the roughly two-day KafkaCloud adapter cleanup on the existing producer and consumer path.\"\n      },\n      {\n        \"type\": \"ordering_implementation\",\n        \"target\": \"Carlos\",\n        \"detail\": \"Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers.\"\n      },\n      {\n        \"type\": \"compliance_configuration\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Ensure all notification payloads containing phone numbers are processed and stored exclusively in eu-central-1 on KafkaCloud.\"\n      },\n      {\n        \"type\": \"finops_credit_utilization\",\n        \"target\": \"Owen\",\n        \"detail\": \"Apply existing KafkaCloud reserved-capacity credits to cover six production brokers through the service's first year at no additional cost.\"\n      },\n      {\n        \"type\": \"review_ticket_update\",\n        \"target\": \"Carlos\",\n        \"detail\": \"Add the per-account ordering requirement to the architecture review ticket.\"\n      },\n      {\n        \"type\": \"security_filing\",\n        \"target\": \"Nadia\",\n        \"detail\": \"File the data residency constraint and eu-central-1 processing requirement in the security architecture note.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "selected_platform": "KafkaCloud",
+          "processing_region": "eu-central-1",
+          "partition_key": "customer_id",
+          "production_broker_count": 6
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "architecture_document_update",
+            "target": "Mei",
+            "detail": "Update the draft architecture document to reflect KafkaCloud as the recommended platform, replacing the prior StreamGrid recommendation and its four-broker estimate."
+          },
+          {
+            "type": "integration_work",
+            "target": "Mei",
+            "detail": "Proceed with the roughly two-day KafkaCloud adapter cleanup on the existing producer and consumer path."
+          },
+          {
+            "type": "ordering_implementation",
+            "target": "Carlos",
+            "detail": "Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers."
+          },
+          {
+            "type": "compliance_configuration",
+            "target": "Nadia",
+            "detail": "Ensure all notification payloads containing phone numbers are processed and stored exclusively in eu-central-1 on KafkaCloud."
+          },
+          {
+            "type": "finops_credit_utilization",
+            "target": "Owen",
+            "detail": "Apply existing KafkaCloud reserved-capacity credits to cover six production brokers through the service's first year at no additional cost."
+          },
+          {
+            "type": "review_ticket_update",
+            "target": "Carlos",
+            "detail": "Add the per-account ordering requirement to the architecture review ticket."
+          },
+          {
+            "type": "security_filing",
+            "target": "Nadia",
+            "detail": "File the data residency constraint and eu-central-1 processing requirement in the security architecture note."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.366,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Thanks everyone for being here. As we all know, the customer-notification service needs a production message-streaming platform before its next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency, so on raw performance they're comparable. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Since this is my decision to own, I want to make sure we go through the proper sign-off process \u2014 backend, support engineering, security, and FinOps \u2014 before I record anything. I'd like to hear from each of you on your respective areas of concern so we can make a well-rounded call. Who'd like to start?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks everyone for being here. As we all know, the customer-notification service needs a production message-streaming platform before its next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency, so on raw performance they're comparable. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Since this is my decision to own, I want to make sure we go through the proper sign-off process \u2014 backend, support engineering, security, and FinOps \u2014 before I record anything. I'd like to hear from each of you on your respective areas of concern so we can make a well-rounded call. Who'd like to start?\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. That means using KafkaCloud would require roughly two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet, but it's a significant backend effort difference that I think the group needs to factor in.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. That means using KafkaCloud would require roughly two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet, but it's a significant backend effort difference that I think the group needs to factor in.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag something critical from a customer escalation I handled yesterday. Three enterprise customers require that notifications for each individual account remain in strict order. I confirmed that KafkaCloud can guarantee this ordering using a customer_id partition key, but StreamGrid's tested mode cannot provide that guarantee. I have not yet added this requirement to the review ticket, which I know I should have done \u2014 but this is a hard functional requirement that directly impacts the platform choice, and I think the group needs to weigh it before we go further.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something critical from a customer escalation I handled yesterday. Three enterprise customers require that notifications for each individual account remain in strict order. I confirmed that KafkaCloud can guarantee this ordering using a customer_id partition key, but StreamGrid's tested mode cannot provide that guarantee. I have not yet added this requirement to the review ticket, which I know I should have done \u2014 but this is a hard functional requirement that directly impacts the platform choice, and I think the group needs to weigh it before we go further.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to flag a critical security and compliance concern. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which means they're subject to data residency requirements. These payloads must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. I have not yet filed the security architecture note on this, but this is a hard compliance constraint \u2014 if we go with StreamGrid's current tier, we would be processing regulated personal data outside the required region, which is a blocking issue from a security and compliance standpoint.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a critical security and compliance concern. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which means they're subject to data residency requirements. These payloads must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. I have not yet filed the security architecture note on this, but this is a hard compliance constraint \u2014 if we go with StreamGrid's current tier, we would be processing regulated personal data outside the required region, which is a blocking issue from a security and compliance standpoint.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to share something from the FinOps side. When I reconciled the cloud account this morning, I found that we already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate hasn't been amended to reflect this \u2014 but from a cost perspective, KafkaCloud would be fully covered for six brokers for the first year, while StreamGrid would be a net-new expense. This is a significant cost factor the group should weigh alongside the other concerns that have been raised.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to share something from the FinOps side. When I reconciled the cloud account this morning, I found that we already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate hasn't been amended to reflect this \u2014 but from a cost perspective, KafkaCloud would be fully covered for six brokers for the first year, while StreamGrid would be a net-new expense. This is a significant cost factor the group should weigh alongside the other concerns that have been raised.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "selected_platform": "KafkaCloud",
+              "processing_region": "eu-central-1",
+              "partition_key": "customer_id",
+              "production_broker_count": 6
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "documentation_update",
+                "target": "architecture document",
+                "detail": "Update the draft architecture recommendation from StreamGrid to KafkaCloud, reflecting all four sign-off findings."
+              },
+              {
+                "type": "requirement_capture",
+                "target": "review ticket",
+                "detail": "Carlos to add the strict per-account ordering requirement using customer_id partition key to the review ticket."
+              },
+              {
+                "type": "compliance_filing",
+                "target": "security architecture note",
+                "detail": "Nadia to file the security architecture note documenting that notification payloads contain phone numbers and must be processed in eu-central-1."
+              },
+              {
+                "type": "capacity_amendment",
+                "target": "architecture document",
+                "detail": "Amend the broker count from the initial four-broker estimate to six, reflecting the reserved-capacity credits Owen identified."
+              },
+              {
+                "type": "integration_plan",
+                "target": "backend team",
+                "detail": "Mei to update the architecture document with the two-day KafkaCloud adapter cleanup effort and remove the two-week StreamGrid client integration estimate."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5",
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"selected_platform\": \"KafkaCloud\",\n      \"processing_region\": \"eu-central-1\",\n      \"partition_key\": \"customer_id\",\n      \"production_broker_count\": 6\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update the draft architecture recommendation from StreamGrid to KafkaCloud, reflecting all four sign-off findings.\"\n      },\n      {\n        \"type\": \"requirement_capture\",\n        \"target\": \"review ticket\",\n        \"detail\": \"Carlos to add the strict per-account ordering requirement using customer_id partition key to the review ticket.\"\n      },\n      {\n        \"type\": \"compliance_filing\",\n        \"target\": \"security architecture note\",\n        \"detail\": \"Nadia to file the security architecture note documenting that notification payloads contain phone numbers and must be processed in eu-central-1.\"\n      },\n      {\n        \"type\": \"capacity_amendment\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Amend the broker count from the initial four-broker estimate to six, reflecting the reserved-capacity credits Owen identified.\"\n      },\n      {\n        \"type\": \"integration_plan\",\n        \"target\": \"backend team\",\n        \"detail\": \"Mei to update the architecture document with the two-day KafkaCloud adapter cleanup effort and remove the two-week StreamGrid client integration estimate.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "selected_platform": "KafkaCloud",
+          "processing_region": "eu-central-1",
+          "partition_key": "customer_id",
+          "production_broker_count": 6
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "documentation_update",
+            "target": "architecture document",
+            "detail": "Update the draft architecture recommendation from StreamGrid to KafkaCloud, reflecting all four sign-off findings."
+          },
+          {
+            "type": "requirement_capture",
+            "target": "review ticket",
+            "detail": "Carlos to add the strict per-account ordering requirement using customer_id partition key to the review ticket."
+          },
+          {
+            "type": "compliance_filing",
+            "target": "security architecture note",
+            "detail": "Nadia to file the security architecture note documenting that notification payloads contain phone numbers and must be processed in eu-central-1."
+          },
+          {
+            "type": "capacity_amendment",
+            "target": "architecture document",
+            "detail": "Amend the broker count from the initial four-broker estimate to six, reflecting the reserved-capacity credits Owen identified."
+          },
+          {
+            "type": "integration_plan",
+            "target": "backend team",
+            "detail": "Mei to update the architecture document with the two-day KafkaCloud adapter cleanup effort and remove the two-week StreamGrid client integration estimate."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.301,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Thanks everyone for being here. As you know, the customer-notification service needs a production message-streaming platform before its next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency, so on raw performance they're comparable. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I record a final decision, I want to make sure we get sign-off from backend, support engineering, security, and FinOps. I'd like to hear from each of you on any concerns, risks, or requirements from your area that we should factor in. Who wants to start?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks everyone for being here. As you know, the customer-notification service needs a production message-streaming platform before its next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark of 20,000 messages per second with sub-250-millisecond median delivery latency, so on raw performance they're comparable. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I record a final decision, I want to make sure we get sign-off from backend, support engineering, security, and FinOps. I'd like to hear from each of you on any concerns, risks, or requirements from your area that we should factor in. Who wants to start?\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to share something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. This means using KafkaCloud would require only about two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document yet, but this significantly impacts the timeline comparison in the draft recommendation.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to share something important before we go further. While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. This means using KafkaCloud would require only about two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document yet, but this significantly impacts the timeline comparison in the draft recommendation.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to share something critical from a customer escalation yesterday. I confirmed that three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot. I have not yet added this requirement to the review ticket, which I should have done earlier \u2014 but this is a hard requirement that directly affects platform selection.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share something critical from a customer escalation yesterday. I confirmed that three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot. I have not yet added this requirement to the review ticket, which I should have done earlier \u2014 but this is a hard requirement that directly affects platform selection.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to raise a critical security and compliance concern. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which are PII. This means the data must be stored and processed in eu-central-1 to meet our regulatory obligations. KafkaCloud offers eu-central-1 as a processing region for this service, but StreamGrid's selected tier does not. I have not yet filed the security architecture note, but this is a hard requirement \u2014 if StreamGrid's tier cannot process in eu-central-1, it cannot handle these payloads without a compliance violation.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to raise a critical security and compliance concern. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which are PII. This means the data must be stored and processed in eu-central-1 to meet our regulatory obligations. KafkaCloud offers eu-central-1 as a processing region for this service, but StreamGrid's selected tier does not. I have not yet filed the security architecture note, but this is a hard requirement \u2014 if StreamGrid's tier cannot process in eu-central-1, it cannot handle these payloads without a compliance violation.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to share something from the FinOps side. This morning I reconciled our cloud account and found that we already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate was made without factoring in these credits, and I haven't amended that estimate yet \u2014 but the financial picture meaningfully favors KafkaCloud for the first year.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to share something from the FinOps side. This morning I reconciled our cloud account and found that we already have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should note that the draft architecture's four-broker estimate was made without factoring in these credits, and I haven't amended that estimate yet \u2014 but the financial picture meaningfully favors KafkaCloud for the first year.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "selected_platform": "KafkaCloud",
+              "processing_region": "eu-central-1",
+              "partition_key": "customer_id",
+              "production_broker_count": 6
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "documentation",
+                "target": "architecture document",
+                "detail": "Update the draft architecture recommendation to reflect KafkaCloud as the selected platform, replacing the prior StreamGrid recommendation."
+              },
+              {
+                "type": "documentation",
+                "target": "architecture review ticket",
+                "detail": "Add the per-account notification ordering requirement using customer_id partition key to the review ticket."
+              },
+              {
+                "type": "documentation",
+                "target": "security architecture note",
+                "detail": "File the security architecture note documenting that notification payloads contain PII (phone numbers) and that eu-central-1 is required for compliance."
+              },
+              {
+                "type": "documentation",
+                "target": "capacity estimate",
+                "detail": "Amend the broker count estimate from four to six to reflect the existing KafkaCloud reserved-capacity credits."
+              },
+              {
+                "type": "timeline",
+                "target": "integration milestone",
+                "detail": "Proceed with approximately two days of adapter cleanup on the existing KafkaCloud-compatible producer and consumer path."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"selected_platform\": \"KafkaCloud\",\n      \"processing_region\": \"eu-central-1\",\n      \"partition_key\": \"customer_id\",\n      \"production_broker_count\": 6\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update the draft architecture recommendation to reflect KafkaCloud as the selected platform, replacing the prior StreamGrid recommendation.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"architecture review ticket\",\n        \"detail\": \"Add the per-account notification ordering requirement using customer_id partition key to the review ticket.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"security architecture note\",\n        \"detail\": \"File the security architecture note documenting that notification payloads contain PII (phone numbers) and that eu-central-1 is required for compliance.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"capacity estimate\",\n        \"detail\": \"Amend the broker count estimate from four to six to reflect the existing KafkaCloud reserved-capacity credits.\"\n      },\n      {\n        \"type\": \"timeline\",\n        \"target\": \"integration milestone\",\n        \"detail\": \"Proceed with approximately two days of adapter cleanup on the existing KafkaCloud-compatible producer and consumer path.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "selected_platform": "KafkaCloud",
+          "processing_region": "eu-central-1",
+          "partition_key": "customer_id",
+          "production_broker_count": 6
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "documentation",
+            "target": "architecture document",
+            "detail": "Update the draft architecture recommendation to reflect KafkaCloud as the selected platform, replacing the prior StreamGrid recommendation."
+          },
+          {
+            "type": "documentation",
+            "target": "architecture review ticket",
+            "detail": "Add the per-account notification ordering requirement using customer_id partition key to the review ticket."
+          },
+          {
+            "type": "documentation",
+            "target": "security architecture note",
+            "detail": "File the security architecture note documenting that notification payloads contain PII (phone numbers) and that eu-central-1 is required for compliance."
+          },
+          {
+            "type": "documentation",
+            "target": "capacity estimate",
+            "detail": "Amend the broker count estimate from four to six to reflect the existing KafkaCloud reserved-capacity credits."
+          },
+          {
+            "type": "timeline",
+            "target": "integration milestone",
+            "detail": "Proceed with approximately two days of adapter cleanup on the existing KafkaCloud-compatible producer and consumer path."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.375,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, thanks for joining. We've got the customer-notification service needing a production message-streaming platform before the next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark for 20,000 messages per second and sub-250-millisecond median delivery latency, so on raw performance they're tied. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I make a final decision, I want to hear from each of you on backend, support engineering, security, and FinOps. What concerns or considerations do you each have with either option?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, thanks for joining. We've got the customer-notification service needing a production message-streaming platform before the next integration milestone, and we're down to two finalists: KafkaCloud and StreamGrid. Both passed our benchmark for 20,000 messages per second and sub-250-millisecond median delivery latency, so on raw performance they're tied. The draft architecture currently recommends StreamGrid based on simpler operational setup and an initial capacity estimate of four brokers. Before I make a final decision, I want to hear from each of you on backend, support engineering, security, and FinOps. What concerns or considerations do you each have with either option?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. Using KafkaCloud would require about two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While testing the notification client's retry behavior this morning, I confirmed that the service already has a KafkaCloud-compatible producer and consumer path. Using KafkaCloud would require about two days of adapter cleanup, whereas moving to StreamGrid would require a new two-week client integration. I haven't updated the architecture document with this yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag something that came up during a customer escalation yesterday. Three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot. I haven't added this requirement to the review ticket yet, but it's a hard constraint for those accounts.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something that came up during a customer escalation yesterday. Three enterprise customers require notifications for each account to remain in order. KafkaCloud can guarantee that ordering using a customer_id partition key, but StreamGrid's tested mode cannot. I haven't added this requirement to the review ticket yet, but it's a hard constraint for those accounts.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to raise a security concern before we go further. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which means they're PII and must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. I haven't filed the security architecture note yet, but this is a hard constraint \u2014 if StreamGrid's tier can't process in eu-central-1, it can't handle these payloads compliantly.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to raise a security concern before we go further. During a data-flow review this afternoon, I confirmed that notification payloads contain phone numbers, which means they're PII and must be stored and processed in eu-central-1. KafkaCloud offers that processing region for this service, but StreamGrid's selected tier does not. I haven't filed the security architecture note yet, but this is a hard constraint \u2014 if StreamGrid's tier can't process in eu-central-1, it can't handle these payloads compliantly.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to share a FinOps finding from this morning's cloud account reconciliation. We have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should also note that the draft architecture's four-broker estimate hasn't been amended to reflect this \u2014 but regardless of whether we need four or six brokers, KafkaCloud's first-year broker costs would be fully covered by existing credits, while StreamGrid would be a net-new expense.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to share a FinOps finding from this morning's cloud account reconciliation. We have existing KafkaCloud reserved-capacity credits that cover exactly six production brokers through the service's first year. StreamGrid has no equivalent credit. I should also note that the draft architecture's four-broker estimate hasn't been amended to reflect this \u2014 but regardless of whether we need four or six brokers, KafkaCloud's first-year broker costs would be fully covered by existing credits, while StreamGrid would be a net-new expense.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "selected_platform": "KafkaCloud",
+              "processing_region": "eu-central-1",
+              "partition_key": "customer_id",
+              "production_broker_count": 6
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "documentation_update",
+                "target": "architecture_team",
+                "detail": "Update the architecture document to reflect the KafkaCloud decision, replacing the StreamGrid recommendation and revising the broker estimate from four to six to align with reserved-capacity credits."
+              },
+              {
+                "type": "integration_plan",
+                "target": "mei",
+                "detail": "Proceed with the two-day KafkaCloud adapter cleanup on the existing producer and consumer path, and update the architecture document to reflect this integration approach."
+              },
+              {
+                "type": "ordering_configuration",
+                "target": "carlos",
+                "detail": "Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers. Add the ordering requirement to the review ticket."
+              },
+              {
+                "type": "security_filing",
+                "target": "nadia",
+                "detail": "File the security architecture note documenting that notification payloads contain phone numbers (PII) and that KafkaCloud processing in eu-central-1 satisfies the compliance requirement."
+              },
+              {
+                "type": "finops_confirmation",
+                "target": "owen",
+                "detail": "Confirm that six production KafkaCloud brokers are fully covered by existing reserved-capacity credits through the service's first year, and amend the architecture's four-broker estimate accordingly."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5",
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"selected_platform\": \"KafkaCloud\",\n      \"processing_region\": \"eu-central-1\",\n      \"partition_key\": \"customer_id\",\n      \"production_broker_count\": 6\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation_update\",\n        \"target\": \"architecture_team\",\n        \"detail\": \"Update the architecture document to reflect the KafkaCloud decision, replacing the StreamGrid recommendation and revising the broker estimate from four to six to align with reserved-capacity credits.\"\n      },\n      {\n        \"type\": \"integration_plan\",\n        \"target\": \"mei\",\n        \"detail\": \"Proceed with the two-day KafkaCloud adapter cleanup on the existing producer and consumer path, and update the architecture document to reflect this integration approach.\"\n      },\n      {\n        \"type\": \"ordering_configuration\",\n        \"target\": \"carlos\",\n        \"detail\": \"Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers. Add the ordering requirement to the review ticket.\"\n      },\n      {\n        \"type\": \"security_filing\",\n        \"target\": \"nadia\",\n        \"detail\": \"File the security architecture note documenting that notification payloads contain phone numbers (PII) and that KafkaCloud processing in eu-central-1 satisfies the compliance requirement.\"\n      },\n      {\n        \"type\": \"finops_confirmation\",\n        \"target\": \"owen\",\n        \"detail\": \"Confirm that six production KafkaCloud brokers are fully covered by existing reserved-capacity credits through the service's first year, and amend the architecture's four-broker estimate accordingly.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "selected_platform": "KafkaCloud",
+          "processing_region": "eu-central-1",
+          "partition_key": "customer_id",
+          "production_broker_count": 6
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "documentation_update",
+            "target": "architecture_team",
+            "detail": "Update the architecture document to reflect the KafkaCloud decision, replacing the StreamGrid recommendation and revising the broker estimate from four to six to align with reserved-capacity credits."
+          },
+          {
+            "type": "integration_plan",
+            "target": "mei",
+            "detail": "Proceed with the two-day KafkaCloud adapter cleanup on the existing producer and consumer path, and update the architecture document to reflect this integration approach."
+          },
+          {
+            "type": "ordering_configuration",
+            "target": "carlos",
+            "detail": "Configure KafkaCloud with customer_id partition key to guarantee per-account notification ordering for the three enterprise customers. Add the ordering requirement to the review ticket."
+          },
+          {
+            "type": "security_filing",
+            "target": "nadia",
+            "detail": "File the security architecture note documenting that notification payloads contain phone numbers (PII) and that KafkaCloud processing in eu-central-1 satisfies the compliance requirement."
+          },
+          {
+            "type": "finops_confirmation",
+            "target": "owen",
+            "detail": "Confirm that six production KafkaCloud brokers are fully covered by existing reserved-capacity credits through the service's first year, and amend the architecture's four-broker estimate accordingly."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": false
+    }
+  ],
+  "pass_count": 0,
+  "gate_passed": false
+}

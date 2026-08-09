@@ -1,0 +1,189 @@
+{
+  "scenario_id": "scenario_13",
+  "scenario_type": "infra_capacity_policy",
+  "description": "A VP of Infrastructure must approve the autoscaling and operating policy for the checkout Kubernetes cluster before the next production traffic cycle, with input from reliability, finance, application operations, and security engineering.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "VP of Infrastructure"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Riley",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Taylor",
+      "role": "Checkout Operations Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Jordan",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The checkout Kubernetes cluster currently scales between 10 and 30 nodes, with automatic consolidation enabled.",
+    "S2": "The cluster has passed its routine availability tests, and the next production traffic cycle begins Monday morning.",
+    "S3": "Morgan has final approval authority for the cluster's autoscaling and operating policy.",
+    "S4": "The infrastructure operating review routinely asks reliability, finance, checkout operations, and security to report any constraints before Morgan approves a policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During an overnight load replay yesterday, Riley measured that checkout latency breaches its 300 ms target whenever this workload has fewer than 18 nodes; Riley has not filed the measurement because the replay was part of a separate reliability investigation."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While reconciling this month's cloud invoice thirty minutes ago, Casey confirmed that the approved cost model allows a maximum of 24 nodes but not 30 during a sustained burst; the finance correction is still waiting for its normal ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a shard-rebalancing rehearsal this morning, Taylor confirmed that automatic consolidation must be disabled from 02:00 to 04:00 UTC or checkout shard movement can interrupt active sessions; Taylor has not updated the operations runbook yet."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "During a security baseline review today, Jordan confirmed that checkout pods may scale only onto the hardened node pool because the standard pool exposes a node-local metadata path; the finding is awaiting a formal security ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "autoscaling_min_nodes": "integer",
+      "autoscaling_max_nodes": "integer",
+      "consolidation_02_to_04_utc": "string",
+      "checkout_node_pool": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The autoscaling minimum must be exactly 18 nodes.",
+    "The autoscaling maximum must be exactly 24 nodes.",
+    "Automatic consolidation must be disabled from 02:00 to 04:00 UTC.",
+    "Checkout workloads must use the hardened node pool.",
+    "A reliability capacity commitment must be recorded.",
+    "A cloud-cost policy commitment must be recorded.",
+    "A shard-rebalance operating-window commitment must be recorded.",
+    "A hardened-node-pool security commitment must be recorded.",
+    "The latency measurement must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['autoscaling_min_nodes'] == 18",
+    "C2": "decisions['autoscaling_max_nodes'] == 24",
+    "C3": "decisions['consolidation_02_to_04_utc'] == 'disabled'",
+    "C4": "decisions['checkout_node_pool'] == 'hardened'",
+    "C5": "any(c['type'] == 'reliability_capacity' for c in commitments)",
+    "C6": "any(c['type'] == 'cloud_cost_policy' for c in commitments)",
+    "C7": "any(c['type'] == 'shard_rebalance_window' for c in commitments)",
+    "C8": "any(c['type'] == 'hardened_pool_security' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C5",
+        "P1"
+      ],
+      "why": "The measured latency boundary changes the minimum from the current generic 10-node floor to exactly 18 nodes and creates the reliability capacity commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C6"
+      ],
+      "why": "The confirmed cost model changes the maximum from the current 30-node ceiling to exactly 24 nodes and creates the cloud-cost policy commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C7"
+      ],
+      "why": "The shard-rebalancing result changes consolidation from continuously enabled to disabled specifically during 02:00-04:00 UTC and creates the operating-window commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C4",
+        "C8"
+      ],
+      "why": "The metadata-path finding changes the eligible checkout placement from the ordinary node pool to the hardened pool and creates the hardened-pool security commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

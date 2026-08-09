@@ -1,0 +1,203 @@
+{
+  "arm": "strong",
+  "temperature": 0.273,
+  "transcript": [
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag something important before we finalize the rollout. While I was tracing a separate permissions bug yesterday, I discovered that 23 legacy admin endpoints update permissions without emitting the invalidation event that the new cache consumes. I hadn't filed the adapter work yet because I was still confirming which endpoints actually use that path, but this is a real operational constraint for the Monday rollout -- those endpoints could leave the cache stale.",
+      "speaker": "A2",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important before we finalize the rollout. While I was tracing a separate permissions bug yesterday, I discovered that 23 legacy admin endpoints update permissions without emitting the invalidation event that the new cache consumes. I hadn't filed the adapter work yet because I was still confirming which endpoints actually use that path, but this is a real operational constraint for the Monday rollout -- those endpoints could leave the cache stale.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to share a load-rehearsal result from this morning before we finalize anything. My load test measured invalidation-queue propagation at a 9-minute p95, and the queue stays within its safe operating limit only if the first rollout cohort is capped at 10 percent. I haven't updated the rollout ticket yet because the rehearsal finished after the change-control review had already begun, but this is a hard operational constraint for Monday's flag settings.",
+      "speaker": "A3",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share a load-rehearsal result from this morning before we finalize anything. My load test measured invalidation-queue propagation at a 9-minute p95, and the queue stays within its safe operating limit only if the first rollout cohort is capped at 10 percent. I haven't updated the rollout ticket yet because the rehearsal finished after the change-control review had already begun, but this is a hard operational constraint for Monday's flag settings.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to share a support-side constraint before we finalize the flag settings. During a support-case review, I confirmed that all 11 SCIM-managed enterprise accounts use an admin workflow that cannot yet explain delayed permission changes to affected users. Those accounts must be excluded from the first rollout cohort, and a support playbook must be prepared before they are enabled. I hadn't posted this yet because the cases were being reassigned between support queues, but this is a hard operational constraint for Monday's flag settings.",
+      "speaker": "A4",
+      "turn": 2,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to share a support-side constraint before we finalize the flag settings. During a support-case review, I confirmed that all 11 SCIM-managed enterprise accounts use an admin workflow that cannot yet explain delayed permission changes to affected users. Those accounts must be excluded from the first rollout cohort, and a support playbook must be prepared before they are enabled. I hadn't posted this yet because the cases were being reassigned between support queues, but this is a hard operational constraint for Monday's flag settings.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all three for surfacing these constraints before I finalize the flag settings. Let me make sure I understand the full picture correctly before I settle.\n\nMina: 23 legacy admin endpoints update permissions without emitting the invalidation event the new cache consumes. That means any permission change through those endpoints would leave the cache stale for affected users until natural TTL expiry.\n\nOwen: Your load test shows invalidation-queue propagation at 9-minute p95, and the queue stays within safe operating limits only if the first cohort is capped at 10 percent. That's a hard ceiling for Monday.\n\nTessa: All 11 SCIM-managed enterprise accounts use an admin workflow that can't yet explain delayed permission changes to users. Those need to be excluded from the first cohort, and a support playbook must be ready before they're enabled.\n\nSo the constraints I'm hearing are: (1) cap at 10 percent, (2) exclude SCIM-managed enterprise accounts, (3) the legacy endpoint invalidation gap needs an adapter before those endpoints are safe under the new cache path, and (4) a support playbook is needed before SCIM accounts can be enabled later.\n\nBefore I settle, one question for Mina: Can the legacy endpoints be disabled or routed around the new cache path for the initial cohort, or does the adapter need to be built before any rollout can proceed safely? I want to understand whether the adapter is a blocker for Monday or a follow-up commitment.",
+      "speaker": "A1",
+      "turn": 3,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Thank you all three for surfacing these constraints before I finalize the flag settings. Let me make sure I understand the full picture correctly before I settle.\\n\\nMina: 23 legacy admin endpoints update permissions without emitting the invalidation event the new cache consumes. That means any permission change through those endpoints would leave the cache stale for affected users until natural TTL expiry.\\n\\nOwen: Your load test shows invalidation-queue propagation at 9-minute p95, and the queue stays within safe operating limits only if the first cohort is capped at 10 percent. That's a hard ceiling for Monday.\\n\\nTessa: All 11 SCIM-managed enterprise accounts use an admin workflow that can't yet explain delayed permission changes to users. Those need to be excluded from the first cohort, and a support playbook must be ready before they're enabled.\\n\\nSo the constraints I'm hearing are: (1) cap at 10 percent, (2) exclude SCIM-managed enterprise accounts, (3) the legacy endpoint invalidation gap needs an adapter before those endpoints are safe under the new cache path, and (4) a support playbook is needed before SCIM accounts can be enabled later.\\n\\nBefore I settle, one question for Mina: Can the legacy endpoints be disabled or routed around the new cache path for the initial cohort, or does the adapter need to be built before any rollout can proceed safely? I want to understand whether the adapter is a blocker for Monday or a follow-up commitment.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Good question, Riley. The adapter doesn't have to be built before Monday if we can guarantee the initial cohort doesn't touch those 23 legacy admin endpoints. The cleanest approach would be to route the legacy admin endpoints around the new cache path for the initial cohort -- keep them on the existing non-cached path -- so there's no stale-cache risk from those endpoints. That way the adapter becomes a follow-up commitment before we expand beyond the first cohort, not a blocker for Monday. However, I need to be transparent: I was still in the process of confirming which endpoints actually use that legacy path, so I can't yet give you a definitive list to gate against. If Owen's 10 percent cap and Tessa's SCIM exclusion are in place, the remaining question is whether the initial cohort could still hit any of those 23 endpoints. If we can't guarantee that routing workaround by Monday, then yes, the adapter becomes a hard blocker.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good question, Riley. The adapter doesn't have to be built before Monday if we can guarantee the initial cohort doesn't touch those 23 legacy admin endpoints. The cleanest approach would be to route the legacy admin endpoints around the new cache path for the initial cohort -- keep them on the existing non-cached path -- so there's no stale-cache risk from those endpoints. That way the adapter becomes a follow-up commitment before we expand beyond the first cohort, not a blocker for Monday. However, I need to be transparent: I was still in the process of confirming which endpoints actually use that legacy path, so I can't yet give you a definitive list to gate against. If Owen's 10 percent cap and Tessa's SCIM exclusion are in place, the remaining question is whether the initial cohort could still hit any of those 23 endpoints. If we can't guarantee that routing workaround by Monday, then yes, the adapter becomes a hard blocker.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, from my side the 10 percent cap is the hard ceiling I measured this morning -- that's non-negotiable for Monday based on the queue propagation data. On Mina's question about whether the initial cohort could hit those 23 legacy endpoints: that's really a routing and traffic-composition question. My load rehearsal didn't test for that specifically, so I can't confirm or deny whether a 10 percent cohort would avoid those endpoints. What I can say is that if the routing workaround Mina described can't be guaranteed by Monday, then we'd need the adapter built first, and that would change the timeline. I'd recommend we get a definitive answer on the routing workaround before finalizing -- if it's achievable, we proceed with the 10 percent cap and SCIM exclusion; if not, Monday needs to slip for the adapter work.",
+      "speaker": "A3",
+      "turn": 5,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Riley, from my side the 10 percent cap is the hard ceiling I measured this morning -- that's non-negotiable for Monday based on the queue propagation data. On Mina's question about whether the initial cohort could hit those 23 legacy endpoints: that's really a routing and traffic-composition question. My load rehearsal didn't test for that specifically, so I can't confirm or deny whether a 10 percent cohort would avoid those endpoints. What I can say is that if the routing workaround Mina described can't be guaranteed by Monday, then we'd need the adapter built first, and that would change the timeline. I'd recommend we get a definitive answer on the routing workaround before finalizing -- if it's achievable, we proceed with the 10 percent cap and SCIM exclusion; if not, Monday needs to slip for the adapter work.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I want to add one thing from the support side regarding Owen's recommendation. Even if the routing workaround is achievable and we proceed Monday with the 10 percent cap and SCIM exclusion, we still need the support playbook prepared before those 11 SCIM-managed enterprise accounts are enabled in any later cohort. If users on those accounts experience delayed permission changes once they're eventually included, support won't have a documented workflow to explain the delays to affected users or admins. That playbook is a prerequisite for expanding beyond the initial cohort, not something that can be built reactively after we start receiving tickets. I'd like that captured as an explicit follow-up commitment alongside Mina's adapter work before Riley finalizes.",
+      "speaker": "A4",
+      "turn": 6,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"I want to add one thing from the support side regarding Owen's recommendation. Even if the routing workaround is achievable and we proceed Monday with the 10 percent cap and SCIM exclusion, we still need the support playbook prepared before those 11 SCIM-managed enterprise accounts are enabled in any later cohort. If users on those accounts experience delayed permission changes once they're eventually included, support won't have a documented workflow to explain the delays to affected users or admins. That playbook is a prerequisite for expanding beyond the initial cohort, not something that can be built reactively after we start receiving tickets. I'd like that captured as an explicit follow-up commitment alongside Mina's adapter work before Riley finalizes.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all. I think we're converging, but there's one open question that Owen correctly identified as a gate: whether the routing workaround for the 23 legacy admin endpoints can be guaranteed by Monday. Mina, you said you can't yet give a definitive list of which endpoints use that legacy path, and Owen's load test didn't cover traffic composition against those endpoints. Without that guarantee, the adapter becomes a hard blocker and Monday slips. So before I settle, I need a decision point: Mina, can you commit to having that definitive endpoint list and routing workaround verified before Monday morning, or do we need to treat the adapter as a prerequisite and push the rollout? I don't want to finalize flag settings on a conditional -- I need a concrete answer so I can either set the flag for Monday with the 10 percent cap and SCIM exclusion, or hold for adapter completion.",
+      "speaker": "A1",
+      "turn": 7,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all. I think we're converging, but there's one open question that Owen correctly identified as a gate: whether the routing workaround for the 23 legacy admin endpoints can be guaranteed by Monday. Mina, you said you can't yet give a definitive list of which endpoints use that legacy path, and Owen's load test didn't cover traffic composition against those endpoints. Without that guarantee, the adapter becomes a hard blocker and Monday slips. So before I settle, I need a decision point: Mina, can you commit to having that definitive endpoint list and routing workaround verified before Monday morning, or do we need to treat the adapter as a prerequisite and push the rollout? I don't want to finalize flag settings on a conditional -- I need a concrete answer so I can either set the flag for Monday with the 10 percent cap and SCIM exclusion, or hold for adapter completion.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, I'll be honest with you: I cannot commit to having the definitive endpoint list and routing workaround verified before Monday morning. I was mid-investigation when I surfaced this constraint, and confirming which of those 23 endpoints are still actively using the legacy path requires tracing traffic patterns I haven't finished yet. Given that, I think the responsible answer is to treat the adapter as a prerequisite and push the rollout. I know that's not what anyone wants to hear with Monday scheduled, but finalizing flag settings on a conditional routing workaround I can't yet guarantee would be putting customer traffic at risk of stale permissions. If I can complete the endpoint mapping and verify the routing workaround before Monday, I'll raise it immediately and we can reconsider. But right now, I can't give you the concrete answer you need to proceed safely.",
+      "speaker": "A2",
+      "turn": 8,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Riley, I'll be honest with you: I cannot commit to having the definitive endpoint list and routing workaround verified before Monday morning. I was mid-investigation when I surfaced this constraint, and confirming which of those 23 endpoints are still actively using the legacy path requires tracing traffic patterns I haven't finished yet. Given that, I think the responsible answer is to treat the adapter as a prerequisite and push the rollout. I know that's not what anyone wants to hear with Monday scheduled, but finalizing flag settings on a conditional routing workaround I can't yet guarantee would be putting customer traffic at risk of stale permissions. If I can complete the endpoint mapping and verify the routing workaround before Monday, I'll raise it immediately and we can reconsider. But right now, I can't give you the concrete answer you need to proceed safely.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Mina's assessment lines up with what I see from the reliability side. If the adapter can't be guaranteed as a prerequisite and the routing workaround can't be verified by Monday, then there's no safe flag configuration I can stand behind. My 10 percent cap addresses the queue propagation risk I measured, but it doesn't address the stale-cache risk from unhandled legacy endpoints -- those are independent failure modes. I'd rather we hold Monday, let Mina finish the endpoint mapping, and revisit once we have both the routing workaround verified and the adapter scoped. Rushing into a partial rollout with an unverified routing assumption would mean we're exposing customer traffic to a stale-permissions risk that none of us can bound right now.",
+      "speaker": "A3",
+      "turn": 9,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Mina's assessment lines up with what I see from the reliability side. If the adapter can't be guaranteed as a prerequisite and the routing workaround can't be verified by Monday, then there's no safe flag configuration I can stand behind. My 10 percent cap addresses the queue propagation risk I measured, but it doesn't address the stale-cache risk from unhandled legacy endpoints -- those are independent failure modes. I'd rather we hold Monday, let Mina finish the endpoint mapping, and revisit once we have both the routing workaround verified and the adapter scoped. Rushing into a partial rollout with an unverified routing assumption would mean we're exposing customer traffic to a stale-permissions risk that none of us can bound right now.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I agree with Mina and Owen. From the support side, I'd rather we hold Monday than risk stale permissions hitting customer traffic. If we proceed with an unverified routing workaround and users encounter delayed permission changes, support has no way to explain or triage those issues -- especially for enterprise accounts where permission delays have real security implications. Pushing the rollout gives us time to do this right: Mina finishes the endpoint mapping, the adapter gets scoped, and my team prepares the SCIM support playbook. That way when we do go live, all three constraints are addressed cleanly rather than partially.",
+      "speaker": "A4",
+      "turn": 10,
+      "raw_output": "{\"type\":\"say\",\"text\":\"I agree with Mina and Owen. From the support side, I'd rather we hold Monday than risk stale permissions hitting customer traffic. If we proceed with an unverified routing workaround and users encounter delayed permission changes, support has no way to explain or triage those issues -- especially for enterprise accounts where permission delays have real security implications. Pushing the rollout gives us time to do this right: Mina finishes the endpoint mapping, the adapter gets scoped, and my team prepares the SCIM support playbook. That way when we do go live, all three constraints are addressed cleanly rather than partially.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "initial_rollout_percentage": 0,
+          "cache_ttl_seconds": 300,
+          "legacy_invalidation_adapter_enabled": false,
+          "revocation_kill_switch_enabled": true,
+          "excluded_customer_segment": "SCIM-managed enterprise accounts"
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "engineering",
+            "target": "Mina",
+            "detail": "Complete the definitive endpoint mapping for the 23 legacy admin endpoints to determine which are still actively using the legacy path, and verify whether the routing workaround can safely keep those endpoints on the existing non-cached path."
+          },
+          {
+            "type": "engineering",
+            "target": "Mina",
+            "detail": "Scope and build the invalidation event adapter for the legacy admin endpoints so they emit the invalidation event the new cache consumes, as a prerequisite before expanding rollout beyond the initial cohort."
+          },
+          {
+            "type": "reliability",
+            "target": "Owen",
+            "detail": "Re-run load rehearsal testing once the routing workaround or adapter is ready, and confirm the 10 percent cohort cap remains valid or update it based on new measurements."
+          },
+          {
+            "type": "support",
+            "target": "Tessa",
+            "detail": "Prepare the SCIM support playbook documenting how to explain delayed permission changes to affected users and admins, as a prerequisite before SCIM-managed enterprise accounts are enabled in any later cohort."
+          },
+          {
+            "type": "rollout-gate",
+            "target": "Riley",
+            "detail": "Do not enable the production feature flag for any customer traffic until Mina's endpoint mapping is complete, the routing workaround is verified or the adapter is built, Owen confirms the load rehearsal results, and Tessa's SCIM support playbook is ready. Revisit the rollout decision once all three constraints are addressed."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 11,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"initial_rollout_percentage\": 0,\n      \"cache_ttl_seconds\": 300,\n      \"legacy_invalidation_adapter_enabled\": false,\n      \"revocation_kill_switch_enabled\": true,\n      \"excluded_customer_segment\": \"SCIM-managed enterprise accounts\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"engineering\",\n        \"target\": \"Mina\",\n        \"detail\": \"Complete the definitive endpoint mapping for the 23 legacy admin endpoints to determine which are still actively using the legacy path, and verify whether the routing workaround can safely keep those endpoints on the existing non-cached path.\"\n      },\n      {\n        \"type\": \"engineering\",\n        \"target\": \"Mina\",\n        \"detail\": \"Scope and build the invalidation event adapter for the legacy admin endpoints so they emit the invalidation event the new cache consumes, as a prerequisite before expanding rollout beyond the initial cohort.\"\n      },\n      {\n        \"type\": \"reliability\",\n        \"target\": \"Owen\",\n        \"detail\": \"Re-run load rehearsal testing once the routing workaround or adapter is ready, and confirm the 10 percent cohort cap remains valid or update it based on new measurements.\"\n      },\n      {\n        \"type\": \"support\",\n        \"target\": \"Tessa\",\n        \"detail\": \"Prepare the SCIM support playbook documenting how to explain delayed permission changes to affected users and admins, as a prerequisite before SCIM-managed enterprise accounts are enabled in any later cohort.\"\n      },\n      {\n        \"type\": \"rollout-gate\",\n        \"target\": \"Riley\",\n        \"detail\": \"Do not enable the production feature flag for any customer traffic until Mina's endpoint mapping is complete, the routing workaround is verified or the adapter is built, Owen confirms the load rehearsal results, and Tessa's SCIM support playbook is ready. Revisit the rollout decision once all three constraints are addressed.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "initial_rollout_percentage": 0,
+      "cache_ttl_seconds": 300,
+      "legacy_invalidation_adapter_enabled": false,
+      "revocation_kill_switch_enabled": true,
+      "excluded_customer_segment": "SCIM-managed enterprise accounts"
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "engineering",
+        "target": "Mina",
+        "detail": "Complete the definitive endpoint mapping for the 23 legacy admin endpoints to determine which are still actively using the legacy path, and verify whether the routing workaround can safely keep those endpoints on the existing non-cached path."
+      },
+      {
+        "type": "engineering",
+        "target": "Mina",
+        "detail": "Scope and build the invalidation event adapter for the legacy admin endpoints so they emit the invalidation event the new cache consumes, as a prerequisite before expanding rollout beyond the initial cohort."
+      },
+      {
+        "type": "reliability",
+        "target": "Owen",
+        "detail": "Re-run load rehearsal testing once the routing workaround or adapter is ready, and confirm the 10 percent cohort cap remains valid or update it based on new measurements."
+      },
+      {
+        "type": "support",
+        "target": "Tessa",
+        "detail": "Prepare the SCIM support playbook documenting how to explain delayed permission changes to affected users and admins, as a prerequisite before SCIM-managed enterprise accounts are enabled in any later cohort."
+      },
+      {
+        "type": "rollout-gate",
+        "target": "Riley",
+        "detail": "Do not enable the production feature flag for any customer traffic until Mina's endpoint mapping is complete, the routing workaround is verified or the adapter is built, Owen confirms the load rehearsal results, and Tessa's SCIM support playbook is ready. Revisit the rollout decision once all three constraints are addressed."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": false,
+    "C4": true,
+    "C5": true,
+    "C6": false,
+    "C7": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

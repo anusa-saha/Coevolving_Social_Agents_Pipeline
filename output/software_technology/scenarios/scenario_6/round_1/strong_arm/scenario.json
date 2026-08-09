@@ -1,0 +1,137 @@
+{
+  "scenario_id": "scenario_6",
+  "scenario_type": "architecture_decision",
+  "description": "A chief architect must approve the production architecture for a new audit-log pipeline and record the implementation safeguards, with input from a compliance architect and a data platform lead.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Chief Architect"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Compliance Architect"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Theo",
+      "role": "Data Platform Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The product is starting work on a centralized audit-log pipeline for administrative actions across its services.",
+    "S2": "The architecture review must choose among direct Kafka publishing, a managed cloud queue, and a transactional-outbox-to-Kafka design.",
+    "S3": "Riley has authority to approve the production architecture and its implementation plan.",
+    "S4": "The team's normal architecture-review process is to hear constraints from compliance and data platform before Riley records the final design and follow-up commitments."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing an unrelated customer-assurance questionnaire this morning, Mina confirmed that these audit records must be retained immutably for exactly 7 years and encrypted with a customer-managed key; she has not yet added the requirement to the architecture review."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During an integration test for another service yesterday, Theo confirmed that the billing service can emit audit events reliably only through its transactional outbox into Kafka, and his capacity review shows the pipeline must be configured with exactly 12 Kafka partitions for the expected peak; he has not updated the design document yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "architecture": "string",
+      "retention_years": "integer",
+      "immutable_storage": "boolean",
+      "customer_managed_key": "boolean",
+      "kafka_partition_count": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The approved architecture must use a transactional outbox feeding Kafka.",
+    "Audit records must be retained immutably for exactly 7 years.",
+    "Audit records must use a customer-managed encryption key.",
+    "The Kafka pipeline must be configured with exactly 12 partitions.",
+    "The plan must include a 7-year immutable-retention commitment for the audit log.",
+    "The plan must include a transactional-outbox implementation commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['architecture'] == 'transactional_outbox_to_kafka'",
+    "C2": "decisions['retention_years'] == 7",
+    "C3": "decisions['immutable_storage'] == True",
+    "C4": "decisions['customer_managed_key'] == True",
+    "C5": "decisions['kafka_partition_count'] == 12",
+    "C6": "any(c['type'] == 'worm_retention' and c['target'] == 'audit_log' for c in commitments)",
+    "C7": "any(c['type'] == 'transactional_outbox' and c['target'] == 'billing_service' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "The newly confirmed compliance requirement changes retention from an unspecified period to exactly 7 years, changes storage to immutable, requires a customer-managed key, and adds the corresponding retention commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C5",
+        "C7"
+      ],
+      "why": "The billing integration finding changes the architecture from a generic publishing option to transactional outbox feeding Kafka, fixes the Kafka configuration at exactly 12 partitions, and requires an outbox implementation commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

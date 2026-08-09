@@ -1,0 +1,139 @@
+{
+  "scenario_id": "scenario_36",
+  "scenario_type": "architecture_selection",
+  "description": "A platform lead must choose the production architecture and operating parameters for a new event-ingestion service before the next customer launch, with input from an application architect and a compliance engineer.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Application Architect"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Leah",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The event-ingestion service is scheduled for its first production customer launch in two weeks.",
+    "S2": "The service can be implemented with either the proposed streaming architecture or the proposed hourly batch architecture.",
+    "S3": "Both architectures passed the current functional test suite in the development environment.",
+    "S4": "Morgan makes the binding architecture decision and records the operating plan.",
+    "S5": "The team's normal architecture-review routine is to hear a final check from application architecture and compliance before Morgan records the decision; after both final checks are heard, Morgan records the operating plan using all constraints stated in those checks and does not defer the decision for another verification step."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While testing an unrelated replay tool yesterday, Ravi measured a launch-period burst of about 18,000 events per minute that the hourly batch design cannot process within the customer-facing latency target; the streaming design needs exactly 12 partitions for that load, and he has not yet updated the architecture document because the replay test was outside the launch checklist."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Leah confirmed with the privacy office this morning that the first customer's event payloads must remain in the EU and be retained for exactly 400 days for an audit requirement; she has not added the requirement to the launch review because the customer questionnaire was completed in a separate compliance system."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "architecture": "string",
+      "partition_count": "integer",
+      "data_region": "string",
+      "retention_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The streaming architecture must be selected.",
+    "The streaming service must be configured with exactly 12 partitions.",
+    "Event data must be hosted in eu-central-1.",
+    "Event data retention must be exactly 400 days.",
+    "A replay-capacity validation commitment must be recorded.",
+    "A data-residency audit commitment must be recorded.",
+    "Ravi's measured burst and partition requirement must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['architecture'] == 'streaming'",
+    "C2": "decisions['partition_count'] == 12",
+    "C3": "decisions['data_region'] == 'eu-central-1'",
+    "C4": "decisions['retention_days'] == 400",
+    "C5": "any(c['type'] == 'replay_capacity_validation' for c in commitments)",
+    "C6": "any(c['type'] == 'data_residency_audit' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The shared tests leave both architectures viable; Ravi's measured 18,000-event-per-minute burst changes the choice to streaming, sets the partition count to exactly 12, and requires replay-capacity validation."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The separate privacy confirmation changes the data region to eu-central-1, changes retention to exactly 400 days, and requires a data-residency audit commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

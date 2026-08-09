@@ -1,0 +1,172 @@
+{
+  "scenario_id": "scenario_4",
+  "scenario_type": "security_key_rotation",
+  "description": "A security engineering manager must approve the production rotation of three JWT signing keys used by internal APIs and finalize the rollout safeguards, compatibility window, and audit record, with input from platform engineering, application engineering, and compliance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Security Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mateo",
+      "role": "Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Hana",
+      "role": "Application Engineering Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Iris",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The team has reserved Saturday from 22:00 to 02:00 UTC for rotating three JWT signing keys used by internal APIs.",
+    "S2": "The rotation passed the planned staging tests, including token issuance, validation, and rollback checks.",
+    "S3": "Riley has authority to approve the production rotation plan and record any required safeguards.",
+    "S4": "As part of the normal readiness review, Riley asks platform engineering, application engineering, and compliance to report anything that should change the runbook before approval."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking the production HSM configuration for a separate access review this afternoon, Mateo confirmed that the HSM permits only four key activations per 60-minute period and that the three keys cover nine production key slots; he has not updated the rotation runbook with this vendor limit yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While investigating an unrelated mobile authentication ticket this morning, Hana confirmed that clients below Android SDK version 8.4 reject the new key identifier; 17% of active mobile sessions still use those clients, and the compatibility bridge can be enabled before rotation with a required seven-day overlap, but she has not filed the compatibility note."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During this week's SOC 2 audit preparation, Iris confirmed that the production key-rotation control requires two-person approval and a before-and-after key-fingerprint evidence package before the change can be closed; she has not added that control detail to the change ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rotation_approved": "boolean",
+      "rotation_wave_count": "integer",
+      "minutes_between_waves": "integer",
+      "compatibility_bridge_enabled": "boolean",
+      "legacy_client_overlap_days": "integer",
+      "two_person_approval_required": "boolean",
+      "fingerprint_evidence_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rotation must be approved.",
+    "The rotation must use exactly three production waves.",
+    "The waves must be separated by exactly 60 minutes.",
+    "The compatibility bridge must be enabled before rotation.",
+    "Legacy clients must receive exactly seven days of overlap.",
+    "Two-person approval must be required.",
+    "Before-and-after key-fingerprint evidence must be required before closure.",
+    "A wave-plan commitment must be recorded.",
+    "A compatibility-bridge commitment must be recorded.",
+    "An audit-evidence commitment must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['rotation_approved'] == True",
+    "C2": "decisions['rotation_wave_count'] == 3",
+    "C3": "decisions['minutes_between_waves'] == 60",
+    "C4": "decisions['compatibility_bridge_enabled'] == True",
+    "C5": "decisions['legacy_client_overlap_days'] == 7",
+    "C6": "decisions['two_person_approval_required'] == True",
+    "C7": "decisions['fingerprint_evidence_required'] == True",
+    "C8": "any(c['type'] == 'key_rotation_wave_plan' for c in commitments)",
+    "C9": "any(c['type'] == 'compatibility_bridge' for c in commitments)",
+    "C10": "any(c['type'] == 'audit_evidence' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C8"
+      ],
+      "why": "The HSM limit changes the plan from an unspecified or single-batch rotation to exactly three waves separated by exactly 60 minutes and requires a wave-plan commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C9",
+        "P1"
+      ],
+      "why": "The legacy-client compatibility finding changes the rollout from immediate key replacement to enabling the bridge and keeping the old validation path for exactly seven days, with a compatibility commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6",
+        "C7",
+        "C10"
+      ],
+      "why": "The SOC 2 control changes closure from ordinary change approval to mandatory two-person approval plus before-and-after fingerprint evidence and an audit-evidence commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

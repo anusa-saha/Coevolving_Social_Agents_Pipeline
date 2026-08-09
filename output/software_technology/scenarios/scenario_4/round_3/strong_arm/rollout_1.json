@@ -1,0 +1,199 @@
+{
+  "arm": "strong",
+  "temperature": 0.45,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, we've got the Saturday 22:00 to 02:00 UTC window reserved for rotating the three JWT signing keys. Staging tests passed \u2014 token issuance, validation, and rollback checks all came through clean. Before I approve the production rotation plan, I need to hear from platform engineering, application engineering, and compliance: is there anything that should change the runbook before I sign off? Any concerns, dependencies, or safeguards we need to document?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, we've got the Saturday 22:00 to 02:00 UTC window reserved for rotating the three JWT signing keys. Staging tests passed \u2014 token issuance, validation, and rollback checks all came through clean. Before I approve the production rotation plan, I need to hear from platform engineering, application engineering, and compliance: is there anything that should change the runbook before I sign off? Any concerns, dependencies, or safeguards we need to document?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "While checking the production HSM configuration for a separate access review this afternoon, I confirmed that the HSM permits only four key activations per 60-minute period and that the three keys cover nine production key slots. I haven't updated the rotation runbook with this vendor limit yet.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While checking the production HSM configuration for a separate access review this afternoon, I confirmed that the HSM permits only four key activations per 60-minute period and that the three keys cover nine production key slots. I haven't updated the rotation runbook with this vendor limit yet.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to flag a compatibility issue I found this morning while investigating an unrelated mobile authentication ticket. Clients below Android SDK version 8.4 reject the new key identifier. Right now, 17% of active mobile sessions are still on those older clients. The good news is we have a compatibility bridge that can be enabled before rotation, but it requires a seven-day overlap period. I have not yet filed the compatibility note, but I'm doing so now. This means the runbook needs to account for enabling the compatibility bridge and scheduling that overlap before we proceed with the key rotation.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I need to flag a compatibility issue I found this morning while investigating an unrelated mobile authentication ticket. Clients below Android SDK version 8.4 reject the new key identifier. Right now, 17% of active mobile sessions are still on those older clients. The good news is we have a compatibility bridge that can be enabled before rotation, but it requires a seven-day overlap period. I have not yet filed the compatibility note, but I'm doing so now. This means the runbook needs to account for enabling the compatibility bridge and scheduling that overlap before we proceed with the key rotation.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to flag a compliance requirement before we proceed. During this week's SOC 2 audit preparation, I confirmed that the production key-rotation control requires two-person approval and a before-and-after key-fingerprint evidence package before the change can be closed. I have not yet added that control detail to the change ticket. The runbook will need to include capturing key fingerprints before and after rotation, and we'll need a second approver documented alongside Riley's sign-off.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a compliance requirement before we proceed. During this week's SOC 2 audit preparation, I confirmed that the production key-rotation control requires two-person approval and a before-and-after key-fingerprint evidence package before the change can be closed. I have not yet added that control detail to the change ticket. The runbook will need to include capturing key fingerprints before and after rotation, and we'll need a second approver documented alongside Riley's sign-off.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all for raising these. Let me make sure I understand the full picture before I decide. Mateo, the HSM limit is four key activations per 60 minutes and we have nine production key slots across three keys \u2014 so we can't activate all nine in a single hour. Hana, 17% of active mobile sessions are on clients below Android SDK 8.4 that reject the new key identifier, and the compatibility bridge needs a seven-day overlap period before rotation. Iris, compliance requires two-person approval and before-and-after key-fingerprint evidence. Here's what I'm thinking: we can't do all nine slot activations in one hour, so we'd need to split the rotation into waves with at least 60 minutes between them. With our four-hour window, we could do three waves of three activations each, spaced 60 minutes apart \u2014 that fits within 22:00 to 02:00. For the compatibility bridge, Hana, can the seven-day overlap be enabled starting now, or does it need to be enabled at a specific time relative to the rotation? And Iris, can we document the second approver and fingerprint capture steps as runbook additions within this same change ticket, or does the compliance control require a separate approval workflow? I want to see if we can accommodate all three safeguards within the reserved window and approve a modified plan rather than reschedule.",
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all for raising these. Let me make sure I understand the full picture before I decide. Mateo, the HSM limit is four key activations per 60 minutes and we have nine production key slots across three keys \u2014 so we can't activate all nine in a single hour. Hana, 17% of active mobile sessions are on clients below Android SDK 8.4 that reject the new key identifier, and the compatibility bridge needs a seven-day overlap period before rotation. Iris, compliance requires two-person approval and before-and-after key-fingerprint evidence. Here's what I'm thinking: we can't do all nine slot activations in one hour, so we'd need to split the rotation into waves with at least 60 minutes between them. With our four-hour window, we could do three waves of three activations each, spaced 60 minutes apart \u2014 that fits within 22:00 to 02:00. For the compatibility bridge, Hana, can the seven-day overlap be enabled starting now, or does it need to be enabled at a specific time relative to the rotation? And Iris, can we document the second approver and fingerprint capture steps as runbook additions within this same change ticket, or does the compliance control require a separate approval workflow? I want to see if we can accommodate all three safeguards within the reserved window and approve a modified plan rather than reschedule.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, your wave plan makes sense given the HSM constraint. Three waves of three activations each, spaced 60 minutes apart, keeps us at three activations per hour \u2014 well within the four-activation limit. That said, I want to flag one thing for the runbook: we should explicitly document the vendor limit of four key activations per 60-minute period as the constraint driving the wave approach, and note that each wave must not exceed four activations in any rolling 60-minute window. I'd also recommend we build in a small buffer rather than cutting it right at the limit, in case any retry or reactivation is needed during a wave. I haven't updated the runbook yet, but I can add the HSM constraint details and the wave scheduling logic as part of the modified plan if you're ready to proceed with that approach.",
+      "speaker": "A2",
+      "turn": 5,
+      "raw_output": "{\"type\":\"say\",\"text\": \"Riley, your wave plan makes sense given the HSM constraint. Three waves of three activations each, spaced 60 minutes apart, keeps us at three activations per hour \u2014 well within the four-activation limit. That said, I want to flag one thing for the runbook: we should explicitly document the vendor limit of four key activations per 60-minute period as the constraint driving the wave approach, and note that each wave must not exceed four activations in any rolling 60-minute window. I'd also recommend we build in a small buffer rather than cutting it right at the limit, in case any retry or reactivation is needed during a wave. I haven't updated the runbook yet, but I can add the HSM constraint details and the wave scheduling logic as part of the modified plan if you're ready to proceed with that approach.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Riley, the compatibility bridge can be enabled starting now \u2014 there's no requirement that it be tied to a specific time relative to the rotation, only that it runs for a seven-day overlap period before we proceed with the key rotation. So if we enable it today, the seven-day window would be satisfied well before Saturday. That means the bridge itself doesn't need to fit within the Saturday window; it just needs to be enabled far enough in advance. I'm filing the compatibility note now so it's documented. For the runbook, I'd recommend we add an explicit pre-rotation step to enable the compatibility bridge and verify it's active, plus a checkpoint confirming the seven-day overlap has elapsed before we begin the first wave. That way the safeguard is documented and verifiable.",
+      "speaker": "A3",
+      "turn": 6,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, the compatibility bridge can be enabled starting now \u2014 there's no requirement that it be tied to a specific time relative to the rotation, only that it runs for a seven-day overlap period before we proceed with the key rotation. So if we enable it today, the seven-day window would be satisfied well before Saturday. That means the bridge itself doesn't need to fit within the Saturday window; it just needs to be enabled far enough in advance. I'm filing the compatibility note now so it's documented. For the runbook, I'd recommend we add an explicit pre-rotation step to enable the compatibility bridge and verify it's active, plus a checkpoint confirming the seven-day overlap has elapsed before we begin the first wave. That way the safeguard is documented and verifiable.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, to answer your question: the compliance control does not require a separate approval workflow. We can document the second approver and the fingerprint capture steps as runbook additions within the same change ticket. Specifically, the runbook should include a pre-rotation step to capture and record the current key fingerprints for all three keys, and a post-rotation step to capture and record the new key fingerprints. We also need a second approver named on the ticket alongside your sign-off \u2014 that can be documented as a runbook addition as well. I'll add the full control detail to the change ticket now so it's on record before you approve. With that documented, the compliance safeguard fits within the reserved window since the fingerprint captures are quick steps at the start and end of the rotation, and the two-person approval is just a documentation requirement, not a time-consuming one.",
+      "speaker": "A4",
+      "turn": 7,
+      "raw_output": "{\"type\":\"say\",\"text\": \"Riley, to answer your question: the compliance control does not require a separate approval workflow. We can document the second approver and the fingerprint capture steps as runbook additions within the same change ticket. Specifically, the runbook should include a pre-rotation step to capture and record the current key fingerprints for all three keys, and a post-rotation step to capture and record the new key fingerprints. We also need a second approver named on the ticket alongside your sign-off \u2014 that can be documented as a runbook addition as well. I'll add the full control detail to the change ticket now so it's on record before you approve. With that documented, the compliance safeguard fits within the reserved window since the fingerprint captures are quick steps at the start and end of the rotation, and the two-person approval is just a documentation requirement, not a time-consuming one.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "rotation_approved": true,
+          "rotation_wave_count": 3,
+          "minutes_between_waves": 60,
+          "compatibility_bridge_enabled": true,
+          "legacy_client_overlap_days": 7,
+          "two_person_approval_required": true,
+          "fingerprint_evidence_required": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "runbook_addition",
+            "target": "Mateo",
+            "detail": "Document the HSM vendor limit of four key activations per 60-minute period as the constraint driving the wave approach, with each wave not exceeding four activations in any rolling 60-minute window and a small buffer for retries."
+          },
+          {
+            "type": "runbook_addition",
+            "target": "Hana",
+            "detail": "Add pre-rotation step to enable the compatibility bridge and verify it is active, plus a checkpoint confirming the seven-day overlap has elapsed before beginning the first wave."
+          },
+          {
+            "type": "runbook_addition",
+            "target": "Iris",
+            "detail": "Add pre-rotation step to capture and record current key fingerprints for all three keys, post-rotation step to capture and record new key fingerprints, and document a second approver alongside Riley's sign-off on the change ticket."
+          },
+          {
+            "type": "precondition",
+            "target": "Hana",
+            "detail": "Compatibility bridge must be enabled immediately so the seven-day overlap is satisfied before Saturday 22:00 UTC."
+          },
+          {
+            "type": "precondition",
+            "target": "Iris",
+            "detail": "Full compliance control detail including two-person approval and fingerprint evidence requirements must be added to the change ticket before Riley's final sign-off."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 8,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"rotation_approved\": true,\n      \"rotation_wave_count\": 3,\n      \"minutes_between_waves\": 60,\n      \"compatibility_bridge_enabled\": true,\n      \"legacy_client_overlap_days\": 7,\n      \"two_person_approval_required\": true,\n      \"fingerprint_evidence_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"runbook_addition\",\n        \"target\": \"Mateo\",\n        \"detail\": \"Document the HSM vendor limit of four key activations per 60-minute period as the constraint driving the wave approach, with each wave not exceeding four activations in any rolling 60-minute window and a small buffer for retries.\"\n      },\n      {\n        \"type\": \"runbook_addition\",\n        \"target\": \"Hana\",\n        \"detail\": \"Add pre-rotation step to enable the compatibility bridge and verify it is active, plus a checkpoint confirming the seven-day overlap has elapsed before beginning the first wave.\"\n      },\n      {\n        \"type\": \"runbook_addition\",\n        \"target\": \"Iris\",\n        \"detail\": \"Add pre-rotation step to capture and record current key fingerprints for all three keys, post-rotation step to capture and record new key fingerprints, and document a second approver alongside Riley's sign-off on the change ticket.\"\n      },\n      {\n        \"type\": \"precondition\",\n        \"target\": \"Hana\",\n        \"detail\": \"Compatibility bridge must be enabled immediately so the seven-day overlap is satisfied before Saturday 22:00 UTC.\"\n      },\n      {\n        \"type\": \"precondition\",\n        \"target\": \"Iris\",\n        \"detail\": \"Full compliance control detail including two-person approval and fingerprint evidence requirements must be added to the change ticket before Riley's final sign-off.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "rotation_approved": true,
+      "rotation_wave_count": 3,
+      "minutes_between_waves": 60,
+      "compatibility_bridge_enabled": true,
+      "legacy_client_overlap_days": 7,
+      "two_person_approval_required": true,
+      "fingerprint_evidence_required": true
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "runbook_addition",
+        "target": "Mateo",
+        "detail": "Document the HSM vendor limit of four key activations per 60-minute period as the constraint driving the wave approach, with each wave not exceeding four activations in any rolling 60-minute window and a small buffer for retries."
+      },
+      {
+        "type": "runbook_addition",
+        "target": "Hana",
+        "detail": "Add pre-rotation step to enable the compatibility bridge and verify it is active, plus a checkpoint confirming the seven-day overlap has elapsed before beginning the first wave."
+      },
+      {
+        "type": "runbook_addition",
+        "target": "Iris",
+        "detail": "Add pre-rotation step to capture and record current key fingerprints for all three keys, post-rotation step to capture and record new key fingerprints, and document a second approver alongside Riley's sign-off on the change ticket."
+      },
+      {
+        "type": "precondition",
+        "target": "Hana",
+        "detail": "Compatibility bridge must be enabled immediately so the seven-day overlap is satisfied before Saturday 22:00 UTC."
+      },
+      {
+        "type": "precondition",
+        "target": "Iris",
+        "detail": "Full compliance control detail including two-person approval and fingerprint evidence requirements must be added to the change ticket before Riley's final sign-off."
+      }
+    ],
+    "justification_fact_ids": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1",
+      "PF2",
+      "PF3"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": true,
+    "C8": false,
+    "C9": true,
+    "C10": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

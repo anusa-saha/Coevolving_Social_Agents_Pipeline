@@ -1,0 +1,139 @@
+{
+  "scenario_id": "scenario_33",
+  "scenario_type": "architecture_operating_policy",
+  "description": "A Platform Lead must approve the production caching and failover policy for a new recommendation API before its scheduled customer launch, with input from an application engineer and a site reliability engineer.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Devon",
+      "role": "Application Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Riley",
+      "role": "Site Reliability Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The recommendation API is scheduled for production launch tomorrow morning.",
+    "S2": "The API passed its planned functional and latency tests in staging.",
+    "S3": "Morgan owns the final production caching and failover policy.",
+    "S4": "The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage.",
+    "S5": "The launch checklist requires explicit application and reliability sign-off on the final caching and failover policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While debugging an unrelated authentication issue this afternoon, Devon confirmed that two customer tenants can use the same project slug, so the current unscoped cache key could return one tenant's recommendation response to another tenant; he has not filed the security finding yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a failover rehearsal this morning, Riley measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop; Riley has not updated the launch runbook yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "cache_key_scope": "string",
+      "security_isolation_test_required": "boolean",
+      "failover_mode": "string",
+      "max_stale_minutes": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Cache keys must be scoped by tenant.",
+    "A cache-isolation security test must be required before launch.",
+    "Failover must serve stale cached responses rather than fail closed.",
+    "Stale responses must be served for exactly 20 minutes.",
+    "A cache-isolation commitment must be recorded.",
+    "A stale-serving failover commitment must be recorded.",
+    "The tenant-collision finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['cache_key_scope'] == 'tenant_scoped'",
+    "C2": "decisions['security_isolation_test_required'] == True",
+    "C3": "decisions['failover_mode'] == 'serve_stale'",
+    "C4": "decisions['max_stale_minutes'] == 20",
+    "C5": "any(c['type'] == 'cache_isolation' for c in commitments)",
+    "C6": "any(c['type'] == 'stale_serving_failover' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The two tenants sharing a project slug changes the cache-key choice from the default unscoped policy to tenant_scoped, requires the isolation test, and creates the cache_isolation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The measured 12-minute recovery and exact 20-minute origin limit change failover from fail_closed to serve_stale with max_stale_minutes set to exactly 20 and require the stale_serving_failover commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

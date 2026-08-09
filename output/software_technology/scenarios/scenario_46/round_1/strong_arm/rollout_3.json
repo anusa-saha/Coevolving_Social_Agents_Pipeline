@@ -1,0 +1,178 @@
+{
+  "arm": "strong",
+  "temperature": 0.44,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, let's get into the backfill plan for tonight. The current runbook has us starting at 10:00 PM UTC, processing 300 records per second, reading from the primary database, and running continuously through the 4:00 AM window. It's already passed successfully in staging and been reviewed in our release-readiness check. Before I make the final binding decision on the production plan, I want to hear from everyone \u2014 do we have any concerns about this approach, particularly around primary database load, throughput assumptions, or the continuous-run strategy?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get into the backfill plan for tonight. The current runbook has us starting at 10:00 PM UTC, processing 300 records per second, reading from the primary database, and running continuously through the 4:00 AM window. It's already passed successfully in staging and been reviewed in our release-readiness check. Before I make the final binding decision on the production plan, I want to hear from everyone \u2014 do we have any concerns about this approach, particularly around primary database load, throughput assumptions, or the continuous-run strategy?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to raise a critical concern before we proceed. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't updated the runbook yet because the replay investigation is still open, but this directly affects tonight's plan \u2014 the continuous-run strategy in particular increases the likelihood of retries, and without these safeguards we risk duplicate customer rows in production.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to raise a critical concern before we proceed. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't updated the runbook yet because the replay investigation is still open, but this directly affects tonight's plan \u2014 the continuous-run strategy in particular increases the likelihood of retries, and without these safeguards we risk duplicate customer rows in production.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I have a critical concern about the throughput assumption. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag starts growing. The current plan to process 300 records per second from the primary would exceed what our infrastructure can safely handle. We need to throttle to exactly 180 records per second and pause after 20 seconds of replication lag. I recorded these results in a capacity notebook but haven't attached it to the release ticket yet \u2014 I should have flagged this earlier.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I have a critical concern about the throughput assumption. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag starts growing. The current plan to process 300 records per second from the primary would exceed what our infrastructure can safely handle. We need to throttle to exactly 180 records per second and pause after 20 seconds of replication lag. I recorded these results in a capacity notebook but haven't attached it to the release ticket yet \u2014 I should have flagged this earlier.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I have a concern about the continuous-run strategy overlapping with customer commitments. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries during that window. I haven't sent the required notification yet because the backfill plan isn't approved. Running continuously at 300 records per second from the primary through that 1\u20133 AM window would put us at risk of breaching those contractual obligations. We need to either pause or significantly throttle during that two-hour window.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I have a concern about the continuous-run strategy overlapping with customer commitments. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries during that window. I haven't sent the required notification yet because the backfill plan isn't approved. Running continuously at 300 records per second from the primary through that 1\u20133 AM window would put us at risk of breaching those contractual obligations. We need to either pause or significantly throttle during that two-hour window.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "backfill_runs_tonight": true,
+          "idempotency_and_dedupe_enabled": true,
+          "throughput_records_per_second": 180,
+          "lag_pause_seconds": 20,
+          "customer_report_pause_start": "01:00",
+          "customer_report_pause_end": "03:00",
+          "protected_tenants": [
+            "Acme",
+            "Bluebird",
+            "Cobalt",
+            "DeltaWorks",
+            "Evergreen",
+            "Fairview"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "commitments": [
+          {
+            "type": "runbook_update",
+            "target": "Mina",
+            "detail": "Update the runbook to require idempotency-key enforcement and deduplication gate enabled before backfill execution tonight."
+          },
+          {
+            "type": "runbook_update",
+            "target": "Owen",
+            "detail": "Update the runbook to set throughput to 180 records per second and add a lag-pause trigger at 20 seconds of replication lag. Attach capacity notebook results to the release ticket."
+          },
+          {
+            "type": "runbook_update",
+            "target": "Tara",
+            "detail": "Update the runbook to include a pause from 1:00 AM to 3:00 AM UTC for the six enterprise tenants. Send required customer notification once plan is approved."
+          },
+          {
+            "type": "release_readiness",
+            "target": "all",
+            "detail": "Updated runbook must be re-reviewed in a quick release-readiness check before execution given the three critical changes."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"backfill_runs_tonight\": true,\n      \"idempotency_and_dedupe_enabled\": true,\n      \"throughput_records_per_second\": 180,\n      \"lag_pause_seconds\": 20,\n      \"customer_report_pause_start\": \"01:00\",\n      \"customer_report_pause_end\": \"03:00\",\n      \"protected_tenants\": [\n        \"Acme\",\n        \"Bluebird\",\n        \"Cobalt\",\n        \"DeltaWorks\",\n        \"Evergreen\",\n        \"Fairview\"\n      ]\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Mina\",\n        \"detail\": \"Update the runbook to require idempotency-key enforcement and deduplication gate enabled before backfill execution tonight.\"\n      },\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Owen\",\n        \"detail\": \"Update the runbook to set throughput to 180 records per second and add a lag-pause trigger at 20 seconds of replication lag. Attach capacity notebook results to the release ticket.\"\n      },\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Tara\",\n        \"detail\": \"Update the runbook to include a pause from 1:00 AM to 3:00 AM UTC for the six enterprise tenants. Send required customer notification once plan is approved.\"\n      },\n      {\n        \"type\": \"release_readiness\",\n        \"target\": \"all\",\n        \"detail\": \"Updated runbook must be re-reviewed in a quick release-readiness check before execution given the three critical changes.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "backfill_runs_tonight": true,
+      "idempotency_and_dedupe_enabled": true,
+      "throughput_records_per_second": 180,
+      "lag_pause_seconds": 20,
+      "customer_report_pause_start": "01:00",
+      "customer_report_pause_end": "03:00",
+      "protected_tenants": [
+        "Acme",
+        "Bluebird",
+        "Cobalt",
+        "DeltaWorks",
+        "Evergreen",
+        "Fairview"
+      ]
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "commitments": [
+      {
+        "type": "runbook_update",
+        "target": "Mina",
+        "detail": "Update the runbook to require idempotency-key enforcement and deduplication gate enabled before backfill execution tonight."
+      },
+      {
+        "type": "runbook_update",
+        "target": "Owen",
+        "detail": "Update the runbook to set throughput to 180 records per second and add a lag-pause trigger at 20 seconds of replication lag. Attach capacity notebook results to the release ticket."
+      },
+      {
+        "type": "runbook_update",
+        "target": "Tara",
+        "detail": "Update the runbook to include a pause from 1:00 AM to 3:00 AM UTC for the six enterprise tenants. Send required customer notification once plan is approved."
+      },
+      {
+        "type": "release_readiness",
+        "target": "all",
+        "detail": "Updated runbook must be re-reviewed in a quick release-readiness check before execution given the three critical changes."
+      }
+    ],
+    "justification_fact_ids": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1",
+      "PF2",
+      "PF3"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": false,
+    "C6": true,
+    "C7": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

@@ -1,0 +1,164 @@
+{
+  "scenario_id": "scenario_47",
+  "scenario_type": "observability_pipeline_migration",
+  "description": "A platform lead must approve the retirement plan for the company's legacy log-ingestion pipeline and finalize the operating settings and follow-up work for routing services to the replacement telemetry backend.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Theo",
+      "role": "Telemetry Infrastructure Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rina",
+      "role": "Compliance Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Service Reliability Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The replacement telemetry backend has passed the planned functional and load tests in the staging environment.",
+    "S2": "The legacy log-ingestion pipeline is still receiving production traffic and is scheduled for retirement during the next platform change window.",
+    "S3": "Maya owns the binding decision on the retirement date, transition settings, and required follow-up work.",
+    "S4": "The weekly change-control review records input from telemetry infrastructure, compliance, and service reliability before Maya finalizes the production plan.",
+    "S5": "When a prepaid capacity commitment ends on a calendar date, the change-control calendar schedules retirement for the following day rather than on the commitment's final day."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reconciling a renewal invoice with the procurement record yesterday, Theo confirmed that the legacy pipeline's prepaid capacity commitment runs through January 31, 2026; under the change-control calendar, retirement must therefore be scheduled for February 1, 2026 rather than January 31, 2026, but he has not updated the change ticket."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During this morning's audit-evidence preparation, Rina confirmed that production audit events must be stored in immutable storage for exactly 365 days and must bypass sampling entirely; she has not yet filed the compliance note against the migration."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While upgrading an unrelated service yesterday, Owen found that the legacy_exporter service cannot switch readers atomically and requires exactly 14 days of dual-write coverage before its old pipeline reader can be disabled; he has only drafted a local migration note."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "legacy_pipeline_retirement_date": "string",
+      "dual_write_days": "integer",
+      "immutable_audit_retention_days": "integer",
+      "audit_sampling_mode": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The legacy pipeline retirement date must include February 1, 2026.",
+    "The transition must use exactly 14 days of dual-write coverage.",
+    "Production audit events must have exactly 365 days of immutable retention.",
+    "Audit events must bypass sampling, with bypass, bypassed, none, no_sampling, bypass_sampling, or no-sampling accepted as the encoding.",
+    "A commitment must reference a 14-day dual-write window or coverage period and be tied to PF3 in the decision-maker's justification.",
+    "The retirement timing must be justified using the prepaid-capacity fact."
+  ],
+  "content_checks": {
+    "C1": "'February 1, 2026' in decisions['legacy_pipeline_retirement_date'] or '2026-02-01' in decisions['legacy_pipeline_retirement_date']",
+    "C2": "decisions['dual_write_days'] == 14",
+    "C3": "decisions['immutable_audit_retention_days'] == 365",
+    "C4": "decisions['audit_sampling_mode'] in ['bypass', 'bypassed', 'none', 'no_sampling', 'bypass_sampling', 'no-sampling']",
+    "C5": "'PF3' in justification_fact_ids and any('14-day' in c['detail'] and ('dual-write' in c['detail'] or 'dual write' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The prepaid-capacity confirmation changes the retirement date from an unspecified near-term change window to February 1, 2026, the day after the commitment ends, and supplies the fact that must justify that date."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The audit requirement changes retention to exactly 365 immutable days and changes the audit stream's sampling mode to bypass, bypassed, none, no_sampling, bypass_sampling, or no-sampling."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "C5"
+      ],
+      "why": "The legacy_exporter limitation changes dual-write coverage to exactly 14 days and requires a commitment referencing that 14-day dual-write window or coverage period."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

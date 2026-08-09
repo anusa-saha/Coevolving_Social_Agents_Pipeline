@@ -1,0 +1,172 @@
+{
+  "scenario_id": "scenario_37",
+  "scenario_type": "architecture_operating_policy",
+  "description": "A tech lead must approve the production operating policy for moving the company's build workloads to a new CI runner platform, deciding the runner architecture, concurrency limit, and build-evidence controls after the standard platform review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Owen",
+      "role": "Developer Productivity Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lena",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Ravi",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The existing CI system uses a shared pool of self-hosted runners, and the platform team has prepared a replacement based on ephemeral runners.",
+    "S2": "The replacement passed the standard build-speed and failure-recovery tests in a staging environment.",
+    "S3": "The draft operating policy allows 20 concurrent jobs, keeps build logs for 30 days, and does not specify immutable log storage or build-provenance attestations.",
+    "S4": "Maya owns the final approval, and the normal platform review includes a round of input from developer productivity, site reliability, and compliance before the policy is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While helping the release team debug a separate build yesterday, Owen confirmed that the production release pipeline uses privileged Docker-in-Docker and cannot run on the proposed ephemeral runner profile; the workable design is exactly two isolated persistent runners for release jobs, with the remaining jobs on ephemeral runners. He has not updated the platform proposal yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During an unrelated queue investigation this morning, Lena measured a campaign-day burst of 28 simultaneous CI jobs; the safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. She has not added those measurements to the capacity dashboard yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While preparing evidence for an audit this afternoon, Ravi confirmed that build logs for the organization's regulated release repositories must be retained for exactly 180 days in immutable storage and that each production build must produce a signed provenance attestation; he has not opened the compliance ticket yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "runner_architecture": "string",
+      "persistent_runner_count": "integer",
+      "max_concurrent_jobs": "integer",
+      "queue_alert_threshold": "integer",
+      "log_retention_days": "integer",
+      "immutable_logs": "boolean",
+      "signed_provenance_attestation": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The production runner architecture must use exactly two isolated persistent runners for release jobs and ephemeral runners for other jobs.",
+    "The maximum concurrent-job limit must be exactly 32.",
+    "A queue alert must trigger above exactly 24 jobs.",
+    "Build logs must be retained for exactly 180 days.",
+    "Build logs must be stored immutably.",
+    "Every production build must produce a signed provenance attestation.",
+    "The policy must include commitments for the release-runner exception, queue monitoring, and compliance evidence."
+  ],
+  "content_checks": {
+    "C1": "'Hybrid' in decisions['runner_architecture'] or 'hybrid' in decisions['runner_architecture']",
+    "C2": "decisions['persistent_runner_count'] == 2",
+    "C3": "decisions['max_concurrent_jobs'] == 32",
+    "C4": "decisions['queue_alert_threshold'] == 24",
+    "C5": "decisions['log_retention_days'] == 180",
+    "C6": "decisions['immutable_logs'] == True",
+    "C7": "decisions['signed_provenance_attestation'] == True",
+    "C8": "any(c['type'] == 'release_runner_exception' for c in commitments)",
+    "C9": "any(c['type'] == 'queue_monitoring' for c in commitments)",
+    "C10": "any(c['type'] == 'compliance_evidence' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C8",
+        "P1"
+      ],
+      "why": "The staging result supports an all-ephemeral design, while PF1 changes the architecture to a hybrid design, sets the persistent runner count to exactly 2, and requires a release-runner exception commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C9"
+      ],
+      "why": "The draft's 20-job limit and unspecified queue alert are replaced by PF2's measured requirements of exactly 32 concurrent jobs, an alert threshold of exactly 24, and a queue-monitoring commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C7",
+        "C10",
+        "P2"
+      ],
+      "why": "The draft's 30-day mutable logs and missing attestation control change under PF3 to exactly 180 days of immutable retention, signed provenance attestations, and a compliance evidence commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

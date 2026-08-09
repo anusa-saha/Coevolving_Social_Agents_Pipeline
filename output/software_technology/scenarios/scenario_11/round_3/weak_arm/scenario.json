@@ -1,0 +1,133 @@
+{
+  "scenario_id": "scenario_11",
+  "scenario_type": "production_resilience_exercise",
+  "description": "A VP of Engineering must approve the operating plan for Saturday's production failover exercise for the notification service, including whether to proceed, the write-traffic exposure, the observation period, and which tenants may participate.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "VP of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Site Reliability Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Data Protection Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The notification service has passed its planned staging failover tests.",
+    "S2": "A production failover exercise is scheduled for Saturday from 10:00 AM to noon.",
+    "S3": "Riley makes the binding decision on the exercise plan and records the final operating limits.",
+    "S4": "As part of the normal pre-exercise review, Riley checks with site reliability engineering and data protection before approving the runbook."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While replaying a production-shaped queue during an unrelated capacity investigation this morning, Mina confirmed that replication lag becomes unsafe at 25% write traffic and recovers only after a 30-minute observation at a 10% write-traffic level; she has not updated the exercise runbook yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Owen confirmed with the privacy team this afternoon that the Aster and Boreal tenants are contractually restricted to processing in the EU primary region and must be excluded from this secondary-region exercise; he found the clause during a separate contract review and has not filed the routing exception yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "exercise_goes_ahead": "boolean",
+      "write_traffic_percent": "integer",
+      "observation_period_minutes": "integer",
+      "excluded_tenants": "list"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The production exercise must proceed.",
+    "Write traffic must be limited to exactly 10 percent.",
+    "The exercise must include exactly a 30-minute observation period.",
+    "Aster and Boreal must be excluded from the secondary-region exercise.",
+    "A commitment must record the 10 percent write-traffic cap and 30-minute observation period.",
+    "A commitment must record filing the routing exception for Aster and Boreal."
+  ],
+  "content_checks": {
+    "C1": "decisions['exercise_goes_ahead'] == True",
+    "C2": "decisions['write_traffic_percent'] == 10",
+    "C3": "decisions['observation_period_minutes'] == 30",
+    "C4": "decisions['excluded_tenants'] == ['Aster', 'Boreal']",
+    "C5": "any(c['type'] == 'runbook_update' and '10%' in c['detail'] and '30-minute' in c['detail'] for c in commitments)",
+    "C6": "any('Aster' in c['detail'] and 'Boreal' in c['detail'] and 'routing exception' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C5",
+        "P1"
+      ],
+      "why": "The staging results do not specify production exposure limits; PF1 changes the write-traffic setting to exactly 10 percent, the observation period to exactly 30 minutes, and requires a runbook commitment recording both limits."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C6"
+      ],
+      "why": "The ordinary exercise cohort would include all tenants; PF2 changes the participant list by excluding exactly Aster and Boreal and requires a commitment to file their routing exception."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

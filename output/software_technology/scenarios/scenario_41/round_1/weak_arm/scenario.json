@@ -1,0 +1,171 @@
+{
+  "scenario_id": "scenario_41",
+  "scenario_type": "on_call_staffing",
+  "description": "An SRE manager must finalize the overnight on-call roster and customer-communication policy for a high-risk search-index rollout, with input from backend engineering, infrastructure, and customer support.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "SRE Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ethan",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rina",
+      "role": "Infrastructure Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Luis",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The search-index rollout is scheduled for Saturday from 8:00 PM to 6:00 AM, with the highest-risk migration work expected overnight.",
+    "S2": "Maya makes the final decision on the on-call roster and operating policy.",
+    "S3": "The current draft roster names Leo as primary, Marta as secondary, and Nina as the escalation manager; it calls for customer status updates every 60 minutes during a service degradation.",
+    "S4": "Before the roster is published, Maya follows the team's normal readiness check by asking backend engineering, infrastructure, and customer support to review the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking permissions for an unrelated release this afternoon, Ethan found that Leo's schema-rollback access expired during the last access review, while Marta still has current rollback access; he has not filed the access ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During today's infrastructure roster reconciliation, Rina confirmed that Omar is the only engineer currently authorized to execute storage failback and that Omar is available for the rollback coverage window only from 1:00 AM to 5:00 AM; the roster document still lists Marta for that coverage."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing the Northstar support agreement for another account matter this morning, Luis confirmed that any search degradation requires customer status updates every 30 minutes, not every 60 minutes, and that Support must own those updates; he has not updated the rollout ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "primary_on_call": "string",
+      "secondary_on_call": "string",
+      "rollback_coverage_start": "string",
+      "rollback_coverage_end": "string",
+      "customer_update_interval_minutes": "integer",
+      "support_owns_customer_updates": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Marta must be the primary on-call engineer.",
+    "Omar must be the secondary on-call engineer.",
+    "Rollback coverage must run from 1:00 AM through 5:00 AM.",
+    "Customer status updates must occur every 30 minutes.",
+    "Support must own the customer updates.",
+    "The roster must include a rollback-access remediation commitment.",
+    "The roster must include a storage-failback coverage commitment.",
+    "The roster must include a Northstar customer-communication commitment.",
+    "The access-expiration finding must be cited in the decision justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['primary_on_call'] == 'Marta'",
+    "C2": "decisions['secondary_on_call'] == 'Omar'",
+    "C3": "decisions['rollback_coverage_start'] == '1:00 AM' and decisions['rollback_coverage_end'] == '5:00 AM'",
+    "C4": "decisions['customer_update_interval_minutes'] == 30",
+    "C5": "decisions['support_owns_customer_updates'] == True",
+    "C6": "any(c['type'] == 'rollback_access_remediation' for c in commitments)",
+    "C7": "any(c['type'] == 'storage_failback_coverage' for c in commitments)",
+    "C8": "any(c['type'] == 'Northstar_customer_communication' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in justification_fact_ids",
+    "P3": "'PF3' in revealed and 'PF3' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C6",
+        "P1"
+      ],
+      "why": "The draft names Leo as primary, but Leo's expired rollback access changes the primary assignment to Marta and creates the rollback-access remediation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C7",
+        "P2"
+      ],
+      "why": "Omar's unique failback authorization and exact 1:00 AM-5:00 AM availability change the secondary assignment, rollback coverage window, and storage-failback commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C8",
+        "P3"
+      ],
+      "why": "Northstar's contract changes the update interval from 60 to exactly 30 minutes, assigns the work to Support, and requires a Northstar communication commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

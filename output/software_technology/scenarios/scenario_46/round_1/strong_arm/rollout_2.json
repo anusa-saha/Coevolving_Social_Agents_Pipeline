@@ -1,0 +1,236 @@
+{
+  "arm": "strong",
+  "temperature": 0.274,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Hi everyone, I wanted to kick off a discussion about tonight's customer-data backfill scheduled from 10:00 PM to 4:00 AM UTC. The current runbook proposes starting at 10:00 PM, processing 300 records per second, reading from the primary database, and running continuously through the window. Since this is the production run, I want to make sure we've all reviewed the plan and are comfortable with it before I make the final binding decision. Does anyone have concerns or anything they think I should know before we proceed?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone, I wanted to kick off a discussion about tonight's customer-data backfill scheduled from 10:00 PM to 4:00 AM UTC. The current runbook proposes starting at 10:00 PM, processing 300 records per second, reading from the primary database, and running continuously through the window. Since this is the production run, I want to make sure we've all reviewed the plan and are comfortable with it before I make the final binding decision. Does anyone have concerns or anything they think I should know before we proceed?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "Riley, I need to flag a concern before you make your decision. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't yet updated the runbook because the replay investigation is still open, but this directly affects tonight's production run.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Riley, I need to flag a concern before you make your decision. While investigating a separate replay issue this afternoon, I confirmed that a retry in the backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production starts. I haven't yet updated the runbook because the replay investigation is still open, but this directly affects tonight's production run.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "Riley, I have a critical capacity concern with the current plan. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag starts growing. The runbook's proposed 300 records per second would exceed this and cause replication lag. We need to throttle to exactly 180 records per second and pause after 20 seconds of lag. I recorded these results in a capacity notebook but haven't attached it to the release ticket yet. Also, I'd strongly recommend reading from the replica rather than the primary to avoid impacting production writes.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Riley, I have a critical capacity concern with the current plan. This morning I measured the production read replica under a comparable load and confirmed it sustains exactly 180 records per second. Above 180, replication lag starts growing. The runbook's proposed 300 records per second would exceed this and cause replication lag. We need to throttle to exactly 180 records per second and pause after 20 seconds of lag. I recorded these results in a capacity notebook but haven't attached it to the release ticket yet. Also, I'd strongly recommend reading from the replica rather than the primary to avoid impacting production writes.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "Riley, I need to flag a critical customer-impact concern before you make your decision. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries during that window. The current runbook proposes running continuously through the entire 10:00 PM to 4:00 AM window at 300 records per second off the primary, which would directly overlap with their reporting window. I have not yet sent the required customer notification because the backfill plan is not yet approved. We need to either pause or significantly throttle the backfill between 1:00 AM and 3:00 AM UTC, or ensure the plan is modified to protect those tenants' queries.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"Riley, I need to flag a critical customer-impact concern before you make your decision. While checking tonight's customer schedules, I confirmed that exactly six enterprise tenants\u2014Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview\u2014run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries during that window. The current runbook proposes running continuously through the entire 10:00 PM to 4:00 AM window at 300 records per second off the primary, which would directly overlap with their reporting window. I have not yet sent the required customer notification because the backfill plan is not yet approved. We need to either pause or significantly throttle the backfill between 1:00 AM and 3:00 AM UTC, or ensure the plan is modified to protect those tenants' queries.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all for flagging these critical concerns. Let me summarize what I'm hearing and make sure I understand the full picture before I make my decision:\n\n1. **Mina**: The backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production. This needs to be in place before we run.\n\n2. **Owen**: The production read replica sustains 180 records per second under comparable load, and exceeding that causes replication lag. We should throttle to 180 rps, pause after 20 seconds of lag, and read from the replica instead of the primary.\n\n3. **Tara**: Six enterprise tenants (Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, Fairview) run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries. We need to pause or significantly throttle during that window.\n\nAll three concerns are serious and need to be addressed. Here's what I'm leaning toward: We do NOT run tonight as currently planned. We need to (a) enable idempotency-key enforcement and the deduplication gate, (b) throttle to 180 rps reading from the replica with a 20-second lag pause, and (c) pause the backfill entirely from 1:00 AM to 3:00 AM UTC to protect those six tenants. However, that gives us only 4 hours of effective run time (10 PM\u20131 AM and 3 AM\u20134 AM) at 180 rps, which may not be enough to complete the backfill. Before I make the binding decision, I need to know: Can the runbook be updated and the idempotency/deduplication gate be enabled before 10 PM tonight? And does anyone have an estimate of total records to process so we can confirm whether the reduced window at 180 rps is sufficient?",
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all for flagging these critical concerns. Let me summarize what I'm hearing and make sure I understand the full picture before I make my decision:\\n\\n1. **Mina**: The backfill worker can insert duplicate customer rows unless idempotency-key enforcement and a deduplication gate are enabled before production. This needs to be in place before we run.\\n\\n2. **Owen**: The production read replica sustains 180 records per second under comparable load, and exceeding that causes replication lag. We should throttle to 180 rps, pause after 20 seconds of lag, and read from the replica instead of the primary.\\n\\n3. **Tara**: Six enterprise tenants (Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, Fairview) run contractual overnight reports from 1:00 AM to 3:00 AM UTC and must not experience degraded queries. We need to pause or significantly throttle during that window.\\n\\nAll three concerns are serious and need to be addressed. Here's what I'm leaning toward: We do NOT run tonight as currently planned. We need to (a) enable idempotency-key enforcement and the deduplication gate, (b) throttle to 180 rps reading from the replica with a 20-second lag pause, and (c) pause the backfill entirely from 1:00 AM to 3:00 AM UTC to protect those six tenants. However, that gives us only 4 hours of effective run time (10 PM\u20131 AM and 3 AM\u20134 AM) at 180 rps, which may not be enough to complete the backfill. Before I make the binding decision, I need to know: Can the runbook be updated and the idempotency/deduplication gate be enabled before 10 PM tonight? And does anyone have an estimate of total records to process so we can confirm whether the reduced window at 180 rps is sufficient?\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, to answer your first question: yes, I can update the runbook and enable the idempotency-key enforcement and deduplication gate before 10 PM tonight. The changes are well-scoped \u2014 I know exactly where in the worker configuration they need to be applied, and I can have them enabled, tested against a small sample, and the runbook updated within the next couple of hours. I'll prioritize that as soon as we wrap up here. On your second question about total records to process \u2014 I don't have that figure myself. Owen, do you have an estimate of total record volume from your capacity testing, or does anyone else have that number? We'll need it to confirm whether 4 hours at 180 rps is sufficient.",
+      "speaker": "A2",
+      "turn": 5,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, to answer your first question: yes, I can update the runbook and enable the idempotency-key enforcement and deduplication gate before 10 PM tonight. The changes are well-scoped \u2014 I know exactly where in the worker configuration they need to be applied, and I can have them enabled, tested against a small sample, and the runbook updated within the next couple of hours. I'll prioritize that as soon as we wrap up here. On your second question about total records to process \u2014 I don't have that figure myself. Owen, do you have an estimate of total record volume from your capacity testing, or does anyone else have that number? We'll need it to confirm whether 4 hours at 180 rps is sufficient.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Mina, I don't have the total record volume from my capacity testing \u2014 my measurements this morning were focused on validating the read replica's sustainable throughput rate under load, not on counting the total dataset. I can confirm the replica holds up at exactly 180 rps, but I don't have a record count estimate to give you. Someone else may have that figure \u2014 perhaps from the staging run or the release ticket. Riley, if no one has the total count readily available, we may need to pull it from the database or the staging run results before we can confirm whether 4 hours at 180 rps is sufficient.",
+      "speaker": "A3",
+      "turn": 6,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Mina, I don't have the total record volume from my capacity testing \u2014 my measurements this morning were focused on validating the read replica's sustainable throughput rate under load, not on counting the total dataset. I can confirm the replica holds up at exactly 180 rps, but I don't have a record count estimate to give you. Someone else may have that figure \u2014 perhaps from the staging run or the release ticket. Riley, if no one has the total count readily available, we may need to pull it from the database or the staging run results before we can confirm whether 4 hours at 180 rps is sufficient.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "I don't have the total record count either \u2014 my work was focused on checking customer schedules and identifying the tenant impact window. However, I want to flag something else important while we're sorting this out: I still have not sent the required customer notification to those six enterprise tenants, because the backfill plan is not yet approved. If we're going to run tonight \u2014 even with the modified plan Riley is leaning toward \u2014 we need to get the plan approved quickly so I can send that notification. Those tenants have contractual reporting windows, and sending notice late or not at all could be a contractual issue on top of the operational risk. So I'd ask Riley: can we get the binding decision made soon enough for me to send the notification with reasonable lead time before tonight's run? And if the total record count ends up being too large for the reduced 4-hour window, we may need to consider postponing to another night entirely, which would give us the full 6-hour window and proper notification time.",
+      "speaker": "A4",
+      "turn": 7,
+      "raw_output": "{\"type\": \"say\", \"text\": \"I don't have the total record count either \u2014 my work was focused on checking customer schedules and identifying the tenant impact window. However, I want to flag something else important while we're sorting this out: I still have not sent the required customer notification to those six enterprise tenants, because the backfill plan is not yet approved. If we're going to run tonight \u2014 even with the modified plan Riley is leaning toward \u2014 we need to get the plan approved quickly so I can send that notification. Those tenants have contractual reporting windows, and sending notice late or not at all could be a contractual issue on top of the operational risk. So I'd ask Riley: can we get the binding decision made soon enough for me to send the notification with reasonable lead time before tonight's run? And if the total record count ends up being too large for the reduced 4-hour window, we may need to consider postponing to another night entirely, which would give us the full 6-hour window and proper notification time.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all. Here's where I'm landing: We don't have the total record count, which means we can't confirm whether 4 hours at 180 rps is sufficient. Without that confirmation, I'm not comfortable committing to tonight with the reduced window. Tara's point about customer notification lead time is also critical \u2014 if we can't confirm the plan is viable quickly, we risk either running without enough processing time or sending late contractual notices. Given all three concerns \u2014 idempotency, capacity, and tenant impact \u2014 I'm leaning toward postponing to another night. That gives us the full 6-hour window at 180 rps, proper time for Mina to enable and test the idempotency/deduplication gate, time for Owen to attach his capacity notebook to the release ticket, and proper lead time for Tara to send customer notifications. Before I make the binding decision, does anyone object to postponing, or can anyone get me the total record count in the next 30 minutes so we can make a final call on tonight vs. another night?",
+      "speaker": "A1",
+      "turn": 8,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all. Here's where I'm landing: We don't have the total record count, which means we can't confirm whether 4 hours at 180 rps is sufficient. Without that confirmation, I'm not comfortable committing to tonight with the reduced window. Tara's point about customer notification lead time is also critical \u2014 if we can't confirm the plan is viable quickly, we risk either running without enough processing time or sending late contractual notices. Given all three concerns \u2014 idempotency, capacity, and tenant impact \u2014 I'm leaning toward postponing to another night. That gives us the full 6-hour window at 180 rps, proper time for Mina to enable and test the idempotency/deduplication gate, time for Owen to attach his capacity notebook to the release ticket, and proper lead time for Tara to send customer notifications. Before I make the binding decision, does anyone object to postponing, or can anyone get me the total record count in the next 30 minutes so we can make a final call on tonight vs. another night?\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley, I support postponing. To be clear on my piece: I can absolutely have the idempotency-key enforcement and deduplication gate enabled, tested, and the runbook updated well before a future run \u2014 whether that's tonight or another night. But I agree that without the total record count, we can't confirm the reduced 4-hour window is sufficient, and rushing the decision creates risk on multiple fronts. If no one can produce the record count in the next 30 minutes, postponing is the responsible call. It gives us time to get the count, validate the math at 180 rps over the full 6-hour window, and let Tara send proper customer notifications. I don't have the total record count myself, so unless someone can pull it quickly, I'd recommend you go ahead and make the binding decision to postpone.",
+      "speaker": "A2",
+      "turn": 9,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Riley, I support postponing. To be clear on my piece: I can absolutely have the idempotency-key enforcement and deduplication gate enabled, tested, and the runbook updated well before a future run \u2014 whether that's tonight or another night. But I agree that without the total record count, we can't confirm the reduced 4-hour window is sufficient, and rushing the decision creates risk on multiple fronts. If no one can produce the record count in the next 30 minutes, postponing is the responsible call. It gives us time to get the count, validate the math at 180 rps over the full 6-hour window, and let Tara send proper customer notifications. I don't have the total record count myself, so unless someone can pull it quickly, I'd recommend you go ahead and make the binding decision to postpone.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Riley, I support postponing as well. I don't have the total record count \u2014 my capacity testing was focused on throughput validation, not dataset size. On my end, I can attach the capacity notebook with the 180 rps measurements to the release ticket well before a future run, so the team has full visibility into the replica's limits. Postponing gives us the full 6-hour window at 180 rps, which at maximum throughput could process up to 3,888,000 records \u2014 but we still need the actual count to confirm. I'd recommend someone pull the total record count from the database or staging run results so we can validate the math before the rescheduled date. If no one can produce it in the next 30 minutes, I agree postponing is the right call.",
+      "speaker": "A3",
+      "turn": 10,
+      "raw_output": "{\"type\":\"say\",\"text\": \"Riley, I support postponing as well. I don't have the total record count \u2014 my capacity testing was focused on throughput validation, not dataset size. On my end, I can attach the capacity notebook with the 180 rps measurements to the release ticket well before a future run, so the team has full visibility into the replica's limits. Postponing gives us the full 6-hour window at 180 rps, which at maximum throughput could process up to 3,888,000 records \u2014 but we still need the actual count to confirm. I'd recommend someone pull the total record count from the database or staging run results so we can validate the math before the rescheduled date. If no one can produce it in the next 30 minutes, I agree postponing is the right call.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Riley, I support postponing as well. My piece is straightforward: once you make the binding decision and the new date is set, I can send the required customer notification to Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview with proper lead time. If we do reschedule to a night with the full 6-hour window at 180 rps, I'll still need to verify that the 1:00 AM to 3:00 AM UTC reporting window for those six tenants is protected \u2014 whether by pausing during that window or confirming the throttled run at 180 rps off the replica won't degrade their queries. Either way, I need the approved plan in hand before I can send notification. So I'd ask that once you make the binding decision to postpone, you also communicate the rescheduled date as soon as possible so I can get the notifications out promptly. I don't have the total record count, so I can't help with that piece \u2014 but I agree that without it, postponing is the right call.",
+      "speaker": "A4",
+      "turn": 11,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, I support postponing as well. My piece is straightforward: once you make the binding decision and the new date is set, I can send the required customer notification to Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview with proper lead time. If we do reschedule to a night with the full 6-hour window at 180 rps, I'll still need to verify that the 1:00 AM to 3:00 AM UTC reporting window for those six tenants is protected \u2014 whether by pausing during that window or confirming the throttled run at 180 rps off the replica won't degrade their queries. Either way, I need the approved plan in hand before I can send notification. So I'd ask that once you make the binding decision to postpone, you also communicate the rescheduled date as soon as possible so I can get the notifications out promptly. I don't have the total record count, so I can't help with that piece \u2014 but I agree that without it, postponing is the right call.\"}\n```"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "backfill_runs_tonight": false,
+          "idempotency_and_dedupe_enabled": true,
+          "throughput_records_per_second": 180,
+          "lag_pause_seconds": 20,
+          "customer_report_pause_start": "01:00",
+          "customer_report_pause_end": "03:00",
+          "protected_tenants": [
+            "Acme",
+            "Bluebird",
+            "Cobalt",
+            "DeltaWorks",
+            "Evergreen",
+            "Fairview"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "runbook_update",
+            "target": "Mina",
+            "detail": "Update the runbook to reflect: idempotency-key enforcement and deduplication gate enabled, throughput throttled to 180 rps, reads from the replica instead of primary, pause after 20 seconds of replication lag, and pause backfill from 1:00 AM to 3:00 AM UTC to protect six enterprise tenants."
+          },
+          {
+            "type": "capacity_documentation",
+            "target": "Owen",
+            "detail": "Attach the capacity notebook with the 180 rps replica measurements to the release ticket before the rescheduled run."
+          },
+          {
+            "type": "customer_notification",
+            "target": "Tara",
+            "detail": "Send required customer notifications to Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview with proper lead time once the rescheduled date is communicated."
+          },
+          {
+            "type": "record_count_verification",
+            "target": "team",
+            "detail": "Pull the total record count from the database or staging run results and confirm that the full 6-hour window at 180 rps (max 3,888,000 records) is sufficient before the rescheduled date."
+          },
+          {
+            "type": "reschedule",
+            "target": "Riley",
+            "detail": "Communicate the rescheduled backfill date as soon as possible so all commitments can be completed with proper lead time."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 12,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"backfill_runs_tonight\": false,\n      \"idempotency_and_dedupe_enabled\": true,\n      \"throughput_records_per_second\": 180,\n      \"lag_pause_seconds\": 20,\n      \"customer_report_pause_start\": \"01:00\",\n      \"customer_report_pause_end\": \"03:00\",\n      \"protected_tenants\": [\n        \"Acme\",\n        \"Bluebird\",\n        \"Cobalt\",\n        \"DeltaWorks\",\n        \"Evergreen\",\n        \"Fairview\"\n      ]\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Mina\",\n        \"detail\": \"Update the runbook to reflect: idempotency-key enforcement and deduplication gate enabled, throughput throttled to 180 rps, reads from the replica instead of primary, pause after 20 seconds of replication lag, and pause backfill from 1:00 AM to 3:00 AM UTC to protect six enterprise tenants.\"\n      },\n      {\n        \"type\": \"capacity_documentation\",\n        \"target\": \"Owen\",\n        \"detail\": \"Attach the capacity notebook with the 180 rps replica measurements to the release ticket before the rescheduled run.\"\n      },\n      {\n        \"type\": \"customer_notification\",\n        \"target\": \"Tara\",\n        \"detail\": \"Send required customer notifications to Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview with proper lead time once the rescheduled date is communicated.\"\n      },\n      {\n        \"type\": \"record_count_verification\",\n        \"target\": \"team\",\n        \"detail\": \"Pull the total record count from the database or staging run results and confirm that the full 6-hour window at 180 rps (max 3,888,000 records) is sufficient before the rescheduled date.\"\n      },\n      {\n        \"type\": \"reschedule\",\n        \"target\": \"Riley\",\n        \"detail\": \"Communicate the rescheduled backfill date as soon as possible so all commitments can be completed with proper lead time.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "backfill_runs_tonight": false,
+      "idempotency_and_dedupe_enabled": true,
+      "throughput_records_per_second": 180,
+      "lag_pause_seconds": 20,
+      "customer_report_pause_start": "01:00",
+      "customer_report_pause_end": "03:00",
+      "protected_tenants": [
+        "Acme",
+        "Bluebird",
+        "Cobalt",
+        "DeltaWorks",
+        "Evergreen",
+        "Fairview"
+      ]
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "runbook_update",
+        "target": "Mina",
+        "detail": "Update the runbook to reflect: idempotency-key enforcement and deduplication gate enabled, throughput throttled to 180 rps, reads from the replica instead of primary, pause after 20 seconds of replication lag, and pause backfill from 1:00 AM to 3:00 AM UTC to protect six enterprise tenants."
+      },
+      {
+        "type": "capacity_documentation",
+        "target": "Owen",
+        "detail": "Attach the capacity notebook with the 180 rps replica measurements to the release ticket before the rescheduled run."
+      },
+      {
+        "type": "customer_notification",
+        "target": "Tara",
+        "detail": "Send required customer notifications to Acme, Bluebird, Cobalt, DeltaWorks, Evergreen, and Fairview with proper lead time once the rescheduled date is communicated."
+      },
+      {
+        "type": "record_count_verification",
+        "target": "team",
+        "detail": "Pull the total record count from the database or staging run results and confirm that the full 6-hour window at 180 rps (max 3,888,000 records) is sufficient before the rescheduled date."
+      },
+      {
+        "type": "reschedule",
+        "target": "Riley",
+        "detail": "Communicate the rescheduled backfill date as soon as possible so all commitments can be completed with proper lead time."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": false,
+    "C6": true,
+    "C7": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

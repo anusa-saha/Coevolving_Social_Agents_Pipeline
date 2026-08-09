@@ -1,0 +1,157 @@
+{
+  "arm": "strong",
+  "temperature": 0.243,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Morning everyone. Since the recommendation API is launching tomorrow, I want to make sure we close out the caching and failover policy sign-off today. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before I sign off on my end, I'd like to hear from the application and reliability folks \u2014 do you have any concerns with the default unscoped cache policy, or with failing closed during an origin outage? If there are no objections, I'd like to get explicit sign-off from both teams so we can check that off the launch checklist.",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Morning everyone. Since the recommendation API is launching tomorrow, I want to make sure we close out the caching and failover policy sign-off today. The current draft uses the platform's default unscoped project-key cache policy and fails closed during an origin outage. Before I sign off on my end, I'd like to hear from the application and reliability folks \u2014 do you have any concerns with the default unscoped cache policy, or with failing closed during an origin outage? If there are no objections, I'd like to get explicit sign-off from both teams so we can check that off the launch checklist.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to raise a concern before we sign off. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. That means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I haven't filed the security finding yet, but this seems like it needs to be addressed before we sign off on the caching policy.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to raise a concern before we sign off. While debugging an unrelated authentication issue this afternoon, I confirmed that two customer tenants can use the same project slug. That means the current unscoped project-key cache policy could return one tenant's recommendation response to another tenant. I haven't filed the security finding yet, but this seems like it needs to be addressed before we sign off on the caching policy.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I have a concern on the reliability side regarding the fail-closed policy. During a failover rehearsal this morning, I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I haven't updated the launch runbook yet, but the key point is: we have an 8-minute window where cached responses could keep being served while recovery completes. Failing closed immediately would mean 12 minutes of total downtime, but we could potentially serve cached responses for up to 20 minutes \u2014 which would cover the 12-minute recovery. We need to decide whether failing closed immediately or serving cached responses during the outage is the right policy, and I need to update the runbook with these numbers before launch.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I have a concern on the reliability side regarding the fail-closed policy. During a failover rehearsal this morning, I measured that DNS and service recovery take 12 minutes, while the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. I haven't updated the launch runbook yet, but the key point is: we have an 8-minute window where cached responses could keep being served while recovery completes. Failing closed immediately would mean 12 minutes of total downtime, but we could potentially serve cached responses for up to 20 minutes \u2014 which would cover the 12-minute recovery. We need to decide whether failing closed immediately or serving cached responses during the outage is the right policy, and I need to update the runbook with these numbers before launch.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thank you both \u2014 these are exactly the kinds of issues I needed to hear before signing off. Let me make sure I understand both concerns correctly so we can settle on the right policy.\n\nDevon, on the caching side: you're saying that because two customer tenants can share the same project slug, the unscoped project-key cache policy could serve one tenant's recommendations to another tenant. That's a cross-tenant data leakage risk, which is clearly unacceptable. It sounds like we need to scope the cache key to include tenant identity, not just the project slug. Do you have a recommendation for what the cache key should include \u2014 tenant ID, tenant ID plus project slug, or something else?\n\nRiley, on the failover side: you're saying recovery takes 12 minutes, the database protection limit allows serving cached responses for up to 20 minutes, and so there's an 8-minute window where serving cached responses would bridge the gap and avoid downtime entirely. That's a strong case for failing open (serving cached responses) rather than failing closed, with a max stale duration of 20 minutes. Does that match your recommendation?\n\nIf we can agree on tenant-scoped cache keys and a fail-open policy with a 20-minute max stale window, I can sign off on the updated policy today. Devon, I'd also want to confirm whether you think we need an explicit security isolation test to verify the tenant-scoped keys actually prevent cross-tenant leakage before launch.",
+      "speaker": "A1",
+      "turn": 3,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you both \u2014 these are exactly the kinds of issues I needed to hear before signing off. Let me make sure I understand both concerns correctly so we can settle on the right policy.\\n\\nDevon, on the caching side: you're saying that because two customer tenants can share the same project slug, the unscoped project-key cache policy could serve one tenant's recommendations to another tenant. That's a cross-tenant data leakage risk, which is clearly unacceptable. It sounds like we need to scope the cache key to include tenant identity, not just the project slug. Do you have a recommendation for what the cache key should include \u2014 tenant ID, tenant ID plus project slug, or something else?\\n\\nRiley, on the failover side: you're saying recovery takes 12 minutes, the database protection limit allows serving cached responses for up to 20 minutes, and so there's an 8-minute window where serving cached responses would bridge the gap and avoid downtime entirely. That's a strong case for failing open (serving cached responses) rather than failing closed, with a max stale duration of 20 minutes. Does that match your recommendation?\\n\\nIf we can agree on tenant-scoped cache keys and a fail-open policy with a 20-minute max stale window, I can sign off on the updated policy today. Devon, I'd also want to confirm whether you think we need an explicit security isolation test to verify the tenant-scoped keys actually prevent cross-tenant leakage before launch.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Morgan. Yes, that matches my understanding \u2014 the unscoped project-key cache policy creates a cross-tenant data leakage risk because tenants can share the same project slug. On your question about the cache key: I'd recommend scoping it to include tenant ID plus project slug, not just tenant ID alone. Tenant ID alone could still create collisions if different projects within the same tenant use overlapping parameters, so including both gives us a unique, unambiguous key. And yes, I absolutely think we need an explicit security isolation test before launch \u2014 we should verify that two tenants sharing the same project slug receive completely separate cached responses and cannot see each other's data. Given that the launch is tomorrow morning, we should scope that test narrowly but make it a blocker: set up two tenants with the same project slug, make a recommendation request from one, and confirm the other tenant never receives that response from cache. I still need to formally file the security finding as well \u2014 I'll do that as soon as we wrap up here so it's documented.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Morgan. Yes, that matches my understanding \u2014 the unscoped project-key cache policy creates a cross-tenant data leakage risk because tenants can share the same project slug. On your question about the cache key: I'd recommend scoping it to include tenant ID plus project slug, not just tenant ID alone. Tenant ID alone could still create collisions if different projects within the same tenant use overlapping parameters, so including both gives us a unique, unambiguous key. And yes, I absolutely think we need an explicit security isolation test before launch \u2014 we should verify that two tenants sharing the same project slug receive completely separate cached responses and cannot see each other's data. Given that the launch is tomorrow morning, we should scope that test narrowly but make it a blocker: set up two tenants with the same project slug, make a recommendation request from one, and confirm the other tenant never receives that response from cache. I still need to formally file the security finding as well \u2014 I'll do that as soon as we wrap up here so it's documented.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Morgan. Yes, that matches my recommendation. To be precise about the numbers: DNS and service recovery take 12 minutes, and the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. So a fail-open policy with a 20-minute max stale window would fully cover the 12-minute recovery and avoid downtime entirely, with 8 minutes of margin. I'll update the launch runbook with these measured numbers before launch so the on-call team has the exact figures. One thing I want to flag: the 20-minute limit is a hard stop \u2014 once we hit it, requests must stop per the database protection limit, so the runbook needs to make clear that serving cached responses beyond 20 minutes is not an option. If everyone agrees on fail-open with a 20-minute max stale window, I'm comfortable signing off on the reliability side once the runbook is updated.",
+      "speaker": "A3",
+      "turn": 5,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Morgan. Yes, that matches my recommendation. To be precise about the numbers: DNS and service recovery take 12 minutes, and the origin database's protection limit permits serving cached responses for exactly 20 minutes before requests must stop. So a fail-open policy with a 20-minute max stale window would fully cover the 12-minute recovery and avoid downtime entirely, with 8 minutes of margin. I'll update the launch runbook with these measured numbers before launch so the on-call team has the exact figures. One thing I want to flag: the 20-minute limit is a hard stop \u2014 once we hit it, requests must stop per the database protection limit, so the runbook needs to make clear that serving cached responses beyond 20 minutes is not an option. If everyone agrees on fail-open with a 20-minute max stale window, I'm comfortable signing off on the reliability side once the runbook is updated.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "cache_key_scope": "tenant ID plus project slug",
+          "security_isolation_test_required": true,
+          "failover_mode": "fail-open (serve cached responses during origin outage)",
+          "max_stale_minutes": 20
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "security_filing",
+            "target": "Devon",
+            "detail": "Devon to formally file the security finding regarding shared project slugs enabling cross-tenant cache leakage."
+          },
+          {
+            "type": "security_isolation_test",
+            "target": "Devon",
+            "detail": "Devon to scope and execute a narrowly-scoped security isolation test before launch: set up two tenants with the same project slug, make a recommendation request from one, and confirm the other tenant never receives that response from cache. This is a launch blocker."
+          },
+          {
+            "type": "runbook_update",
+            "target": "Riley",
+            "detail": "Riley to update the launch runbook with measured failover numbers (12-minute recovery, 20-minute hard stop on serving cached responses) and clear documentation that serving cached responses beyond 20 minutes is not permitted."
+          },
+          {
+            "type": "policy_implementation",
+            "target": "Morgan",
+            "detail": "Morgan to update the production caching and failover policy to use tenant-ID-plus-project-slug scoped cache keys and fail-open with a 20-minute max stale window, and sign off on the platform side once Devon and Riley confirm their commitments are complete."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 6,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cache_key_scope\": \"tenant ID plus project slug\",\n      \"security_isolation_test_required\": true,\n      \"failover_mode\": \"fail-open (serve cached responses during origin outage)\",\n      \"max_stale_minutes\": 20\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"security_filing\",\n        \"target\": \"Devon\",\n        \"detail\": \"Devon to formally file the security finding regarding shared project slugs enabling cross-tenant cache leakage.\"\n      },\n      {\n        \"type\": \"security_isolation_test\",\n        \"target\": \"Devon\",\n        \"detail\": \"Devon to scope and execute a narrowly-scoped security isolation test before launch: set up two tenants with the same project slug, make a recommendation request from one, and confirm the other tenant never receives that response from cache. This is a launch blocker.\"\n      },\n      {\n        \"type\": \"runbook_update\",\n        \"target\": \"Riley\",\n        \"detail\": \"Riley to update the launch runbook with measured failover numbers (12-minute recovery, 20-minute hard stop on serving cached responses) and clear documentation that serving cached responses beyond 20 minutes is not permitted.\"\n      },\n      {\n        \"type\": \"policy_implementation\",\n        \"target\": \"Morgan\",\n        \"detail\": \"Morgan to update the production caching and failover policy to use tenant-ID-plus-project-slug scoped cache keys and fail-open with a 20-minute max stale window, and sign off on the platform side once Devon and Riley confirm their commitments are complete.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "cache_key_scope": "tenant ID plus project slug",
+      "security_isolation_test_required": true,
+      "failover_mode": "fail-open (serve cached responses during origin outage)",
+      "max_stale_minutes": 20
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2"
+    ],
+    "commitments": [
+      {
+        "type": "security_filing",
+        "target": "Devon",
+        "detail": "Devon to formally file the security finding regarding shared project slugs enabling cross-tenant cache leakage."
+      },
+      {
+        "type": "security_isolation_test",
+        "target": "Devon",
+        "detail": "Devon to scope and execute a narrowly-scoped security isolation test before launch: set up two tenants with the same project slug, make a recommendation request from one, and confirm the other tenant never receives that response from cache. This is a launch blocker."
+      },
+      {
+        "type": "runbook_update",
+        "target": "Riley",
+        "detail": "Riley to update the launch runbook with measured failover numbers (12-minute recovery, 20-minute hard stop on serving cached responses) and clear documentation that serving cached responses beyond 20 minutes is not permitted."
+      },
+      {
+        "type": "policy_implementation",
+        "target": "Morgan",
+        "detail": "Morgan to update the production caching and failover policy to use tenant-ID-plus-project-slug scoped cache keys and fail-open with a 20-minute max stale window, and sign off on the platform side once Devon and Riley confirm their commitments are complete."
+      }
+    ],
+    "justification_fact_ids": [
+      "S1",
+      "S3",
+      "S4",
+      "S5",
+      "PF1",
+      "PF2"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": false,
+    "C4": true,
+    "C5": false,
+    "C6": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2"
+  ],
+  "passed": false
+}

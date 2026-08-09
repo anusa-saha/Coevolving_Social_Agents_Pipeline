@@ -1,0 +1,173 @@
+{
+  "scenario_id": "scenario_38",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A security engineering manager must approve the production rollout plan for passkey authentication on the internal administrator console, including enforcement mode, canary size, audit controls, and temporary account exclusions.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Security Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Identity Platform Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "IT Operations Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Noah",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The internal administrator console is scheduled for a passkey-authentication rollout on Monday at 09:00.",
+    "S2": "The passkey pilot passed its planned usability and recovery tests with 40 employees.",
+    "S3": "The draft rollout enables passkeys for all employees in enforced mode, keeps the standard 30-day audit-log retention, and has no temporary account exclusions.",
+    "S4": "At the weekly access-control review, Morgan goes around identity platform, IT operations, and compliance before approving the production rollout plan.",
+    "S5": "The review checklist requires Morgan to call on the identity platform lead, IT operations lead, and compliance engineer individually to state any rollout-impacting findings, the exact plan changes they require, and the follow-up they will own; Morgan does not approve the plan until each role has completed that check-in."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While testing an unrelated mobile-device enrollment issue this morning, Ravi confirmed that 23 legacy mobile clients cannot complete the passkey ceremony; the identity platform team requires a 10% canary and a 14-day optional-mode period before enforcement, but Ravi has not updated the rollout ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While preparing the weekly administrator access roster, Elena confirmed that 18 contractor accounts do not receive their required hardware keys until Wednesday at 09:00; IT Operations must exclude those accounts from enrollment until that time, but Elena has not added the exception list to the rollout plan."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a control-evidence review this afternoon, Noah confirmed that privileged administrator authentication events must be kept in immutable storage for exactly 400 days; he has not yet opened the compliance ticket for this rollout."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_mode": "string",
+      "canary_percent": "integer",
+      "optional_mode_days": "integer",
+      "contractor_exclusion": "string",
+      "contractor_exclusion_until": "string",
+      "admin_log_retention_days": "integer",
+      "admin_logs_immutable": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must use optional mode for exactly 14 days before enforcement.",
+    "The initial canary must be exactly 10 percent.",
+    "The 18 contractor accounts must be excluded until Wednesday at 09:00.",
+    "Privileged administrator authentication logs must be retained for exactly 400 days.",
+    "Those logs must be stored immutably.",
+    "A legacy-client compatibility commitment must be recorded.",
+    "A contractor hardware-key exception commitment must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['rollout_mode'] == 'optional'",
+    "C2": "decisions['canary_percent'] == 10",
+    "C3": "decisions['optional_mode_days'] == 14",
+    "C4": "'18 contractor accounts' in decisions['contractor_exclusion']",
+    "C5": "decisions['contractor_exclusion_until'] == 'Wednesday 09:00'",
+    "C6": "decisions['admin_log_retention_days'] == 400",
+    "C7": "decisions['admin_logs_immutable'] == True",
+    "C8": "any('legacy mobile clients' in c['detail'] for c in commitments)",
+    "C9": "any('hardware keys' in c['detail'] and '18 contractor accounts' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C8",
+        "P1"
+      ],
+      "why": "The staging pilot supports immediate enforcement, but PF1 changes the rollout to optional mode for exactly 14 days with a 10% canary and requires a commitment addressing the 23 legacy mobile clients."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C9"
+      ],
+      "why": "The draft has no account exception, while PF2 changes the enrollment assignment to exclude exactly 18 contractor accounts until Wednesday at 09:00 and requires a hardware-key exception commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6",
+        "C7"
+      ],
+      "why": "The draft's 30-day ordinary logs change under PF3 to exactly 400 days of immutable retention for privileged administrator authentication events."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

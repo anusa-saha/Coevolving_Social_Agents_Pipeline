@@ -1,0 +1,191 @@
+{
+  "scenario_id": "scenario_19",
+  "scenario_type": "incident_postmortem",
+  "description": "A Director of Engineering must finalize the incident classification and corrective-action plan after a production image-processing outage, with input from site reliability, customer support, security engineering, and QA.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Director of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leah",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Tariq",
+      "role": "QA Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "Yesterday's production image-processing outage lasted 52 minutes and delayed uploads for customers in three regions.",
+    "S2": "The service has been restored, and the preliminary incident report attributes the interruption to saturation in the image-processing queue.",
+    "S3": "Riley is responsible for approving the final incident severity and corrective-action plan.",
+    "S4": "As part of the normal incident-review process, Riley conducts a round-robin check with reliability, customer support, security, and QA before closing the review.",
+    "S5": "During the round-robin, each representative records any newly discovered corrective-action evidence through the formal incident-review finding disclosure before discussing the recommended plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking worker-pool metrics overnight, Mina found that an undocumented nightly-reindex cron job on the shared worker pool caused the queue saturation. The corrective-action plan must disable and remove that cron job from the shared worker pool; she has not yet filed the infrastructure change because she found the cause during a separate capacity investigation."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Owen confirmed with account teams this morning that three enterprise customers experienced processing delays exceeding two hours, and their support agreement requires a status report within 24 hours of a delay of that length; he has not added the confirmation to the incident report because the account teams replied after the report draft was circulated."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a log review completed this morning, Leah found that signed image-download URLs were written to an incident-debug log accessible to more engineers than the production image store; the signing key must be rotated and the incident must be classified SEV-1, but she has not opened the security finding yet."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Tariq reproduced the outage only when an image batch contains more than 500 items, using a test he ran for a different queue-performance investigation; the corrective plan must add a regression test at the 500-item boundary, but he has not attached the test result to the incident ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "incident_severity": "string",
+      "customer_status_report_due": "string",
+      "enterprise_customers_to_notify": "integer",
+      "status_report_deadline_hours": "integer",
+      "signing_key_rotated": "boolean",
+      "regression_boundary_items": "integer",
+      "nightly_reindex_cron_removed": "boolean",
+      "queue_monitoring_added": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The incident must be classified SEV-1.",
+    "The image-download signing key must be rotated.",
+    "The nightly-reindex cron job must be disabled and removed from the shared worker pool.",
+    "A status report must be committed for exactly three affected enterprise customers within 24 hours.",
+    "The regression plan must test the exact 500-item batch boundary.",
+    "Queue saturation monitoring must be added for the image-processing queue."
+  ],
+  "content_checks": {
+    "C1": "decisions['incident_severity'] == 'SEV-1'",
+    "C2": "decisions['signing_key_rotated'] == True",
+    "C3": "decisions['nightly_reindex_cron_removed'] == True",
+    "C4": "decisions['enterprise_customers_to_notify'] == 3 and decisions['status_report_deadline_hours'] == 24",
+    "C5": "decisions['regression_boundary_items'] == 500",
+    "C6": "decisions['queue_monitoring_added'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3"
+      ],
+      "why": "The preliminary queue-saturation description does not identify the nightly-reindex cron or require its removal; PF1 changes the corrective plan to set nightly_reindex_cron_removed to true."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The outage duration alone does not identify a customer communication obligation; PF2 changes the plan to notify exactly three enterprise customers and set the status-report deadline to 24 hours."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The visible queue-saturation cause supports an availability incident but not SEV-1 or credential rotation; PF3 changes the severity to SEV-1 and requires rotating the image-download signing key."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5"
+      ],
+      "why": "The preliminary report gives no batch-size boundary; PF4 changes the regression requirement to testing exactly the 500-item boundary."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

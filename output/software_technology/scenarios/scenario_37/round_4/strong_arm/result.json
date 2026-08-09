@@ -1,0 +1,728 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.329,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright, let's get this platform review started. As we all know, I own the final approval on the ephemeral runner replacement, and before we publish the policy I want to make sure we've gotten input from developer productivity, site reliability, and compliance. I've reviewed the draft policy \u2014 20 concurrent jobs, 30-day log retention \u2014 but I noticed it doesn't specify immutable log storage or build-provenance attestations. Before I sign off, I'd like to hear from each of you on whether this policy is ready or if there are gaps we need to address.",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright, let's get this platform review started. As we all know, I own the final approval on the ephemeral runner replacement, and before we publish the policy I want to make sure we've gotten input from developer productivity, site reliability, and compliance. I've reviewed the draft policy \u2014 20 concurrent jobs, 30-day log retention \u2014 but I noticed it doesn't specify immutable log storage or build-provenance attestations. Before I sign off, I'd like to hear from each of you on whether this policy is ready or if there are gaps we need to address.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag a critical gap. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, so the current draft policy doesn't account for this.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a critical gap. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, so the current draft policy doesn't account for this.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I have a capacity concern with the draft policy. This morning, during an unrelated queue investigation, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added these measurements to the capacity dashboard yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I have a capacity concern with the draft policy. This morning, during an unrelated queue investigation, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added these measurements to the capacity dashboard yet.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to flag a compliance gap. This afternoon, while preparing evidence for an audit, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. The draft policy's 30-day retention with no immutability or attestation requirements falls short of these requirements. I haven't opened the compliance ticket yet, but these are hard requirements we need to address before this policy can be approved.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to flag a compliance gap. This afternoon, while preparing evidence for an audit, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. The draft policy's 30-day retention with no immutability or attestation requirements falls short of these requirements. I haven't opened the compliance ticket yet, but these are hard requirements we need to address before this policy can be approved.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "runner_architecture": "Hybrid: two isolated persistent runners dedicated to release jobs, with remaining jobs on ephemeral runners",
+              "persistent_runner_count": 2,
+              "max_concurrent_jobs": 32,
+              "queue_alert_threshold": 24,
+              "log_retention_days": 180,
+              "immutable_logs": true,
+              "signed_provenance_attestation": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3"
+            ],
+            "commitments": [
+              {
+                "type": "documentation_update",
+                "target": "platform proposal / operating policy",
+                "detail": "Update the draft operating policy to reflect the hybrid runner architecture, 32 max concurrent jobs, 24-job queue alert threshold, 180-day immutable log retention, and signed provenance attestation requirements."
+              },
+              {
+                "type": "ticket",
+                "target": "compliance",
+                "detail": "Ravi to open the compliance ticket capturing the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories."
+              },
+              {
+                "type": "dashboard_update",
+                "target": "capacity dashboard",
+                "detail": "Lena to add the campaign-day burst measurement and updated concurrency limits to the capacity dashboard."
+              },
+              {
+                "type": "proposal_update",
+                "target": "platform proposal",
+                "detail": "Owen to update the platform proposal to account for the two isolated persistent runners dedicated to release jobs using privileged Docker-in-Docker."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"runner_architecture\": \"Hybrid: two isolated persistent runners dedicated to release jobs, with remaining jobs on ephemeral runners\",\n      \"persistent_runner_count\": 2,\n      \"max_concurrent_jobs\": 32,\n      \"queue_alert_threshold\": 24,\n      \"log_retention_days\": 180,\n      \"immutable_logs\": true,\n      \"signed_provenance_attestation\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation_update\",\n        \"target\": \"platform proposal / operating policy\",\n        \"detail\": \"Update the draft operating policy to reflect the hybrid runner architecture, 32 max concurrent jobs, 24-job queue alert threshold, 180-day immutable log retention, and signed provenance attestation requirements.\"\n      },\n      {\n        \"type\": \"ticket\",\n        \"target\": \"compliance\",\n        \"detail\": \"Ravi to open the compliance ticket capturing the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories.\"\n      },\n      {\n        \"type\": \"dashboard_update\",\n        \"target\": \"capacity dashboard\",\n        \"detail\": \"Lena to add the campaign-day burst measurement and updated concurrency limits to the capacity dashboard.\"\n      },\n      {\n        \"type\": \"proposal_update\",\n        \"target\": \"platform proposal\",\n        \"detail\": \"Owen to update the platform proposal to account for the two isolated persistent runners dedicated to release jobs using privileged Docker-in-Docker.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "runner_architecture": "Hybrid: two isolated persistent runners dedicated to release jobs, with remaining jobs on ephemeral runners",
+          "persistent_runner_count": 2,
+          "max_concurrent_jobs": 32,
+          "queue_alert_threshold": 24,
+          "log_retention_days": 180,
+          "immutable_logs": true,
+          "signed_provenance_attestation": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "documentation_update",
+            "target": "platform proposal / operating policy",
+            "detail": "Update the draft operating policy to reflect the hybrid runner architecture, 32 max concurrent jobs, 24-job queue alert threshold, 180-day immutable log retention, and signed provenance attestation requirements."
+          },
+          {
+            "type": "ticket",
+            "target": "compliance",
+            "detail": "Ravi to open the compliance ticket capturing the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories."
+          },
+          {
+            "type": "dashboard_update",
+            "target": "capacity dashboard",
+            "detail": "Lena to add the campaign-day burst measurement and updated concurrency limits to the capacity dashboard."
+          },
+          {
+            "type": "proposal_update",
+            "target": "platform proposal",
+            "detail": "Owen to update the platform proposal to account for the two isolated persistent runners dedicated to release jobs using privileged Docker-in-Docker."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": false,
+        "C9": false,
+        "C10": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.34,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Thanks everyone for joining. As most of you know, the platform team has a replacement CI runner system based on ephemeral runners that passed the standard build-speed and failure-recovery tests in staging. The draft operating policy currently allows 20 concurrent jobs, keeps build logs for 30 days, and doesn't specify immutable log storage or build-provenance attestations. Before I make a final approval decision, I'd like to hear input from developer productivity, site reliability, and compliance. Let's start with any concerns or feedback you each have on the policy as drafted.",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks everyone for joining. As most of you know, the platform team has a replacement CI runner system based on ephemeral runners that passed the standard build-speed and failure-recovery tests in staging. The draft operating policy currently allows 20 concurrent jobs, keeps build logs for 30 days, and doesn't specify immutable log storage or build-provenance attestations. Before I make a final approval decision, I'd like to hear input from developer productivity, site reliability, and compliance. Let's start with any concerns or feedback you each have on the policy as drafted.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important I discovered yesterday while helping the release team debug a separate build. The production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, but this directly affects the operating policy we're reviewing.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important I discovered yesterday while helping the release team debug a separate build. The production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, but this directly affects the operating policy we're reviewing.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, I'd recommend setting max_concurrent_jobs to 32 \u2014 the 28-job burst shows the current draft limit of 20 would be exceeded under real load. I haven't added these measurements to the capacity dashboard yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, I'd recommend setting max_concurrent_jobs to 32 \u2014 the 28-job burst shows the current draft limit of 20 would be exceeded under real load. I haven't added these measurements to the capacity dashboard yet.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "While preparing evidence for an audit this afternoon, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. I haven't opened the compliance ticket yet. The draft policy's 30-day log retention without immutable storage or provenance attestations falls well short of these requirements.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"While preparing evidence for an audit this afternoon, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. I haven't opened the compliance ticket yet. The draft policy's 30-day log retention without immutable storage or provenance attestations falls well short of these requirements.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thank you all for surfacing these findings \u2014 they're all critical to getting this policy right. Let me summarize what I'm hearing and how I think we should proceed:\n\n1. Owen: The release pipeline requires privileged Docker-in-Docker, which won't work on ephemeral runners. You're proposing exactly two isolated persistent runners dedicated to release jobs, with everything else on ephemeral runners.\n\n2. Lena: You measured a real burst of 28 simultaneous jobs on a campaign day, and the safe production ceiling is 32 with an alert threshold at 24. The current draft limit of 20 would be exceeded under real load.\n\n3. Ravi: Regulated release repositories require 180-day immutable log retention and signed provenance attestations \u2014 the draft's 30-day retention with no immutability or provenance falls well short.\n\nAll three findings are significant enough that I can't approve the policy as drafted. The policy needs to be updated to reflect: two persistent runners for release jobs alongside ephemeral runners, a max concurrency of 32 with an alert at 24, 180-day immutable log retention, and signed provenance attestations for production builds. Before I settle on a final decision, are there any additional concerns or constraints from anyone that would affect these parameters? For instance, Owen \u2014 are the two persistent runners sufficient for all release jobs, or could there be contention? And Ravi \u2014 do the immutable storage and provenance requirements apply to all CI jobs or only the regulated release repositories?",
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all for surfacing these findings \u2014 they're all critical to getting this policy right. Let me summarize what I'm hearing and how I think we should proceed:\\n\\n1. Owen: The release pipeline requires privileged Docker-in-Docker, which won't work on ephemeral runners. You're proposing exactly two isolated persistent runners dedicated to release jobs, with everything else on ephemeral runners.\\n\\n2. Lena: You measured a real burst of 28 simultaneous jobs on a campaign day, and the safe production ceiling is 32 with an alert threshold at 24. The current draft limit of 20 would be exceeded under real load.\\n\\n3. Ravi: Regulated release repositories require 180-day immutable log retention and signed provenance attestations \u2014 the draft's 30-day retention with no immutability or provenance falls well short.\\n\\nAll three findings are significant enough that I can't approve the policy as drafted. The policy needs to be updated to reflect: two persistent runners for release jobs alongside ephemeral runners, a max concurrency of 32 with an alert at 24, 180-day immutable log retention, and signed provenance attestations for production builds. Before I settle on a final decision, are there any additional concerns or constraints from anyone that would affect these parameters? For instance, Owen \u2014 are the two persistent runners sufficient for all release jobs, or could there be contention? And Ravi \u2014 do the immutable storage and provenance requirements apply to all CI jobs or only the regulated release repositories?\"\n}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. To answer your question about the two persistent runners \u2014 based on what I found yesterday, the production release pipeline is the workload that requires privileged Docker-in-Docker, and the workable design is exactly two isolated persistent runners dedicated to those release jobs. I confirmed this while debugging with the release team, and two runners is the design that works. I haven't seen evidence of a third concurrent release job in what I reviewed, but I'd want to confirm with the release team whether they ever have more than two release builds running simultaneously before we lock that number in. If there's a possibility of contention, we'd need to either queue release jobs or add a third runner, and either choice has implications for the policy. I'll prioritize updating the platform proposal with this finding regardless.",
+          "speaker": "A2",
+          "turn": 5,
+          "raw_output": "{\"type\":\"say\",\"text\": \"Thanks, Maya. To answer your question about the two persistent runners \u2014 based on what I found yesterday, the production release pipeline is the workload that requires privileged Docker-in-Docker, and the workable design is exactly two isolated persistent runners dedicated to those release jobs. I confirmed this while debugging with the release team, and two runners is the design that works. I haven't seen evidence of a third concurrent release job in what I reviewed, but I'd want to confirm with the release team whether they ever have more than two release builds running simultaneously before we lock that number in. If there's a possibility of contention, we'd need to either queue release jobs or add a third runner, and either choice has implications for the policy. I'll prioritize updating the platform proposal with this finding regardless.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Maya, I don't have additional concerns beyond what I've already shared on the concurrency side. The 32-job ceiling and 24-job alert threshold are firm numbers based on my measurements this morning. One thing I want to flag: I haven't added these measurements to the capacity dashboard yet, so right now the alert at 24 jobs isn't configured in production. I'll prioritize getting that alert in place alongside whatever policy changes you approve, so we're not running with a new concurrency limit but no corresponding alert. If Owen confirms a potential third concurrent release job, that would run on the persistent runners outside the ephemeral pool, so it wouldn't affect the 32-job ceiling for ephemeral jobs \u2014 but it's worth clarifying whether persistent runner jobs count toward the overall concurrency limit or are tracked separately.",
+          "speaker": "A3",
+          "turn": 6,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Maya, I don't have additional concerns beyond what I've already shared on the concurrency side. The 32-job ceiling and 24-job alert threshold are firm numbers based on my measurements this morning. One thing I want to flag: I haven't added these measurements to the capacity dashboard yet, so right now the alert at 24 jobs isn't configured in production. I'll prioritize getting that alert in place alongside whatever policy changes you approve, so we're not running with a new concurrency limit but no corresponding alert. If Owen confirms a potential third concurrent release job, that would run on the persistent runners outside the ephemeral pool, so it wouldn't affect the 32-job ceiling for ephemeral jobs \u2014 but it's worth clarifying whether persistent runner jobs count toward the overall concurrency limit or are tracked separately.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. To answer your question directly: the 180-day immutable log retention and signed provenance attestation requirements apply specifically to the regulated release repositories \u2014 not to all CI jobs across the board. So the policy could tier its requirements: regulated release repositories get 180-day immutable retention and signed provenance attestations, while non-regulated jobs could operate under a lighter retention policy. That said, I'd recommend we be explicit in the policy about which repositories are classified as regulated so there's no ambiguity at audit time. I also want to flag that I still haven't opened the compliance ticket for this \u2014 I'll do that immediately after this meeting so we have a tracked record of the gap and the remediation plan. One additional consideration: since Owen's two persistent runners are dedicated to release jobs, and those are precisely the jobs that fall under the regulated release repositories, we need to make sure the persistent runner configuration supports producing and storing the provenance attestations and that their logs are routed to immutable storage. The ephemeral runners handling non-release jobs wouldn't have the same requirements, which may simplify their configuration.",
+          "speaker": "A4",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Maya. To answer your question directly: the 180-day immutable log retention and signed provenance attestation requirements apply specifically to the regulated release repositories \u2014 not to all CI jobs across the board. So the policy could tier its requirements: regulated release repositories get 180-day immutable retention and signed provenance attestations, while non-regulated jobs could operate under a lighter retention policy. That said, I'd recommend we be explicit in the policy about which repositories are classified as regulated so there's no ambiguity at audit time. I also want to flag that I still haven't opened the compliance ticket for this \u2014 I'll do that immediately after this meeting so we have a tracked record of the gap and the remediation plan. One additional consideration: since Owen's two persistent runners are dedicated to release jobs, and those are precisely the jobs that fall under the regulated release repositories, we need to make sure the persistent runner configuration supports producing and storing the provenance attestations and that their logs are routed to immutable storage. The ephemeral runners handling non-release jobs wouldn't have the same requirements, which may simplify their configuration.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "runner_architecture": "Hybrid: two isolated persistent runners dedicated to privileged Docker-in-Docker release jobs, with all other jobs on ephemeral runners",
+              "persistent_runner_count": 2,
+              "max_concurrent_jobs": 32,
+              "queue_alert_threshold": 24,
+              "log_retention_days": 180,
+              "immutable_logs": true,
+              "signed_provenance_attestation": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3"
+            ],
+            "commitments": [
+              {
+                "type": "follow-up",
+                "target": "Owen",
+                "detail": "Confirm with the release team whether more than two concurrent release builds ever occur; if so, revisit persistent runner count or add release-job queuing to the policy."
+              },
+              {
+                "type": "follow-up",
+                "target": "Owen",
+                "detail": "Update the platform proposal to reflect the hybrid runner architecture with two isolated persistent runners for release jobs."
+              },
+              {
+                "type": "follow-up",
+                "target": "Lena",
+                "detail": "Add the 24-job alert threshold to the production capacity dashboard and ensure it is active before the new concurrency limit goes live."
+              },
+              {
+                "type": "follow-up",
+                "target": "Lena",
+                "detail": "Clarify in the policy whether persistent runner release jobs count toward the 32-job overall concurrency limit or are tracked separately."
+              },
+              {
+                "type": "follow-up",
+                "target": "Ravi",
+                "detail": "Open the compliance ticket immediately to track the gap between the draft policy and the 180-day immutable retention and signed provenance requirements."
+              },
+              {
+                "type": "follow-up",
+                "target": "Ravi",
+                "detail": "Explicitly list in the policy which repositories are classified as regulated release repositories so tiered retention and provenance requirements are unambiguous at audit time."
+              },
+              {
+                "type": "follow-up",
+                "target": "Ravi and Owen",
+                "detail": "Ensure the two persistent release runners are configured to produce signed provenance attestations and route logs to immutable storage, since release jobs are the regulated workloads."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 8,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"runner_architecture\": \"Hybrid: two isolated persistent runners dedicated to privileged Docker-in-Docker release jobs, with all other jobs on ephemeral runners\",\n      \"persistent_runner_count\": 2,\n      \"max_concurrent_jobs\": 32,\n      \"queue_alert_threshold\": 24,\n      \"log_retention_days\": 180,\n      \"immutable_logs\": true,\n      \"signed_provenance_attestation\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Owen\",\n        \"detail\": \"Confirm with the release team whether more than two concurrent release builds ever occur; if so, revisit persistent runner count or add release-job queuing to the policy.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Owen\",\n        \"detail\": \"Update the platform proposal to reflect the hybrid runner architecture with two isolated persistent runners for release jobs.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Lena\",\n        \"detail\": \"Add the 24-job alert threshold to the production capacity dashboard and ensure it is active before the new concurrency limit goes live.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Lena\",\n        \"detail\": \"Clarify in the policy whether persistent runner release jobs count toward the 32-job overall concurrency limit or are tracked separately.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Open the compliance ticket immediately to track the gap between the draft policy and the 180-day immutable retention and signed provenance requirements.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Explicitly list in the policy which repositories are classified as regulated release repositories so tiered retention and provenance requirements are unambiguous at audit time.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Ravi and Owen\",\n        \"detail\": \"Ensure the two persistent release runners are configured to produce signed provenance attestations and route logs to immutable storage, since release jobs are the regulated workloads.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "runner_architecture": "Hybrid: two isolated persistent runners dedicated to privileged Docker-in-Docker release jobs, with all other jobs on ephemeral runners",
+          "persistent_runner_count": 2,
+          "max_concurrent_jobs": 32,
+          "queue_alert_threshold": 24,
+          "log_retention_days": 180,
+          "immutable_logs": true,
+          "signed_provenance_attestation": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "follow-up",
+            "target": "Owen",
+            "detail": "Confirm with the release team whether more than two concurrent release builds ever occur; if so, revisit persistent runner count or add release-job queuing to the policy."
+          },
+          {
+            "type": "follow-up",
+            "target": "Owen",
+            "detail": "Update the platform proposal to reflect the hybrid runner architecture with two isolated persistent runners for release jobs."
+          },
+          {
+            "type": "follow-up",
+            "target": "Lena",
+            "detail": "Add the 24-job alert threshold to the production capacity dashboard and ensure it is active before the new concurrency limit goes live."
+          },
+          {
+            "type": "follow-up",
+            "target": "Lena",
+            "detail": "Clarify in the policy whether persistent runner release jobs count toward the 32-job overall concurrency limit or are tracked separately."
+          },
+          {
+            "type": "follow-up",
+            "target": "Ravi",
+            "detail": "Open the compliance ticket immediately to track the gap between the draft policy and the 180-day immutable retention and signed provenance requirements."
+          },
+          {
+            "type": "follow-up",
+            "target": "Ravi",
+            "detail": "Explicitly list in the policy which repositories are classified as regulated release repositories so tiered retention and provenance requirements are unambiguous at audit time."
+          },
+          {
+            "type": "follow-up",
+            "target": "Ravi and Owen",
+            "detail": "Ensure the two persistent release runners are configured to produce signed provenance attestations and route logs to immutable storage, since release jobs are the regulated workloads."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": false,
+        "C9": false,
+        "C10": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.355,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Thanks everyone for being here. As we kick off this review, I want to make sure we cover the standard bases before I give final approval. We all know the replacement ephemeral runner system passed build-speed and failure-recovery tests in staging, and that the draft policy currently allows 20 concurrent jobs with 30-day log retention. But I'm noticing the draft doesn't mention immutable log storage or build-provenance attestations. Before we go further, I'd like to hear from each of you on your respective areas of concern so we can decide whether the policy needs revisions before publication.",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks everyone for being here. As we kick off this review, I want to make sure we cover the standard bases before I give final approval. We all know the replacement ephemeral runner system passed build-speed and failure-recovery tests in staging, and that the draft policy currently allows 20 concurrent jobs with 30-day log retention. But I'm noticing the draft doesn't mention immutable log storage or build-provenance attestations. Before we go further, I'd like to hear from each of you on your respective areas of concern so we can decide whether the policy needs revisions before publication.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "There's a critical issue we need to address before this policy goes forward. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, but this directly affects the concurrency and runner architecture assumptions in the draft policy.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"There's a critical issue we need to address before this policy goes forward. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with the remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, but this directly affects the concurrency and runner architecture assumptions in the draft policy.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added those measurements to the capacity dashboard yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added those measurements to the capacity dashboard yet.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "While preparing evidence for an audit this afternoon, I confirmed that build logs for the organization's regulated release repositories must be retained for exactly 180 days in immutable storage and that each production build must produce a signed provenance attestation. I have not opened the compliance ticket yet. This directly conflicts with the draft policy's 30-day log retention and lack of provenance attestation requirements.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"While preparing evidence for an audit this afternoon, I confirmed that build logs for the organization's regulated release repositories must be retained for exactly 180 days in immutable storage and that each production build must produce a signed provenance attestation. I have not opened the compliance ticket yet. This directly conflicts with the draft policy's 30-day log retention and lack of provenance attestation requirements.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "runner_architecture": "hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), remaining jobs on ephemeral runners",
+              "persistent_runner_count": 2,
+              "max_concurrent_jobs": 32,
+              "queue_alert_threshold": 24,
+              "log_retention_days": 180,
+              "immutable_logs": true,
+              "signed_provenance_attestation": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3"
+            ],
+            "commitments": [
+              {
+                "type": "policy_revision",
+                "target": "platform team",
+                "detail": "Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all other jobs, max_concurrent_jobs of 32, queue alert threshold of 24, 180-day immutable log retention, and signed provenance attestations for production builds before publication."
+              },
+              {
+                "type": "documentation_update",
+                "target": "Owen",
+                "detail": "Update the platform proposal to incorporate the two isolated persistent runners dedicated to release jobs alongside the ephemeral runner pool."
+              },
+              {
+                "type": "monitoring_update",
+                "target": "Lena",
+                "detail": "Add the capacity measurements (28-job observed burst, 32-job safe ceiling, 24-job alert threshold) to the capacity dashboard."
+              },
+              {
+                "type": "compliance_ticket",
+                "target": "Ravi",
+                "detail": "Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "S1",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"runner_architecture\": \"hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), remaining jobs on ephemeral runners\",\n      \"persistent_runner_count\": 2,\n      \"max_concurrent_jobs\": 32,\n      \"queue_alert_threshold\": 24,\n      \"log_retention_days\": 180,\n      \"immutable_logs\": true,\n      \"signed_provenance_attestation\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"policy_revision\",\n        \"target\": \"platform team\",\n        \"detail\": \"Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all other jobs, max_concurrent_jobs of 32, queue alert threshold of 24, 180-day immutable log retention, and signed provenance attestations for production builds before publication.\"\n      },\n      {\n        \"type\": \"documentation_update\",\n        \"target\": \"Owen\",\n        \"detail\": \"Update the platform proposal to incorporate the two isolated persistent runners dedicated to release jobs alongside the ephemeral runner pool.\"\n      },\n      {\n        \"type\": \"monitoring_update\",\n        \"target\": \"Lena\",\n        \"detail\": \"Add the capacity measurements (28-job observed burst, 32-job safe ceiling, 24-job alert threshold) to the capacity dashboard.\"\n      },\n      {\n        \"type\": \"compliance_ticket\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "runner_architecture": "hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), remaining jobs on ephemeral runners",
+          "persistent_runner_count": 2,
+          "max_concurrent_jobs": 32,
+          "queue_alert_threshold": 24,
+          "log_retention_days": 180,
+          "immutable_logs": true,
+          "signed_provenance_attestation": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "policy_revision",
+            "target": "platform team",
+            "detail": "Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all other jobs, max_concurrent_jobs of 32, queue alert threshold of 24, 180-day immutable log retention, and signed provenance attestations for production builds before publication."
+          },
+          {
+            "type": "documentation_update",
+            "target": "Owen",
+            "detail": "Update the platform proposal to incorporate the two isolated persistent runners dedicated to release jobs alongside the ephemeral runner pool."
+          },
+          {
+            "type": "monitoring_update",
+            "target": "Lena",
+            "detail": "Add the capacity measurements (28-job observed burst, 32-job safe ceiling, 24-job alert threshold) to the capacity dashboard."
+          },
+          {
+            "type": "compliance_ticket",
+            "target": "Ravi",
+            "detail": "Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": false,
+        "C9": false,
+        "C10": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.3,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Thanks everyone for joining. As most of you know, the platform team has a replacement CI runner system based on ephemeral runners that passed our standard build-speed and failure-recovery tests in staging. Before I make a final approval decision, I want to hear from each of you \u2014 developer productivity, site reliability, and compliance \u2014 on the draft operating policy. Specifically, the policy currently allows 20 concurrent jobs, keeps build logs for 30 days, and doesn't specify immutable log storage or build-provenance attestations. I'd like to get your input on whether those settings are adequate or if we need to tighten anything up before publishing. Who wants to start?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks everyone for joining. As most of you know, the platform team has a replacement CI runner system based on ephemeral runners that passed our standard build-speed and failure-recovery tests in staging. Before I make a final approval decision, I want to hear from each of you \u2014 developer productivity, site reliability, and compliance \u2014 on the draft operating policy. Specifically, the policy currently allows 20 concurrent jobs, keeps build logs for 30 days, and doesn't specify immutable log storage or build-provenance attestations. I'd like to get your input on whether those settings are adequate or if we need to tighten anything up before publishing. Who wants to start?\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important before we go further. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with all remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, so the current draft doesn't account for this.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important before we go further. Yesterday, while helping the release team debug a separate build, I confirmed that the production release pipeline uses privileged Docker-in-Docker, which cannot run on the proposed ephemeral runner profile. The workable design is exactly two isolated persistent runners dedicated to release jobs, with all remaining jobs on ephemeral runners. I haven't updated the platform proposal yet, so the current draft doesn't account for this.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added those measurements to the capacity dashboard yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"During an unrelated queue investigation this morning, I measured a campaign-day burst of 28 simultaneous CI jobs. The safe production ceiling is exactly 32 concurrent jobs, and the queue should generate an alert when it exceeds 24 jobs. For the policy, 32 is the max_concurrent_jobs value to use; 28 is only the observed burst that motivates raising the draft limit. I haven't added those measurements to the capacity dashboard yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to flag a compliance issue with the draft policy. This afternoon, while preparing evidence for an audit, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. The current draft's 30-day retention with no immutability or provenance attestation requirement falls well short of these requirements. I haven't opened the compliance ticket yet, but these are hard requirements we need to address before the policy can be approved.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a compliance issue with the draft policy. This afternoon, while preparing evidence for an audit, I confirmed that build logs for our regulated release repositories must be retained for exactly 180 days in immutable storage, and each production build must produce a signed provenance attestation. The current draft's 30-day retention with no immutability or provenance attestation requirement falls well short of these requirements. I haven't opened the compliance ticket yet, but these are hard requirements we need to address before the policy can be approved.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "runner_architecture": "Hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), all remaining jobs on ephemeral runners",
+              "persistent_runner_count": 2,
+              "max_concurrent_jobs": 32,
+              "queue_alert_threshold": 24,
+              "log_retention_days": 180,
+              "immutable_logs": true,
+              "signed_provenance_attestation": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3"
+            ],
+            "commitments": [
+              {
+                "type": "policy_update",
+                "target": "platform team",
+                "detail": "Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all remaining jobs"
+              },
+              {
+                "type": "policy_update",
+                "target": "platform team",
+                "detail": "Set max_concurrent_jobs to 32 and configure queue alert threshold at 24 jobs"
+              },
+              {
+                "type": "policy_update",
+                "target": "platform team",
+                "detail": "Set build log retention to 180 days in immutable storage for regulated release repositories"
+              },
+              {
+                "type": "policy_update",
+                "target": "platform team",
+                "detail": "Require signed provenance attestations for each production build"
+              },
+              {
+                "type": "follow_up",
+                "target": "Owen",
+                "detail": "Update the platform proposal to account for the two isolated persistent runners needed for the privileged Docker-in-Docker release pipeline"
+              },
+              {
+                "type": "follow_up",
+                "target": "Lena",
+                "detail": "Add the 28-job observed burst and 32-job safe ceiling measurements to the capacity dashboard"
+              },
+              {
+                "type": "follow_up",
+                "target": "Ravi",
+                "detail": "Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories"
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"runner_architecture\": \"Hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), all remaining jobs on ephemeral runners\",\n      \"persistent_runner_count\": 2,\n      \"max_concurrent_jobs\": 32,\n      \"queue_alert_threshold\": 24,\n      \"log_retention_days\": 180,\n      \"immutable_logs\": true,\n      \"signed_provenance_attestation\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"platform team\",\n        \"detail\": \"Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all remaining jobs\"\n      },\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"platform team\",\n        \"detail\": \"Set max_concurrent_jobs to 32 and configure queue alert threshold at 24 jobs\"\n      },\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"platform team\",\n        \"detail\": \"Set build log retention to 180 days in immutable storage for regulated release repositories\"\n      },\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"platform team\",\n        \"detail\": \"Require signed provenance attestations for each production build\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Owen\",\n        \"detail\": \"Update the platform proposal to account for the two isolated persistent runners needed for the privileged Docker-in-Docker release pipeline\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Lena\",\n        \"detail\": \"Add the 28-job observed burst and 32-job safe ceiling measurements to the capacity dashboard\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "runner_architecture": "Hybrid: two isolated persistent runners dedicated to release jobs (privileged Docker-in-Docker), all remaining jobs on ephemeral runners",
+          "persistent_runner_count": 2,
+          "max_concurrent_jobs": 32,
+          "queue_alert_threshold": 24,
+          "log_retention_days": 180,
+          "immutable_logs": true,
+          "signed_provenance_attestation": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "policy_update",
+            "target": "platform team",
+            "detail": "Update the draft operating policy to reflect the hybrid runner architecture with two isolated persistent runners for release jobs and ephemeral runners for all remaining jobs"
+          },
+          {
+            "type": "policy_update",
+            "target": "platform team",
+            "detail": "Set max_concurrent_jobs to 32 and configure queue alert threshold at 24 jobs"
+          },
+          {
+            "type": "policy_update",
+            "target": "platform team",
+            "detail": "Set build log retention to 180 days in immutable storage for regulated release repositories"
+          },
+          {
+            "type": "policy_update",
+            "target": "platform team",
+            "detail": "Require signed provenance attestations for each production build"
+          },
+          {
+            "type": "follow_up",
+            "target": "Owen",
+            "detail": "Update the platform proposal to account for the two isolated persistent runners needed for the privileged Docker-in-Docker release pipeline"
+          },
+          {
+            "type": "follow_up",
+            "target": "Lena",
+            "detail": "Add the 28-job observed burst and 32-job safe ceiling measurements to the capacity dashboard"
+          },
+          {
+            "type": "follow_up",
+            "target": "Ravi",
+            "detail": "Open the compliance ticket documenting the 180-day immutable log retention and signed provenance attestation requirements for regulated release repositories"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": true,
+        "C9": false,
+        "C10": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3"
+      ],
+      "passed": false
+    }
+  ],
+  "pass_count": 0,
+  "gate_passed": false
+}

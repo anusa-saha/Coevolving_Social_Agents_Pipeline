@@ -1,0 +1,182 @@
+{
+  "arm": "strong",
+  "temperature": 0.469,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Thanks everyone for making time. I want to get the incident review for yesterday's image-processing outage moving so we can finalize severity and the corrective-action plan. The preliminary report points to queue saturation as the cause, and we need each function \u2014 reliability, customer support, security, and QA \u2014 to review the corrective actions relevant to their area before we can close this out. Before we dive in, does anyone have additional findings or context that should be on the table?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks everyone for making time. I want to get the incident review for yesterday's image-processing outage moving so we can finalize severity and the corrective-action plan. The preliminary report points to queue saturation as the cause, and we need each function \u2014 reliability, customer support, security, and QA \u2014 to review the corrective actions relevant to their area before we can close this out. Before we dive in, does anyone have additional findings or context that should be on the table?\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "While checking worker-pool metrics overnight, I found the actual root cause: an undocumented nightly-reindex cron job running on the shared worker pool caused the image-processing queue saturation. The corrective-action plan needs to include disabling and removing that cron job from the shared worker pool, plus adding a queue-saturation alert on the image-processing queue. I haven't filed the infrastructure change or monitoring request yet because I found this during a separate capacity investigation, but I'll get those filed now that we're reviewing the incident.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While checking worker-pool metrics overnight, I found the actual root cause: an undocumented nightly-reindex cron job running on the shared worker pool caused the image-processing queue saturation. The corrective-action plan needs to include disabling and removing that cron job from the shared worker pool, plus adding a queue-saturation alert on the image-processing queue. I haven't filed the infrastructure change or monitoring request yet because I found this during a separate capacity investigation, but I'll get those filed now that we're reviewing the incident.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to add something important to the record. I confirmed with account teams this morning that three enterprise customers experienced processing delays exceeding two hours. Their support agreements require a status report within 24 hours of a delay of that length. I hadn't added this to the incident report yet because the account teams replied after the report draft was circulated. We need to factor this into the severity assessment and ensure those customer status reports go out within the required timeframe.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to add something important to the record. I confirmed with account teams this morning that three enterprise customers experienced processing delays exceeding two hours. Their support agreements require a status report within 24 hours of a delay of that length. I hadn't added this to the incident report yet because the account teams replied after the report draft was circulated. We need to factor this into the severity assessment and ensure those customer status reports go out within the required timeframe.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to put a critical security finding on the table. During a log review I completed this morning, I found that signed image-download URLs were written to an incident-debug log that is accessible to more engineers than the production image store itself. This means the signing key must be rotated, and based on this exposure I believe the incident must be classified SEV-1. I have not opened the security finding yet, but I'm raising it now so it's part of this review.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to put a critical security finding on the table. During a log review I completed this morning, I found that signed image-download URLs were written to an incident-debug log that is accessible to more engineers than the production image store itself. This means the signing key must be rotated, and based on this exposure I believe the incident must be classified SEV-1. I have not opened the security finding yet, but I'm raising it now so it's part of this review.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF4",
+      "text": "I have a QA finding that needs to be on the table. I actually reproduced the outage \u2014 but only when an image batch contains more than 500 items. I ran this test during a separate queue-performance investigation, so the result isn't attached to the incident ticket yet. The corrective-action plan must include a regression test at the 500-item batch boundary to catch this going forward. I'll get the test result attached to the incident ticket now that we're in this review.",
+      "speaker": "A5",
+      "turn": 4,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I have a QA finding that needs to be on the table. I actually reproduced the outage \u2014 but only when an image batch contains more than 500 items. I ran this test during a separate queue-performance investigation, so the result isn't attached to the incident ticket yet. The corrective-action plan must include a regression test at the 500-item batch boundary to catch this going forward. I'll get the test result attached to the incident ticket now that we're in this review.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "incident_severity": "SEV-1",
+          "customer_status_report_due": "yes",
+          "enterprise_customers_to_notify": 3,
+          "status_report_deadline_hours": 24,
+          "signing_key_rotated": true,
+          "regression_boundary_items": 500,
+          "nightly_reindex_cron_removed": true,
+          "queue_monitoring_added": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "infrastructure_change",
+            "target": "Mina",
+            "detail": "File and execute the change to disable and remove the undocumented nightly-reindex cron job from the shared worker pool."
+          },
+          {
+            "type": "monitoring_request",
+            "target": "Mina",
+            "detail": "Add a queue-saturation alert on the image-processing queue."
+          },
+          {
+            "type": "customer_notification",
+            "target": "Owen",
+            "detail": "Send status reports to the three enterprise customers within 24 hours of their processing delays exceeding two hours, per their support agreements."
+          },
+          {
+            "type": "security_remediation",
+            "target": "Leah",
+            "detail": "Open the security finding and rotate the image-download URL signing key due to exposure in the incident-debug log."
+          },
+          {
+            "type": "regression_test",
+            "target": "Tariq",
+            "detail": "Attach the reproduced outage test result to the incident ticket and add a regression test at the 500-item batch boundary to the corrective-action plan."
+          },
+          {
+            "type": "round_robin_signoff",
+            "target": "all_functions",
+            "detail": "Reliability, customer support, security, and QA each review the corrective actions relevant to their function before the incident review is closed."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"incident_severity\": \"SEV-1\",\n      \"customer_status_report_due\": \"yes\",\n      \"enterprise_customers_to_notify\": 3,\n      \"status_report_deadline_hours\": 24,\n      \"signing_key_rotated\": true,\n      \"regression_boundary_items\": 500,\n      \"nightly_reindex_cron_removed\": true,\n      \"queue_monitoring_added\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"infrastructure_change\",\n        \"target\": \"Mina\",\n        \"detail\": \"File and execute the change to disable and remove the undocumented nightly-reindex cron job from the shared worker pool.\"\n      },\n      {\n        \"type\": \"monitoring_request\",\n        \"target\": \"Mina\",\n        \"detail\": \"Add a queue-saturation alert on the image-processing queue.\"\n      },\n      {\n        \"type\": \"customer_notification\",\n        \"target\": \"Owen\",\n        \"detail\": \"Send status reports to the three enterprise customers within 24 hours of their processing delays exceeding two hours, per their support agreements.\"\n      },\n      {\n        \"type\": \"security_remediation\",\n        \"target\": \"Leah\",\n        \"detail\": \"Open the security finding and rotate the image-download URL signing key due to exposure in the incident-debug log.\"\n      },\n      {\n        \"type\": \"regression_test\",\n        \"target\": \"Tariq\",\n        \"detail\": \"Attach the reproduced outage test result to the incident ticket and add a regression test at the 500-item batch boundary to the corrective-action plan.\"\n      },\n      {\n        \"type\": \"round_robin_signoff\",\n        \"target\": \"all_functions\",\n        \"detail\": \"Reliability, customer support, security, and QA each review the corrective actions relevant to their function before the incident review is closed.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "incident_severity": "SEV-1",
+      "customer_status_report_due": "yes",
+      "enterprise_customers_to_notify": 3,
+      "status_report_deadline_hours": 24,
+      "signing_key_rotated": true,
+      "regression_boundary_items": 500,
+      "nightly_reindex_cron_removed": true,
+      "queue_monitoring_added": true
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "commitments": [
+      {
+        "type": "infrastructure_change",
+        "target": "Mina",
+        "detail": "File and execute the change to disable and remove the undocumented nightly-reindex cron job from the shared worker pool."
+      },
+      {
+        "type": "monitoring_request",
+        "target": "Mina",
+        "detail": "Add a queue-saturation alert on the image-processing queue."
+      },
+      {
+        "type": "customer_notification",
+        "target": "Owen",
+        "detail": "Send status reports to the three enterprise customers within 24 hours of their processing delays exceeding two hours, per their support agreements."
+      },
+      {
+        "type": "security_remediation",
+        "target": "Leah",
+        "detail": "Open the security finding and rotate the image-download URL signing key due to exposure in the incident-debug log."
+      },
+      {
+        "type": "regression_test",
+        "target": "Tariq",
+        "detail": "Attach the reproduced outage test result to the incident ticket and add a regression test at the 500-item batch boundary to the corrective-action plan."
+      },
+      {
+        "type": "round_robin_signoff",
+        "target": "all_functions",
+        "detail": "Reliability, customer support, security, and QA each review the corrective actions relevant to their function before the incident review is closed."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3",
+    "PF4"
+  ],
+  "passed": true
+}

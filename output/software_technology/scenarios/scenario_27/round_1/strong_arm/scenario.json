@@ -1,0 +1,196 @@
+{
+  "scenario_id": "scenario_27",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A Director of Engineering must finalize the production rollout policy for a real-time collaboration service, including rollout scope, connection limits, client retry behavior, data handling, and account exclusions, after the standard launch-readiness review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Director of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Rafael",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lin",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Privacy and Compliance Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Owen",
+      "role": "Customer Success Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The real-time collaboration service is scheduled for production launch Monday at 09:00 UTC.",
+    "S2": "The service passed its planned staging tests, including functional, failover, and basic load tests.",
+    "S3": "The draft launch plan enables the feature for 10% of accounts initially, permits up to 10,000 concurrent connections, uses the client library's default 5-second retry interval, stores collaboration data in the primary production region, and retains session transcripts for 90 days.",
+    "S4": "Before the launch plan is finalized, the standard readiness review gives backend engineering, reliability, privacy, and customer success a separate final check-in before Maya records the binding policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While investigating an unrelated mobile performance report this afternoon, Rafael confirmed that mobile clients resume from background in bursts and currently retry every 5 seconds, which can create a reconnect storm; the rollout policy should set the retry interval to exactly 30 seconds. He has not yet filed the client-library ticket."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Lin completed a production-traffic replay 20 minutes ago and confirmed that the collaboration cluster's safe connection ceiling for Monday is exactly 6,000 concurrent connections; the autoscaling limit in the draft has not been updated because the replay results are still being attached to the capacity worksheet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nadia finished a privacy review this morning and confirmed that collaboration content for EU accounts must remain in the EU processing region and that session transcripts must be deleted after exactly 30 days; she has not opened the compliance ticket because legal was still reviewing the wording."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Owen reconciled the customer-success rollout spreadsheet an hour ago and confirmed that accounts acct-204, acct-219, acct-233, acct-241, acct-278, and acct-301 have administrator opt-out commitments until their enablement sessions are complete; those six accounts must be excluded from Monday's rollout. He has not updated the launch checklist yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_mode": "string",
+      "max_concurrent_connections": "integer",
+      "client_retry_interval_seconds": "integer",
+      "data_processing_region": "string",
+      "transcript_retention_days": "integer",
+      "excluded_account_ids": [
+        "string"
+      ]
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must use an account allowlist rather than the draft percentage rollout.",
+    "The production connection ceiling must be exactly 6,000 concurrent connections.",
+    "The client retry interval must be exactly 30 seconds.",
+    "Collaboration data must use the EU processing region.",
+    "Session transcripts must be retained for exactly 30 days.",
+    "Exactly the six opted-out accounts must be excluded from Monday's rollout.",
+    "The plan must include commitments for reconnect protection, capacity enforcement, privacy controls, and customer account exclusions.",
+    "The reconnect-storm finding must be cited as a reason for the retry setting."
+  ],
+  "content_checks": {
+    "C1": "decisions['rollout_mode'] == 'account_allowlist'",
+    "C2": "decisions['max_concurrent_connections'] == 6000",
+    "C3": "decisions['client_retry_interval_seconds'] == 30",
+    "C4": "decisions['data_processing_region'] == 'EU'",
+    "C5": "decisions['transcript_retention_days'] == 30",
+    "C6": "decisions['excluded_account_ids'] == ['acct-204', 'acct-219', 'acct-233', 'acct-241', 'acct-278', 'acct-301']",
+    "C7": "any(c['type'] == 'reconnect_protection' for c in commitments)",
+    "C8": "any(c['type'] == 'capacity_enforcement' for c in commitments)",
+    "C9": "any(c['type'] == 'privacy_controls' for c in commitments)",
+    "C10": "any(c['type'] == 'account_exclusions' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C7",
+        "P1"
+      ],
+      "why": "The draft uses a 5-second retry interval; PF1 changes it to exactly 30 seconds and adds the reconnect-protection commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C8"
+      ],
+      "why": "The draft allows 10,000 concurrent connections; PF2 changes the production ceiling to exactly 6,000 and requires capacity enforcement."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C9"
+      ],
+      "why": "The draft uses the primary region and 90-day retention; PF3 changes the region to EU, retention to exactly 30 days, and adds privacy controls."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C1",
+        "C6",
+        "C10"
+      ],
+      "why": "The draft enables a percentage of accounts; PF4 changes the rollout to an account allowlist excluding exactly the six named opted-out accounts and requires an account-exclusions commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}
