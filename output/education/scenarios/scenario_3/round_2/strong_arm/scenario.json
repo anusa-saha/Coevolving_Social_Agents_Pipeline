@@ -1,0 +1,139 @@
+{
+  "scenario_id": "scenario_3",
+  "scenario_type": "activity_safety_approval",
+  "description": "An assistant principal must approve an after-school student culinary showcase and finalize the room, food-safety supervision, and allergy protections, with input from the culinary arts teacher and school nurse.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Ms. Brooks",
+      "role": "Assistant Principal"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mr. Shah",
+      "role": "Culinary Arts Teacher"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nurse Morgan",
+      "role": "School Nurse"
+    }
+  ],
+  "shared_context": {
+    "S1": "The student culinary club plans an after-school tasting showcase for families in three weeks.",
+    "S2": "Ms. Brooks must give the final approval for the event and its operating plan.",
+    "S3": "The club has proposed using one of the school's culinary teaching rooms and serving prepared food to visitors.",
+    "S4": "The school's routine activity-approval workflow requires each reviewer to submit a recorded finding from their own area before Ms. Brooks signs the approval; Ms. Brooks then records the sources of the findings in the decision rationale."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Kitchen 2 is the only available room with a currently inspected commercial hood and the required handwashing station for a public tasting; Mr. Shah confirmed this against the facilities inspection log yesterday, but the club's planning form still lists Kitchen 1. District policy also requires a food-handler-certified adult to supervise public food service, and Mr. Shah holds the current certification."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "A participating student has a documented anaphylactic allergy to peanuts and tree nuts. The student's health plan requires that no peanut or tree-nut ingredients be used, two epinephrine kits be present at the event, and an adult trained in epinephrine administration be assigned; Nurse Morgan reviewed the current health plan this week, but the event health form has not yet been updated."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "approved": "boolean",
+      "room": "string",
+      "food_service_supervisor": "string",
+      "ingredients_restricted": "string",
+      "epinephrine_kits_present": "integer",
+      "trained_epinephrine_adult_assigned": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The showcase must be approved only with Kitchen 2 as the event room.",
+    "A currently food-handler-certified adult must be assigned to supervise public food service.",
+    "The menu must exclude all peanut and tree-nut ingredients.",
+    "Two epinephrine kits must be present at the event.",
+    "An adult trained in epinephrine administration must be assigned.",
+    "The room, food-safety supervision, and health protections must be documented in formal commitments."
+  ],
+  "content_checks": {
+    "C1": "decisions['approved'] == True",
+    "C2": "decisions['room'] == 'Kitchen 2'",
+    "C3": "decisions['food_service_supervisor'] == 'Mr. Shah'",
+    "C4": "decisions.get('food_service_supervisor') == 'Mr. Shah' or any(c.get('type') in ['supervision', 'supervisor_designation', 'supervisor_assignment'] for c in commitments)",
+    "C5": "decisions.get('ingredients_restricted') in ['No peanut or tree-nut ingredients', 'no peanut or tree-nut ingredients'] or any(c.get('type') in ['ingredient_restriction', 'ingredient_review'] for c in commitments)",
+    "C6": "decisions['epinephrine_kits_present'] == 2",
+    "C7": "decisions['trained_epinephrine_adult_assigned'] == True",
+    "C8": "any(c.get('type') in ['allergy_emergency_plan', 'form_update', 'health_form_update'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C4"
+      ],
+      "why": "The room changes from Kitchen 1 to Kitchen 2, and the food-service supervisor changes to Mr. Shah because Kitchen 2 alone has the inspected hood and handwashing station and Mr. Shah is the certified adult."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "P1"
+      ],
+      "why": "The health plan changes the menu to no peanuts or tree nuts, sets the exact number of epinephrine kits to two, requires a trained adult, and adds the health-form or allergy-plan documentation commitment."
+    }
+  ],
+  "domain": "education",
+  "requested_num_agents": 3
+}
