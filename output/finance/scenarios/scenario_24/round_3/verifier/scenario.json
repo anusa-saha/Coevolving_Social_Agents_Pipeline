@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_24",
+  "scenario_type": "liquidity_and_payment_rail_approval",
+  "description": "A treasury director must approve the bank's operating plan for joining an instant-payments rail and finalize its liquidity buffer, eligible collateral mobilization, and monitoring cadence, with input from payments operations and liquidity risk.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Treasury Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Payments Operations Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Liquidity Risk Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The bank is scheduled to connect to a domestic instant-payments rail on 2026-09-01.",
+    "S2": "Maya makes the binding treasury decision on whether the bank may activate the connection.",
+    "S3": "The rail operator requires each participating bank to submit an operating plan covering liquidity, collateral, and monitoring before activation.",
+    "S4": "As part of the normal pre-activation review, Maya asks payments operations and liquidity risk to confirm their requirements before signing the operating plan.",
+    "S5": "The review records confirmed operating inputs in the plan, while any unresolved funding gap may be assigned for escalation after the meeting rather than blocking the current sign-off decision.",
+    "S6": "The review protocol requires payments operations and liquidity risk to formally reveal each confirmed input into the shared meeting record, one function at a time, before Maya signs the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas confirmed in the rail operator's implementation call this morning that the bank's modeled peak two-hour net settlement outflow is $6,500,000; the figure is in his working notes but has not yet been circulated to treasury."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena confirmed while reviewing the collateral inventory this week that exactly $4,000,000 of unencumbered Treasury bills are eligible for the rail's liquidity facility, and liquidity-risk policy requires a daily eligibility and substitution check; the inventory note has not yet been attached to the operating-plan file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rail_activation_approved": "boolean",
+      "liquidity_buffer_usd": "integer",
+      "eligible_collateral_usd": "integer",
+      "monitoring_frequency": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Activation must be approved for 2026-09-01.",
+    "The operating plan must hold a liquidity buffer of exactly $6,500,000.",
+    "The plan must identify exactly $4,000,000 of eligible Treasury-bill collateral.",
+    "The monitoring frequency must include daily eligibility and substitution checking.",
+    "The settlement must include an executable monitoring commitment requiring daily eligibility and substitution checking.",
+    "Both the peak settlement outflow and the eligible-collateral finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['rail_activation_approved'] == True",
+    "C2": "decisions['liquidity_buffer_usd'] == 6500000",
+    "C3": "decisions['eligible_collateral_usd'] == 4000000",
+    "C4": "'daily' in decisions['monitoring_frequency']",
+    "C5": "any(c['type'] == 'monitoring' and 'daily' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "Without PF1, the shared file supplies no peak-outflow amount, so a generic operating plan would not set liquidity_buffer_usd to exactly 6500000 or cite the peak settlement requirement."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "P1"
+      ],
+      "why": "Without PF2, the plan has no confirmed eligible collateral amount or required cadence, so it would not set eligible_collateral_usd to exactly 4000000, include daily monitoring in monitoring_frequency, include a monitoring commitment whose detail requires daily checking, or cite the collateral finding."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

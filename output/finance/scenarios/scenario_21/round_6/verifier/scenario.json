@@ -1,0 +1,132 @@
+{
+  "scenario_id": "scenario_21",
+  "scenario_type": "construction_loan_draw_release",
+  "description": "A credit operations director must authorize a progress draw from a commercial construction loan and finalize the draw amount, lien protection, and disbursement control, with input from legal collateral review and construction finance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Credit Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Elias",
+      "role": "Collateral Counsel"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nora",
+      "role": "Construction Finance Analyst"
+    }
+  ],
+  "shared_context": {
+    "S1": "The borrower is requesting a $3,000,000 progress draw from its approved commercial construction facility.",
+    "S2": "The facility has sufficient undrawn capacity, and all previously released draws are current.",
+    "S3": "Maya makes the binding decision on whether and how to release this draw.",
+    "S4": "Under the team's normal pre-release process, Maya conducts a final check-in with collateral counsel and construction finance before authorizing any draw."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Elias received a title-search update this morning showing an unresolved mechanic's lien claim; the collateral policy therefore requires a $300,000 lien holdback and payment of the approved draw into the project's controlled disbursement account, but he has not yet attached the update to the credit file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nora received the independent inspector's report today confirming that completed work supports exactly a $2,400,000 eligible progress draw rather than the requested $3,000,000; the report has not yet been uploaded to the loan system."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "draw_approved": "boolean",
+      "draw_amount_usd": "integer",
+      "lien_holdback_usd": "integer",
+      "controlled_disbursement_account_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The progress draw must be approved.",
+    "The draw amount must be exactly $2,400,000.",
+    "Exactly $300,000 must be withheld as a lien holdback.",
+    "The approved draw must be paid into the project's controlled disbursement account.",
+    "The settlement must encode the controlled-disbursement requirement, either through the controlled_disbursement_account_required decision or an executable controlled-disbursement commitment.",
+    "The unresolved mechanic's lien must be cited as justification for the holdback and controlled disbursement."
+  ],
+  "content_checks": {
+    "C1": "decisions['draw_approved'] == True",
+    "C2": "decisions['draw_amount_usd'] == 2400000",
+    "C3": "decisions['lien_holdback_usd'] == 300000",
+    "C4": "decisions['controlled_disbursement_account_required'] == True",
+    "C5": "decisions['controlled_disbursement_account_required'] == True or any(c['type'] == 'controlled_disbursement' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed and 'PF1' in credited_facts"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "P1"
+      ],
+      "why": "Without PF1, the clean current facility supports releasing the requested draw without a holdback or controlled-account requirement; PF1 changes lien_holdback_usd to exactly 300000, controlled_disbursement_account_required to true, and requires the unresolved lien to be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2"
+      ],
+      "why": "Without PF2, a generic release would either approve the requested 3000000 or decline for lack of verified progress; PF2 changes the approvable draw_amount_usd to exactly 2400000 and supports draw_approved as true."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

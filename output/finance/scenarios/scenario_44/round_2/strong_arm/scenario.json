@@ -1,0 +1,162 @@
+{
+  "scenario_id": "scenario_44",
+  "scenario_type": "receivables_finance_approval",
+  "description": "An underwriting manager must approve a receivables-backed revolving facility for a medical-supply distributor and finalize the commitment amount, equity condition, and security controls, with input from risk, legal, and relationship management.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Underwriting Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Credit Risk Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Banking Legal Counsel"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Ravi",
+      "role": "Relationship Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The medical-supply distributor has requested a $12,000,000 revolving facility secured by trade receivables.",
+    "S2": "The preliminary underwriting model assumes an 80% advance rate and does not specify a required cash-equity contribution.",
+    "S3": "The facility would fund ordinary inventory purchases and customer deliveries, and the distributor's submitted financial statements show positive operating cash flow.",
+    "S4": "Maya makes the binding underwriting decision. As part of the bank's normal approval huddle, risk, legal, and relationship management each give a review before Maya finalizes the terms."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas confirmed this morning from the detailed receivables aging that policy-eligible receivables total exactly $9,000,000, and the applicable advance rate is 75%; he has not yet uploaded the revised borrowing-base worksheet to the credit file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena found while reviewing the security documents this week that the bank must have a first-priority UCC filing before the first draw and a controlled lockbox for all facility collections; these requirements are not yet in the draft term sheet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Ravi received a signed customer-side funding plan yesterday confirming that the distributor will contribute exactly $1,500,000 of cash equity before the first draw; the plan is still in his client file and has not been circulated to underwriting."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "facility_approved": "boolean",
+      "facility_commitment_usd": "integer",
+      "cash_equity_before_first_draw_usd": "integer",
+      "ucc_filing_before_first_draw": "boolean",
+      "controlled_lockbox_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The facility must be approved.",
+    "The approved facility commitment must be either exactly $6,750,000, representing borrowing-base availability, or exactly $8,250,000, representing borrowing-base availability plus the separately required cash equity.",
+    "Exactly $1,500,000 of cash equity must be required before the first draw.",
+    "A first-priority UCC filing must be required before the first draw.",
+    "A controlled lockbox must be required for facility collections.",
+    "The settlement must include a borrowing-base worksheet or borrowing-base certificate commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['facility_approved'] == True",
+    "C2": "decisions['facility_commitment_usd'] == 6750000 or decisions['facility_commitment_usd'] == 8250000",
+    "C3": "decisions['cash_equity_before_first_draw_usd'] == 1500000",
+    "C4": "decisions['ucc_filing_before_first_draw'] == True",
+    "C5": "decisions['controlled_lockbox_required'] == True",
+    "C6": "any('borrowing-base worksheet' in c['detail'] or 'borrowing-base certificate' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C6",
+        "P1"
+      ],
+      "why": "The preliminary model would support the requested $12,000,000 facility without a revised borrowing-base control; PF1 changes the commitment to either $6,750,000 of borrowing-base availability or $8,250,000 when separately committed equity is included, and requires a borrowing-base worksheet or certificate commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The draft terms contain neither security-perfection nor collection-control language; PF2 changes the settlement by requiring the UCC filing before the first draw and the controlled lockbox."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C3"
+      ],
+      "why": "Without PF3, a cautious underwriting decision would not approve the facility because no first-loss funding is documented; PF3 changes the decision to approval conditioned on exactly $1,500,000 of cash equity before the first draw."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

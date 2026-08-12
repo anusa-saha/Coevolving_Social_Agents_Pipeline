@@ -1,0 +1,147 @@
+{
+  "scenario_id": "scenario_23",
+  "scenario_type": "receivables_securitization_authorization",
+  "description": "A chief financial officer must authorize the sale of a pool of customer receivables to a funding vehicle and finalize the eligible pool, exclusions, reserve, net proceeds, and legal closing controls, with input from legal counsel and treasury.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Chief Financial Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Commercial Finance Legal Counsel"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Treasury Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has proposed selling a pool of customer invoices to a bankruptcy-remote funding vehicle.",
+    "S2": "The preliminary proposal assumes an eligible receivables balance of $8,500,000 and a closing date of 2026-06-30.",
+    "S3": "Maya has authority to approve the transaction and its final operating conditions.",
+    "S4": "Legal and treasury are expected to provide material transaction findings and required closing controls before approval."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing the customer contracts this afternoon, Jonas confirmed that the KITE and NORTHSTAR agreements prohibit assignment without consent; excluding those invoices leaves exactly $7,200,000 eligible for sale, and the closing file must include a signed assignment-consent package for both customers. He has not uploaded this review to the transaction folder yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena received the arranger's funding memo this morning, which confirms an 85% advance rate and a 5% cash reserve on the $7,200,000 eligible pool. The resulting net cash proceeds are exactly $5,760,000, and treasury requires the reserve to remain in a segregated account through the first reporting date. The memo has not yet been circulated to the sign-off group."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "sale_approved": "boolean",
+      "eligible_receivables_usd": "integer",
+      "excluded_customer_ids": "list",
+      "advance_rate_percent": "integer",
+      "cash_reserve_usd": "integer",
+      "net_cash_proceeds_usd": "integer",
+      "closing_date": "string",
+      "assignment_consent_package_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The receivables sale must be approved.",
+    "The eligible receivables balance must be exactly $7,200,000.",
+    "KITE and NORTHSTAR must be excluded from the receivables pool.",
+    "The advance rate must be exactly 85 percent.",
+    "The segregated cash reserve must be exactly $360,000.",
+    "Net cash proceeds must be exactly $5,760,000.",
+    "The closing date must remain 2026-06-30.",
+    "A signed assignment-consent package for KITE and NORTHSTAR must be required before closing.",
+    "The legal contract restriction must be cited by the decision-maker."
+  ],
+  "content_checks": {
+    "C1": "decisions['sale_approved'] == True",
+    "C2": "decisions['eligible_receivables_usd'] == 7200000",
+    "C3": "decisions['excluded_customer_ids'] == ['KITE', 'NORTHSTAR']",
+    "C4": "decisions['advance_rate_percent'] == 85",
+    "C5": "decisions['cash_reserve_usd'] == 360000",
+    "C6": "decisions['net_cash_proceeds_usd'] == 5760000",
+    "C7": "decisions['closing_date'] == '2026-06-30'",
+    "C8": "decisions['assignment_consent_package_required'] == True",
+    "C9": "any((c['type'] == 'closing_control' or c['type'] == 'closing_condition') and c['target'] == 'Jonas' and 'assignment-consent' in c['detail'] and 'KITE' in c['detail'] and 'NORTHSTAR' in c['detail'] for c in commitments)",
+    "C10": "any((c['type'] == 'closing_control' or c['type'] == 'closing_condition') and c['target'] == 'Elena' and 'segregated' in c['detail'] and 'reserve' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C8",
+        "C9",
+        "P1"
+      ],
+      "why": "The preliminary pool is $8,500,000 with no stated exclusions; PF1 changes eligible_receivables_usd to exactly 7,200,000, adds the exact KITE and NORTHSTAR exclusions, and requires a signed assignment-consent commitment before closing."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C6",
+        "C10"
+      ],
+      "why": "The preliminary proposal gives no confirmed funding mechanics; PF2 changes advance_rate_percent to exactly 85, cash_reserve_usd to exactly 360,000, net_cash_proceeds_usd to exactly 5,760,000, and requires a treasury or reserve-account commitment to segregate the reserve."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

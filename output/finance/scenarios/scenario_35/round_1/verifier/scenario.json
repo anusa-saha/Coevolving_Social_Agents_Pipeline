@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_35",
+  "scenario_type": "secondary_loan_sale",
+  "description": "A portfolio manager must approve the sale of part of a private-credit loan participation and finalize the retained exposure, cash proceeds, settlement timing, and assignment controls, with input from portfolio risk and loan operations.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Private Credit Portfolio Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Portfolio Risk Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Loan Operations Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The fund holds a $12,000,000 participation in the Northstar Equipment loan.",
+    "S2": "A secondary-market buyer has submitted an indication of interest for part of the participation.",
+    "S3": "The buyer's initial indication assumes settlement at par with standard settlement timing.",
+    "S4": "Maya makes the final decision on the sale and its terms.",
+    "S5": "Before finalizing a secondary-market transaction, Maya's routine process is to obtain a risk review and an operations review."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas completed a buyer-group exposure review this morning and confirmed that the buyer's affiliated funds already have $6,000,000 of Northstar exposure; the portfolio policy caps aggregate exposure to that buyer group at $10,000,000, but the review has not yet been circulated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena received the buyer's executed settlement memo today, which requires settlement five business days after approval at a 2% discount to par, producing cash proceeds of exactly $3,920,000 on a $4,000,000 assignment; the memo has not yet been attached to the transaction file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A1"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "sale_approved": "boolean",
+      "assigned_exposure_usd": "integer",
+      "retained_exposure_usd": "integer",
+      "cash_proceeds_usd": "integer",
+      "settlement_days_after_approval": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The sale must be approved for exactly $4,000,000 of exposure.",
+    "The fund must retain exactly $8,000,000 of Northstar exposure.",
+    "Cash proceeds must be exactly $3,920,000.",
+    "Settlement must occur exactly five business days after approval.",
+    "The settlement must include an assignment-notice control and a cash-settlement instruction."
+  ],
+  "content_checks": {
+    "C1": "decisions['sale_approved'] == True",
+    "C2": "decisions['assigned_exposure_usd'] == 4000000",
+    "C3": "decisions['retained_exposure_usd'] == 8000000",
+    "C4": "decisions['cash_proceeds_usd'] == 3920000",
+    "C5": "decisions['settlement_days_after_approval'] == 5",
+    "C6": "any(c['type'] == 'assignment_notice' for c in commitments)",
+    "C7": "any(c['type'] == 'cash_settlement_instruction' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "Without PF1, the buyer's $6,000,000 existing affiliate exposure is unknown, so a generic sale could assign the proposed $8,000,000 and retain $4,000,000 instead of limiting the assignment to exactly $4,000,000 and retaining exactly $8,000,000."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "P2"
+      ],
+      "why": "Without PF2, the initial indication supports par settlement on standard timing, so the decision would not set cash_proceeds_usd to exactly $3,920,000, settlement_days_after_approval to exactly 5, or add the assignment-notice and cash-settlement controls."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

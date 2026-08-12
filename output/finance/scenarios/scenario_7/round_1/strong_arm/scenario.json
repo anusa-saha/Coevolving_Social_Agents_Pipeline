@@ -1,0 +1,142 @@
+{
+  "scenario_id": "scenario_7",
+  "scenario_type": "budget_signoff",
+  "description": "A corporate controller must approve the annual employee bonus pool and finalize the payment schedule, with input from payroll control and the HR finance partner.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Corporate Controller"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marcus",
+      "role": "Payroll Controller"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "HR Finance Partner"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has proposed a total annual employee bonus pool of $1,200,000 for approval.",
+    "S2": "The bonus pool must be finalized before the December payroll close.",
+    "S3": "Elena has authority to approve the pool and its payment schedule.",
+    "S4": "As part of the normal payroll-close process, Elena asks payroll control and HR finance to confirm any payment, timing, or contractual requirements before signing off."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Marcus confirmed this morning that payroll treatment requires exactly $180,000 of the approved pool to be paid as taxable cash through the December payroll run; the payroll treatment note has not yet been attached to the approval packet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia found while reviewing the employee files this week that signed retention letters require exactly $300,000 of the pool to be paid on January 15, and those letters have not yet been circulated to corporate finance."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "bonus_pool_approved_usd": "integer",
+      "december_cash_bonus_usd": "integer",
+      "ordinary_bonus_pool_usd": "integer",
+      "december_payroll_run_required": "boolean",
+      "january_15_retention_awards_usd": "integer",
+      "january_15_payment_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The approved bonus pool must be exactly $1,200,000.",
+    "Exactly $180,000 must be designated as December taxable cash bonuses.",
+    "The December payroll run must be required for that $180,000 payment.",
+    "Exactly $300,000 must be designated for retention awards.",
+    "The retention awards must be paid on January 15.",
+    "The remaining ordinary bonus pool must be exactly $720,000.",
+    "The settlement must include commitments for the December payroll run and the January 15 retention-award payment.",
+    "The payroll treatment requirement must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['bonus_pool_approved_usd'] == 1200000",
+    "C2": "decisions['december_cash_bonus_usd'] == 180000",
+    "C3": "decisions['december_payroll_run_required'] == True",
+    "C4": "decisions['january_15_retention_awards_usd'] == 300000",
+    "C5": "decisions['january_15_payment_required'] == True",
+    "C6": "decisions['ordinary_bonus_pool_usd'] == 720000",
+    "C7": "any(c['type'] == 'december_payroll_run' for c in commitments)",
+    "C8": "any(c['type'] == 'january_15_retention_payment' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C6",
+        "C7",
+        "P1"
+      ],
+      "why": "Without PF1, the December payment could be set to zero or an unspecified amount; PF1 changes december_cash_bonus_usd to exactly 180000, requires the December payroll run, reduces ordinary_bonus_pool_usd to 720000, and supplies the payroll commitment and cited basis."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C6",
+        "C8"
+      ],
+      "why": "Without PF2, the approval could allocate no specifically timed retention awards; PF2 changes january_15_retention_awards_usd to exactly 300000, requires payment on January 15, reduces ordinary_bonus_pool_usd to 720000, and adds the retention-payment commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}
