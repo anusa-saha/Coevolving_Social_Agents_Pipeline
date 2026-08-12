@@ -1,0 +1,156 @@
+{
+  "scenario_id": "scenario_4",
+  "scenario_type": "counterparty_limit_decision",
+  "description": "A risk committee chair must decide whether to increase a corporate counterparty's derivatives exposure limit and set the collateral and margin conditions for the increase, with input from credit risk, legal documentation, and the trading desk.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Risk Committee Chair"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonah",
+      "role": "Credit Risk Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Mei",
+      "role": "Legal Documentation Counsel"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Rafael",
+      "role": "Derivatives Trading Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The corporate counterparty currently has an approved derivatives exposure limit of $20,000,000 and has requested an increase to $35,000,000.",
+    "S2": "Elena makes the binding decision on the exposure limit and its conditions.",
+    "S3": "The derivatives desk expects the requested increase to support additional interest-rate and foreign-exchange hedging activity.",
+    "S4": "At the limit committee meeting, Elena follows the normal round-robin practice of asking credit risk, legal documentation, and the trading desk for relevant information before finalizing the decision."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonah received the counterparty's updated rating assessment this morning; under the bank's single-name limit matrix, the counterparty's rating band permits a maximum derivatives exposure limit of exactly $28,000,000, but the assessment has not yet been entered in the committee pack."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Mei confirmed yesterday that the counterparty's newly signed credit-support annex permits daily variation-margin calls with a $250,000 minimum transfer amount; the executed annex is still awaiting upload to the legal repository."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Rafael confirmed with the counterparty's treasury team this afternoon that it will post exactly $4,000,000 of cash collateral before the increased limit is activated; the confirmation is in the desk's email folder and has not been added to the exposure request."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "limit_increase_approved": "boolean",
+      "approved_exposure_limit_usd": "integer",
+      "cash_collateral_required_usd": "integer",
+      "variation_margin_frequency": "string",
+      "minimum_transfer_amount_usd": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The exposure limit increase must be approved, subject to the stated conditions.",
+    "The approved derivatives exposure limit must be exactly $28,000,000.",
+    "Exactly $4,000,000 of cash collateral must be required before activation.",
+    "Variation margin must be called daily with a $250,000 minimum transfer amount.",
+    "The settlement must include a commitment to obtain the $4,000,000 cash collateral before activation."
+  ],
+  "content_checks": {
+    "C1": "decisions['limit_increase_approved'] == True",
+    "C2": "decisions['approved_exposure_limit_usd'] == 28000000",
+    "C3": "decisions['cash_collateral_required_usd'] == 4000000",
+    "C4": "decisions['variation_margin_frequency'] == 'daily' and decisions['minimum_transfer_amount_usd'] == 250000",
+    "C5": "any(c['type'] == 'pre_activation_collateral' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The request proposes $35,000,000, but PF1 changes the permissible approved_exposure_limit_usd to exactly $28,000,000 and supplies the rating basis that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "Without PF2, the settlement would not set variation_margin_frequency to daily or minimum_transfer_amount_usd to exactly 250000 because the executed annex terms would be unavailable."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C3",
+        "C5"
+      ],
+      "why": "Without PF3, the desk has no confirmed collateral source supporting the increase, so a cautious decision would fail to approve it conditionally, require exactly 4000000 of cash collateral, and include the pre-activation collateral commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

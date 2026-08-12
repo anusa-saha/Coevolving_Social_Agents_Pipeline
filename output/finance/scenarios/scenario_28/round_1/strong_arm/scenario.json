@@ -1,0 +1,188 @@
+{
+  "scenario_id": "scenario_28",
+  "scenario_type": "standby_letter_of_credit_underwriting",
+  "description": "An underwriting manager must decide whether to issue a standby letter of credit for a construction contractor and finalize its amount, margin, expiry, draw-notice terms, sanctions controls, and message format, with input from risk, compliance, operations, and relationship coverage.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Underwriting Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Credit Risk Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Financial Crime Compliance Officer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Ravi",
+      "role": "Trade Operations Specialist"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Clara",
+      "role": "Relationship Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The bank has received a request for a standby letter of credit with a face amount of $2,400,000 for a construction contractor's performance obligation.",
+    "S2": "The request currently describes a twelve-month instrument with no specified cash margin, draw-notice period, or message-format requirements.",
+    "S3": "Maya makes the binding underwriting decision and sets the issuance conditions.",
+    "S4": "Under the bank's normal issuance process, Maya conducts a final round-robin check with credit risk, financial crime compliance, trade operations, and relationship coverage before recording the decision."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas completed a risk review this morning showing that the contractor's existing contingent obligations trigger the bank's policy cap: this standby may not exceed $1,800,000 unless a cash margin of at least 25% of the face amount is blocked in a pledged account; the review is not yet attached to the underwriting file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena received a compliance memo this morning confirming that the beneficiary's state-ownership structure requires enhanced sanctions screening before issuance and quarterly screening thereafter; she has not yet updated the transaction checklist."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Ravi found while testing the draft instruction this week that this advising bank can authenticate the instrument only as an MT760 containing the project reference in field 77C; trade operations will reject any other format, but the requirement is not yet recorded in the deal ticket."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Clara received the signed underlying contract yesterday confirming that the standby must expire exactly 300 days after issuance and that any draw request requires 10 business days' advance notice; she has not yet circulated the relevant contract page."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "sblc_issued": "boolean",
+      "face_amount_usd": "integer",
+      "cash_margin_usd": "integer",
+      "expiry_days": "integer",
+      "draw_notice_days": "integer",
+      "enhanced_sanctions_screening_before_issue": "boolean",
+      "quarterly_sanctions_screening": "boolean",
+      "swift_message_format": "string",
+      "field_77c_contains_project_reference": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The standby must be issued with a face amount exactly $1,800,000 and cash margin exactly $450,000.",
+    "Enhanced sanctions screening must occur before issuance and quarterly thereafter.",
+    "The standby must use an MT760 message with the project reference in field 77C.",
+    "The standby must expire after exactly 300 days and require 10 business days' advance notice for a draw.",
+    "The settlement must include commitments for the blocked cash margin, sanctions-screening schedule, and authenticated MT760 preparation."
+  ],
+  "content_checks": {
+    "C1": "decisions['sblc_issued'] == True",
+    "C2": "decisions['face_amount_usd'] == 1800000",
+    "C3": "decisions['cash_margin_usd'] == 450000",
+    "C4": "decisions['enhanced_sanctions_screening_before_issue'] == True and decisions['quarterly_sanctions_screening'] == True",
+    "C5": "decisions['swift_message_format'] == 'MT760' and decisions['field_77c_contains_project_reference'] == True",
+    "C6": "decisions['expiry_days'] == 300 and decisions['draw_notice_days'] == 10",
+    "C7": "any(c['type'] == 'blocked_cash_margin' for c in commitments) and any(c['type'] == 'quarterly_sanctions_screening' for c in commitments) and any(c['type'] == 'authenticated_mt760' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The request proposes $2,400,000 with no margin; PF1 changes face_amount_usd to exactly 1,800,000 and cash_margin_usd to exactly 450,000 under the contingent-obligation cap."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C7"
+      ],
+      "why": "The shared request has no financial-crime control, while PF2 changes the settlement to require screening before issue and quarterly screening commitments."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C7"
+      ],
+      "why": "The shared request specifies no transmission format, while PF3 changes swift_message_format to MT760, requires the field-77C project reference, and adds the authenticated_mt760 commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C6"
+      ],
+      "why": "The shared request says twelve months with no draw-notice term, while PF4 changes expiry_days to exactly 300 and draw_notice_days to exactly 10."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 5
+}

@@ -1,0 +1,142 @@
+{
+  "scenario_id": "scenario_48",
+  "scenario_type": "credit_line_renewal",
+  "description": "A credit officer must decide whether to renew a manufacturer's revolving credit line and finalize the commitment, eligible collateral, borrower paydown, and monitoring terms, with input from a risk analyst and a relationship manager.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Nadia",
+      "role": "Credit Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Victor",
+      "role": "Risk Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Relationship Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The manufacturer is requesting renewal of an $8,000,000 revolving credit line.",
+    "S2": "The current facility has $5,000,000 drawn, and the borrower has made all scheduled payments on time.",
+    "S3": "The borrowing-base report submitted with the renewal request lists $10,000,000 of eligible receivables.",
+    "S4": "Nadia makes the binding renewal decision, and bank practice is for the credit officer to conduct a final check-in with risk and relationship management before issuing terms."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing the collateral file this week, Victor found $1,500,000 of the reported receivables are invoices owed by entities under the borrower's common ownership; policy excludes those related-party receivables, leaving exactly $8,500,000 eligible, and the 80% advance rate therefore permits a maximum commitment of exactly $6,800,000. Victor also noted that an approved renewal at this risk level requires a monthly borrowing-base certificate, but the finding has not yet been entered in the credit system."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena confirmed in a customer call this morning that the manufacturer must retain at least $2,000,000 of undrawn availability for a seasonal payroll contract, and the borrower has agreed to pay down exactly $500,000 before the renewal is funded; Elena recorded this in her client notes, which have not yet been circulated to credit."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "renewal_approved": "boolean",
+      "renewed_commitment_usd": "integer",
+      "eligible_receivables_usd": "integer",
+      "required_pre_funding_paydown_usd": "integer",
+      "minimum_undrawn_availability_usd": "integer",
+      "monthly_borrowing_base_certificate_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The revolving credit line must be renewed.",
+    "The renewed commitment must be exactly $6,800,000.",
+    "Eligible receivables must be set to exactly $8,500,000.",
+    "The borrower must be required to make exactly a $500,000 paydown before funding.",
+    "The settlement must preserve at least $2,000,000 of undrawn availability.",
+    "A monthly borrowing-base certificate must be required.",
+    "The renewal terms must include a commitment for monthly borrowing-base certificate monitoring."
+  ],
+  "content_checks": {
+    "C1": "decisions['renewal_approved'] == True",
+    "C2": "decisions['renewed_commitment_usd'] == 6800000",
+    "C3": "decisions['eligible_receivables_usd'] == 8500000",
+    "C4": "decisions['required_pre_funding_paydown_usd'] == 500000",
+    "C5": "decisions['minimum_undrawn_availability_usd'] >= 2000000",
+    "C6": "decisions['monthly_borrowing_base_certificate_required'] == True",
+    "C7": "any(c['type'] in ['monitoring', 'ongoing_reporting', 'ongoing_monitoring'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C6",
+        "C7",
+        "P1"
+      ],
+      "why": "Without PF1, the submitted $10,000,000 receivables figure would support an $8,000,000 renewal and no specified monthly certificate; PF1 changes eligible_receivables_usd to exactly 8,500,000, caps renewed_commitment_usd at exactly 6,800,000, and requires the monthly certificate commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "why": "Without PF2, the existing $5,000,000 draw and lack of a confirmed liquidity remedy would make a generic renewal either unsafe or require declining it; PF2 changes required_pre_funding_paydown_usd to exactly 500,000 and establishes the borrower's need for at least 2,000,000 of undrawn availability, making the 6,800,000 renewal executable."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

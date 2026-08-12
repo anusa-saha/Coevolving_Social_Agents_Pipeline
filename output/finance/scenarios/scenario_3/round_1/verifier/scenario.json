@@ -1,0 +1,161 @@
+{
+  "scenario_id": "scenario_3",
+  "scenario_type": "capital_distribution_decision",
+  "description": "A board finance committee chair must decide whether to authorize a special dividend and finalize its funding conditions and payment mix, with input from financial control, pension treasury, and corporate legal.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Board Finance Committee Chair"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Elias",
+      "role": "Financial Controller"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Pension Treasury Manager"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonah",
+      "role": "Corporate Legal Counsel"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has requested approval for a special dividend of up to $8,000,000 after reporting a profitable quarter.",
+    "S2": "The company currently has $12,000,000 of unrestricted cash.",
+    "S3": "Mara chairs the committee and makes the binding decision on the distribution proposal.",
+    "S4": "At the monthly capital-distribution meeting, Mara asks financial control, pension treasury, and corporate legal to report any items that must be reflected before the proposal is finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Elias received the finalized quarter-end audit note this morning showing that legally distributable reserves available for this special dividend are exactly $5,700,000, rather than the $8,000,000 amount in the internal draft; the note has not yet been circulated to the committee."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia confirmed with the pension trustee this week that a $1,500,000 contribution must be funded before the company declares any special dividend; she recorded the confirmation in her treasury file but has not uploaded it to the distribution folder."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jonah found in the shareholder agreement while reviewing it this week that at least 40% of a special dividend must be paid as scrip shares, with the remainder payable in cash; he has not yet sent the clause to the committee secretary."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "special_dividend_approved": "boolean",
+      "special_dividend_amount_usd": "integer",
+      "pre_dividend_pension_contribution_usd": "integer",
+      "cash_dividend_usd": "integer",
+      "scrip_dividend_usd": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The special dividend must be approved.",
+    "The approved special dividend must be exactly $5,700,000.",
+    "A $1,500,000 pension contribution must be funded before the dividend is declared.",
+    "The cash portion of the dividend must be exactly $3,420,000.",
+    "The scrip portion of the dividend must be exactly $2,280,000.",
+    "The settlement must include commitments for the required pension contribution and scrip issuance."
+  ],
+  "content_checks": {
+    "C1": "decisions['special_dividend_approved'] == True",
+    "C2": "decisions['special_dividend_amount_usd'] == 5700000",
+    "C3": "decisions['pre_dividend_pension_contribution_usd'] == 1500000",
+    "C4": "decisions['cash_dividend_usd'] == 3420000",
+    "C5": "decisions['scrip_dividend_usd'] == 2280000",
+    "C6": "decisions['cash_dividend_usd'] + decisions['scrip_dividend_usd'] == decisions['special_dividend_amount_usd']",
+    "C7": "any(c['type'] == 'pension_contribution' for c in commitments) and any(c['type'] == 'scrip_issuance' for c in commitments)",
+    "C8": "all(c in credited_facts for c in ['PF1', 'PF2', 'PF3'])"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The internal proposal allows up to $8,000,000, but PF1 changes the legally permissible special-dividend amount to exactly $5,700,000 and supplies the required cited basis for that amount."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C7"
+      ],
+      "why": "Without PF2, the settlement would set no pre-declaration pension contribution and would omit the required $1,500,000 pension-contribution commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "why": "Without PF3, a generic all-cash dividend would set cash at $5,700,000 and scrip at $0, whereas the agreement changes those amounts to exactly $3,420,000 cash and $2,280,000 scrip and requires a scrip-issuance commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

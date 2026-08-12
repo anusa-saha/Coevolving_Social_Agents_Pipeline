@@ -1,0 +1,166 @@
+{
+  "scenario_id": "scenario_1",
+  "scenario_type": "capital_expenditure_approval",
+  "description": "A finance director must approve a $4,000,000 equipment purchase and set its funding conditions and payment schedule, with input from treasury, compliance, and project operations.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Finance Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marcus",
+      "role": "Treasury Director"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Compliance Officer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jon",
+      "role": "Project Operations Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company is considering a $4,000,000 purchase of automated warehouse equipment from Northstar Industrial.",
+    "S2": "The purchase is expected to improve annual fulfillment capacity and has already received operating-unit support.",
+    "S3": "Elena makes the binding decision on the capital expenditure and its funding conditions.",
+    "S4": "Company practice is for treasury, compliance, and project operations to confirm current conditions in a review round before a capital expenditure is signed off.",
+    "S5": "Company practice permits Elena to sign a conditional approval when a required follow-up action is assigned to an accountable function and must be completed before the related payment or execution occurs."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Marcus confirmed in this week's cash forecast that a $1,500,000 tax remittance is due on July 15, and treasury policy requires at least $1,000,000 of unrestricted cash afterward; therefore no more than $2,500,000 may be released for this purchase before July 16. Treasury policy also requires that this purchase be funded from unrestricted operating cash rather than short-term borrowing. The forecast was finalized this morning and has not yet been circulated to the capital committee."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia found in a compliance memo received yesterday that Northstar's beneficial-owner screening requires enhanced due diligence before any payment can be released. The memo was sent directly to her team and has not yet been added to the procurement approval checklist."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jon confirmed with Northstar's contract manager this morning that the quoted price remains fixed if the company pays $2,500,000 on June 20 and the remaining $1,500,000 on September 1; Northstar will not hold the quoted price for a different payment schedule. Jon's updated contract note is still being reviewed by procurement."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "capex_approved": "boolean",
+      "initial_release_usd": "integer",
+      "deferred_release_usd": "integer",
+      "deferred_release_date": "string, use 'September 1'",
+      "funding_source": "string, use 'unrestricted operating cash'",
+      "enhanced_due_diligence_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string, use 'due_diligence', 'funding_condition', or 'payment_release_compliance'",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The capital expenditure must be approved.",
+    "The purchase must be funded from unrestricted operating cash rather than short-term borrowing.",
+    "The two releases together must fund exactly the $4,000,000 purchase.",
+    "The deferred $1,500,000 release must be scheduled for September 1.",
+    "Enhanced due diligence must be completed before any payment is released.",
+    "The settlement must include a payment-release compliance commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['capex_approved'] == True",
+    "C2": "decisions['funding_source'] == 'unrestricted operating cash'",
+    "C3": "decisions['initial_release_usd'] + decisions['deferred_release_usd'] == 4000000",
+    "C4": "decisions['deferred_release_usd'] == 1500000",
+    "C5": "decisions['deferred_release_date'] == 'September 1'",
+    "C6": "decisions['enhanced_due_diligence_required'] == True",
+    "C7": "any(c['type'] in ['due_diligence', 'compliance_condition', 'payment_release_compliance', 'EDD gating condition'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2"
+      ],
+      "why": "Without PF1, the decision-maker has no basis for requiring the exact funding_source value 'unrestricted operating cash' instead of short-term borrowing."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C6",
+        "C7",
+        "P1"
+      ],
+      "why": "Without PF2, the approval would not require enhanced_due_diligence_required to be true or include a due-diligence payment-release commitment, and the decision-maker could not cite the newly received screening requirement."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C4",
+        "C5"
+      ],
+      "why": "Without PF3, the settlement would lack the exact $1,500,000 deferred release and the exact 'September 1' date needed to fund the full $4,000,000 while preserving Northstar's quoted price."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

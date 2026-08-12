@@ -1,0 +1,162 @@
+{
+  "scenario_id": "scenario_18",
+  "scenario_type": "term_loan_prepayment_and_hedge_management",
+  "description": "A treasury director must authorize a partial prepayment of the company's term loan and finalize the resulting cash reserve, lender treatment, and interest-rate hedge actions, with input from lender relations, treasury forecasting, and tax accounting.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Treasury Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Martin",
+      "role": "Lender Relations Counsel"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jo",
+      "role": "Treasury Forecasting Manager"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Tax Accounting Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has $18,000,000 of unrestricted cash and an outstanding $10,000,000 term loan with a 7.2% annual interest rate.",
+    "S2": "The term loan is paired with a $5,000,000 interest-rate swap, and the current proposal is to make an $8,000,000 voluntary loan prepayment this quarter.",
+    "S3": "Elena makes the binding treasury decision before the payment instruction and hedge instructions are released.",
+    "S4": "As part of the normal prepayment review, Elena asks lender relations, treasury forecasting, and tax accounting for any information affecting the transaction."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Martin received a lender email this morning confirming that the prepayment fee is waived only if the company prepays exactly $6,000,000; the email also confirms that this amount needs no loan-amendment filing, but Martin has not uploaded it to the transaction file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Jo completed the rolling cash forecast this morning and confirmed that $7,250,000 of unrestricted cash must remain as the operating reserve through quarter-end because of scheduled payroll, tax, and supplier outflows; the forecast has not yet been circulated to Elena."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nadia's tax-accounting memo, received this week, definitively specifies the hedge treatment for this prepayment decision regardless of the final loan-prepayment amount: exactly $3,000,000 of the swap must be terminated with a $95,000 cash settlement, while the remaining $2,000,000 swap stays in place. She has not attached the memo to the treasury workpaper."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "loan_prepayment_usd": "integer",
+      "operating_cash_reserve_usd": "integer",
+      "lender_prepayment_fee_waived": "boolean",
+      "hedge_termination_notional_usd": "integer",
+      "hedge_cash_settlement_usd": "integer",
+      "remaining_swap_notional_usd": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The loan prepayment must be exactly $6,000,000.",
+    "At least $7,250,000 of unrestricted cash must remain as the operating reserve.",
+    "The settlement must record that the lender prepayment fee is waived and include the lender confirmation in the execution package.",
+    "Exactly $3,000,000 of the interest-rate swap must be terminated with a $95,000 cash settlement.",
+    "The remaining $2,000,000 swap notional must stay in place and the partial termination must be documented.",
+    "The lender's exact-prepayment condition must be cited as a reason for the prepayment amount."
+  ],
+  "content_checks": {
+    "C1": "decisions['loan_prepayment_usd'] == 6000000",
+    "C2": "decisions['operating_cash_reserve_usd'] >= 7250000",
+    "C3": "decisions['lender_prepayment_fee_waived'] == True",
+    "C4": "any(('lender email' in c.get('detail', '') or 'lender confirmation' in c.get('detail', '')) and ('upload' in c.get('detail', '') or 'circulat' in c.get('detail', '') or 'attach' in c.get('detail', '') or 'document' in c.get('detail', '')) for c in commitments)",
+    "C5": "decisions['hedge_termination_notional_usd'] == 3000000 and decisions['hedge_cash_settlement_usd'] == 95000",
+    "C6": "decisions['remaining_swap_notional_usd'] == 2000000",
+    "C7": "any(('tax-accounting memo' in c.get('detail', '') or 'tax accounting memo' in c.get('detail', '')) and ('upload' in c.get('detail', '') or 'circulat' in c.get('detail', '') or 'attach' in c.get('detail', '') or 'document' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The shared proposal suggests an $8,000,000 prepayment with no confirmed fee treatment; PF1 changes loan_prepayment_usd to exactly 6000000, lender_prepayment_fee_waived to true, and requires the lender email to be uploaded or otherwise documented."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2"
+      ],
+      "why": "The shared cash balance does not establish the required reserve; PF2 changes operating_cash_reserve_usd to a minimum of exactly 7250000."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "The shared facts identify a $5,000,000 swap but do not specify its required treatment; PF3 changes hedge_termination_notional_usd to exactly 3000000, hedge_cash_settlement_usd to exactly 95000, remaining_swap_notional_usd to exactly 2000000, and requires the tax-accounting memo to be attached or otherwise documented."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

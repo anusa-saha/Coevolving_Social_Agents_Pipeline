@@ -1,0 +1,133 @@
+{
+  "scenario_id": "scenario_46",
+  "scenario_type": "securities_lending_collateral_reinvestment",
+  "description": "A securities finance manager must approve the reinvestment plan for $20,000,000 of cash collateral and finalize the liquidity reserve, sovereign-bill allocation, issuer concentration, and maturity controls, with input from market risk and securities-lending operations.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Securities Finance Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Market Risk Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Securities-Lending Operations Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The securities-lending desk holds $20,000,000 of cash collateral that is available for reinvestment.",
+    "S2": "Maya makes the binding decision on the reinvestment plan.",
+    "S3": "The desk's preliminary plan would place the full amount in a single 90-day bank deposit because it offers the highest quoted yield.",
+    "S4": "Under the desk's normal pre-trade process, Maya conducts a check-in with market risk and securities-lending operations before authorizing any collateral reinvestment."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas received a market-risk bulletin this morning that now requires at least 60% of reinvested cash collateral to be held in sovereign bills and limits exposure to any one sovereign-bill issuer to $7,000,000; the bulletin has not yet been entered in the desk's risk system."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena's collateral-return forecast, completed after this morning's borrower notices, shows that $8,000,000 may be demanded overnight; operations therefore requires an $8,000,000 overnight liquidity reserve and a maximum 30-day maturity for the remaining reinvestment, but the forecast has not yet been circulated to the trading desk."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A1"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "reinvestment_approved": "boolean",
+      "sovereign_bills_usd": "integer",
+      "largest_sovereign_bill_issuer_usd": "integer",
+      "overnight_liquidity_reserve_usd": "integer",
+      "maximum_non_overnight_maturity_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The reinvestment must be approved with at least $12,000,000 in sovereign bills.",
+    "No more than $7,000,000 may be placed with any single sovereign-bill issuer.",
+    "Exactly $8,000,000 must remain available through overnight liquidity instruments.",
+    "The remaining non-overnight reinvestment must have a maximum maturity of exactly 30 days or less.",
+    "The settlement must include a documented overnight-liquidity monitoring commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['reinvestment_approved'] == True",
+    "C2": "decisions['sovereign_bills_usd'] >= 12000000",
+    "C3": "decisions['largest_sovereign_bill_issuer_usd'] <= 7000000",
+    "C4": "decisions['overnight_liquidity_reserve_usd'] == 8000000",
+    "C5": "decisions['maximum_non_overnight_maturity_days'] <= 30",
+    "C6": "any(c['type'] == 'overnight_liquidity_monitoring' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The preliminary plan puts all $20,000,000 in a single bank deposit; PF1 changes sovereign_bills_usd from zero to at least $12,000,000 and largest_sovereign_bill_issuer_usd from $20,000,000 to no more than $7,000,000."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "why": "The preliminary 90-day deposit provides no overnight reserve or monitoring plan; PF2 changes overnight_liquidity_reserve_usd to exactly $8,000,000, maximum_non_overnight_maturity_days to no more than 30, and requires the overnight-liquidity-monitoring commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}
