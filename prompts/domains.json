@@ -4563,12 +4563,12 @@
   },
   "friends_family_informal": {
     "display_name": "Friends, Family & Informal",
-    "domain_context": "Scenarios are informal, personal decisions among friends or family: trip planning, shared living arrangements, splitting a task or cost. There is no institutional decision-maker -- one person naturally ends up organizing or deciding (the trip planner, the one whose name is on the lease, the eldest sibling), but the tone should stay casual, not corporate. Private facts should read like things a person might not volunteer unless asked directly: a money worry, a scheduling conflict, a health/mobility limit, an unspoken preference. Commitments are informal \u2014 a promise, a plan, a way of splitting something \u2014 not legal or monetary instruments.",
+    "domain_context": "Scenarios are informal, personal decisions among friends or family. Vary who ends up deciding rather than defaulting to the same setup -- a trip organizer, the one whose name is on a lease, an eldest or coordinating sibling, whoever is holding onto something others want, all plausibly end up making the call. There is no institutional authority; the tone stays casual, not corporate. Vary the decision type too: trip planning, shared living, splitting a cost or inherited item, coordinating care for a family member, planning a group celebration, or handling something scarce that several people want -- avoid defaulting to the same 'trip or lease' shape every time. Vary the KIND of hidden lever as well: a money worry, a scheduling conflict, a health or mobility limit, an unspoken preference, a professional recommendation nobody's shared yet, or a piece of information someone mentioned to one friend but not the group -- do not let every scenario's secret be 'a private financial constraint.' Private facts should read like things a person might not volunteer unless asked directly -- a person's own circumstance needs no extra explanation, but something learned from a document, a quote, or another person should say briefly who told them and that it hasn't reached the group yet. Commitments are informal -- a promise, a plan, a way of splitting something -- not legal or monetary instruments. Scenarios in this domain commonly involve 3 to 5 people -- as the count grows, add more distinct people each holding their own piece of the picture, rather than padding with people who don't affect the outcome.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_friendsfamily_001",
         "scenario_type": "trip_planning",
-        "description": "One sibling organizing a family trip must finalize the itinerary and cost split, with input from the other two siblings.",
+        "description": "One sibling organizing a family trip must finalize the itinerary, cost split, and transportation plan, with input from the other two siblings.",
         "agents": [
           {
             "agent_id": "A1",
@@ -4596,11 +4596,15 @@
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Dev is between jobs right now and can't cover more than $150 toward the trip without real difficulty."
+            "text": "Dev is between jobs right now and can't cover more than $150 toward the trip without real difficulty; he mentioned this to Ana in passing but hasn't brought it up to Maya directly."
           },
           "PF2": {
             "owner": "A3",
-            "text": "Ana's knee has been bothering her enough that the stairs to the dock would need to be avoided."
+            "text": "Ana's knee has been bothering her enough that the stairs to the dock would need to be avoided; she mentioned it to Dev but hasn't told Maya yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Ana's car only seats three, so if she drives, a second car needs to be arranged for the other two; she brought this up to Dev casually but hasn't confirmed a plan with Maya."
           }
         },
         "views": {
@@ -4625,7 +4629,8 @@
             "S3",
             "S4",
             "S5",
-            "PF2"
+            "PF2",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -4664,13 +4669,15 @@
           "The full $900 cost must be covered by the three shares combined.",
           "Dev's share must be reduced to reflect his situation, landing between $100 and $150.",
           "The dock-access plan must be adjusted to avoid the stairs for Ana.",
-          "A commitment to find an alternate dock route or skip it must exist."
+          "A commitment to find an alternate dock route or skip it must exist.",
+          "A transportation commitment covering the second car must exist."
         ],
         "content_checks": {
           "C1": "sum(decisions['cost_split'].values()) == 900",
           "C2": "decisions['cost_split']['Dev'] >= 100 and decisions['cost_split']['Dev'] <= 150",
           "C3": "decisions['dock_access_plan_adjusted'] == True",
-          "C4": "any(c['type'] == 'alternate_access_plan' for c in commitments)"
+          "C4": "any(c['type'] == 'alternate_access_plan' for c in commitments)",
+          "C5": "any(c['type'] == 'transportation_plan' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -4693,13 +4700,21 @@
               "C4"
             ],
             "why": "Without knowing about Ana's knee, the itinerary would keep the dock stairs as planned rather than adjusting access or arranging an alternate route."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing Ana's car only seats three, a generic plan would assume everyone fits in one car and never arrange a second."
           }
         ]
       },
       {
         "scenario_id": "domain_friendsfamily_002",
         "scenario_type": "shared_living",
-        "description": "One roommate, whose name is on the lease, must decide whether to renew and how to assign rooms, with input from the other two roommates.",
+        "description": "One roommate, whose name is on the lease, must decide whether to renew, how rooms are assigned, and the transition plan, with input from the other three roommates.",
         "agents": [
           {
             "agent_id": "A1",
@@ -4715,22 +4730,31 @@
             "agent_id": "A3",
             "name": "Jess",
             "role": "Roommate"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Marcus",
+            "role": "Roommate"
           }
         ],
         "shared_context": {
           "S1": "The current lease is up for renewal next month.",
           "S2": "Priya decides whether to renew and how rooms are assigned.",
           "S3": "The apartment has one larger bedroom and two smaller ones.",
-          "S4": "Before deciding, Priya checks with Sam and Jess for anything relevant."
+          "S4": "Before deciding, Priya checks with everyone for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Sam has a job offer in another city and is about 80% likely to move out within two months regardless of the lease."
+            "text": "Sam has accepted a conditional job offer in another city and expects to move out within two months if it's confirmed; he mentioned this to Marcus but hasn't told Priya directly."
           },
           "PF2": {
             "owner": "A3",
             "text": "Jess would take the larger bedroom at a higher rent share if it were offered, but hasn't brought it up unprompted."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Marcus read through the actual lease renewal paperwork this week and found it includes a clause allowing early termination without penalty if a replacement tenant is found within 30 days of notice; he hasn't mentioned this to the group yet."
           }
         },
         "views": {
@@ -4753,6 +4777,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -4760,15 +4791,17 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "lease_renewed": "boolean",
             "short_term_sublet_plan_needed": "boolean",
-            "jess_assigned_larger_room": "boolean"
+            "jess_assigned_larger_room": "boolean",
+            "replacement_search_started_within_days": "integer"
           },
           "credited_facts": [
             "fact_id"
@@ -4788,13 +4821,15 @@
           "A short-term sublet plan must be flagged as needed, given Sam's likely move.",
           "The lease should still be renewed, since the risk is manageable with a sublet plan.",
           "Jess must be assigned the larger bedroom as part of the workable rent plan.",
+          "A replacement-tenant search must start within 30 days, to use the termination clause.",
           "Sam's likely departure must be cited as justification for the sublet plan."
         ],
         "content_checks": {
           "C1": "decisions['short_term_sublet_plan_needed'] == True",
           "C2": "decisions['lease_renewed'] == True",
           "C3": "any(c['type'] == 'sublet_plan' for c in commitments)",
-          "C4": "decisions['jess_assigned_larger_room'] == True"
+          "C4": "decisions['jess_assigned_larger_room'] == True",
+          "C5": "decisions['replacement_search_started_within_days'] >= 1 and decisions['replacement_search_started_within_days'] <= 30"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -4818,6 +4853,191 @@
               "C4"
             ],
             "why": "Without knowing Jess would take the larger room at a higher share, a cautious response to Sam's departure risk might be to not renew at all, rather than renew with Jess specifically moved into the larger room to cover the gap."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing about the 30-day early-termination clause, a generic sublet plan would have no specific reason to start the replacement search within that window."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_friendsfamily_004",
+        "scenario_type": "eldercare_coordination",
+        "description": "A sibling coordinating their mother's home safety modifications must finalize the contractor, cost split, and installation order, with input from three other siblings and their mother's physical therapist.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Elena",
+            "role": "Coordinating Sibling"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Dr. Osei",
+            "role": "Physical Therapist"
+          }
+        ],
+        "shared_context": {
+          "S1": "Their mother's home needs safety modifications: a wheelchair ramp, bathroom grab bars, and a stairlift, estimated at $6,000 total.",
+          "S2": "Elena is coordinating the modifications and how the cost is split among the four siblings.",
+          "S3": "All four siblings have said they want to contribute something.",
+          "S4": "Before finalizing, Elena checks with everyone for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus just took on a new mortgage and can only contribute $300-500 right now without real strain; he mentioned this to Priya but hasn't told Elena directly."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya got a quote from a contractor she trusts for exactly $5,400 total, $600 less than the original estimate, but hasn't shared the quote with the group yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "David is willing to cover a noticeably larger share, at least $1,600, since he can't be physically present to help with the installation due to a work trip; he mentioned this to Marcus casually."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Dr. Osei recommended this week that the stairlift be installed before the grab bars, since the stairs are the more urgent fall risk; this hasn't been communicated to the family yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "total_cost_usd": "integer",
+            "marcus_contribution_usd": "integer",
+            "david_contribution_usd": "integer",
+            "installation_order": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Total cost must be set to $5,400, using Priya's contractor quote.",
+          "Marcus's contribution must land between $300 and $500.",
+          "David's contribution must be between $1,600 and $3,000, reflecting his offer to cover more.",
+          "The stairlift must be installed before the grab bars.",
+          "A commitment confirming the contractor must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['total_cost_usd'] == 5400",
+          "C2": "decisions['marcus_contribution_usd'] >= 300 and decisions['marcus_contribution_usd'] <= 500",
+          "C3": "decisions['david_contribution_usd'] >= 1600 and decisions['david_contribution_usd'] <= 3000",
+          "C4": "decisions['installation_order'] == 'stairlift_first'",
+          "C5": "any(c['type'] == 'contractor_confirmed' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about the new mortgage, a generic even split ($1,500 each) would assign Marcus far more than he can manage."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C5",
+              "P1"
+            ],
+            "why": "Without the contractor quote, the plan would proceed at the original $6,000 estimate and never confirm the specific $5,400 contractor."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing David offered to cover more, a generic even split would give him the same $1,500 as everyone else instead of a larger share."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without the physical therapist's recommendation, a generic plan would install items in an arbitrary or convenience-based order rather than addressing the more urgent fall risk first."
           }
         ]
       }
@@ -4825,12 +5045,12 @@
   },
   "informal_commerce_bargaining": {
     "display_name": "Informal Commerce / Bargaining",
-    "domain_context": "Scenarios are informal price or terms negotiations outside a corporate setting: a flea market or classifieds sale, a freelance gig arranged through a mutual contact, a private used-goods sale. There is no institutional authority \u2014 the decision-maker is whoever makes the final call on price/terms (the buyer, the client). Private facts should read like things a party in an informal deal might know but not volunteer: a defect, a better alternative offer (BATNA), a real budget ceiling, a scheduling conflict. Commitments are informal terms \u2014 a price, a condition disclosure, a delivery promise \u2014 agreed verbally.",
+    "domain_context": "Scenarios are informal price or terms negotiations outside a corporate setting. Vary who ends up deciding rather than defaulting to the same setup -- a buyer, a client, but also a seller weighing an offer, someone allocating a scarce item among interested friends, or whoever is arranging an informal swap or sublet. There is no institutional authority; the decision-maker is whoever makes the final call. Vary the decision type too: a used-goods sale, a freelance gig, an informal service swap or barter, a room-share or sublet price, or handling something scarce that multiple people want -- avoid defaulting to the same 'buyer vs seller' shape every time. Vary the KIND of hidden lever as well: a defect, a better alternative offer (BATNA), a real budget ceiling, a scheduling conflict, a quality or reference detail, or a competing interested party -- do not let every scenario's secret be 'a hidden defect.' Private facts should read like things a party in an informal deal might know but not volunteer -- a person's own circumstance needs no extra explanation, but something learned from someone else (an overheard comment, a friend's tip) should say briefly who it came from and that it hasn't been shared yet. Commitments are informal terms -- a price, a condition disclosure, a delivery promise -- agreed verbally. Scenarios in this domain commonly involve 3 to 5 people -- as the count grows, add more distinct people each holding their own piece of the picture, rather than padding with people who don't affect the outcome.",
     "few_shot_examples": [
       {
         "scenario_id": "domain_informalcommerce_001",
         "scenario_type": "used_goods_negotiation",
-        "description": "A buyer at a flea market must decide a final offer for a used bicycle, with the seller and the buyer's friend both weighing in.",
+        "description": "A buyer at a flea market must decide a final offer for a used bicycle and what the seller throws in, with the seller and the buyer's friend both weighing in.",
         "agents": [
           {
             "agent_id": "A1",
@@ -4862,6 +5082,10 @@
           "PF2": {
             "owner": "A3",
             "text": "Nadia saw a nearly identical bike, in confirmed better condition, listed for $140 at another stall an hour ago."
+          },
+          "PF3": {
+            "owner": "A2",
+            "text": "Marisol would also throw in the bike lock and pump for free if asked directly, but hasn't offered it upfront since most buyers don't ask."
           }
         },
         "views": {
@@ -4876,7 +5100,8 @@
             "S2",
             "S3",
             "S4",
-            "PF1"
+            "PF1",
+            "PF3"
           ],
           "A3": [
             "S1",
@@ -4899,7 +5124,8 @@
           "decisions": {
             "final_offer": "integer",
             "brake_disclosure_confirmed": "boolean",
-            "repair_credit_applied": "boolean"
+            "repair_credit_applied": "boolean",
+            "accessories_included": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -4919,13 +5145,15 @@
           "The final offer must land between $100 and $140, matching the better alternative without lowballing unreasonably.",
           "The brake-cable issue must be explicitly confirmed before the deal closes.",
           "A repair credit acknowledging the brake issue must be applied.",
+          "The lock and pump must be included in the final deal.",
           "The alternative listing must be cited as justification for the lower offer."
         ],
         "content_checks": {
           "C1": "decisions['final_offer'] >= 100 and decisions['final_offer'] <= 140",
           "C2": "decisions['brake_disclosure_confirmed'] == True",
           "C3": "any(c['type'] == 'condition_disclosure' for c in commitments)",
-          "C4": "decisions['repair_credit_applied'] == True"
+          "C4": "decisions['repair_credit_applied'] == True",
+          "C5": "decisions['accessories_included'] == True"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -4948,13 +5176,21 @@
               "P1"
             ],
             "why": "The bike looks fine from the outside; without the brake-cable admission, there is no reason to require explicit confirmation of its condition before buying, or to apply any repair credit."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A2",
+            "flips": [
+              "C5"
+            ],
+            "why": "Without knowing the lock and pump are available for the asking, a generic deal would close on just the bike."
           }
         ]
       },
       {
         "scenario_id": "domain_informalcommerce_002",
         "scenario_type": "freelance_gig_negotiation",
-        "description": "A client must finalize price and turnaround for a freelance design job, arranged through a mutual contact, with the freelancer and the contact both weighing in.",
+        "description": "A client must finalize price, turnaround, and whether to proceed, for a freelance design job arranged through a mutual contact, with the freelancer, the contact, and a past client all weighing in.",
         "agents": [
           {
             "agent_id": "A1",
@@ -4970,13 +5206,18 @@
             "agent_id": "A3",
             "name": "Ben",
             "role": "Mutual Contact"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Sana",
+            "role": "Past Client"
           }
         ],
         "shared_context": {
           "S1": "The job is a logo redesign, initially quoted at $500 for a two-week turnaround.",
-          "S2": "Karim finalizes the price and deadline.",
+          "S2": "Karim finalizes the price, deadline, and whether to proceed.",
           "S3": "Yara has done good work for others in the past.",
-          "S4": "Before finalizing, Karim checks with Yara and Ben for anything relevant."
+          "S4": "Before finalizing, Karim checks with everyone for anything relevant."
         },
         "private_facts": {
           "PF1": {
@@ -4985,7 +5226,11 @@
           },
           "PF2": {
             "owner": "A3",
-            "text": "Ben knows Karim's actual budget ceiling for this project is $700, higher than the $500 number Karim first mentioned."
+            "text": "Ben knows Karim's actual budget ceiling for this project is $700, higher than the $500 number Karim first mentioned; he overheard this from Karim's assistant this week but hasn't mentioned it to Yara or the group yet."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Sana hired Yara for a similar rush job last year and confirmed Yara delivered a full day early despite the tight deadline; Karim would find this reassuring, but Sana hasn't volunteered it unprompted."
           }
         },
         "views": {
@@ -5008,6 +5253,13 @@
             "S3",
             "S4",
             "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
           ]
         },
         "decision_maker": "A1",
@@ -5015,14 +5267,16 @@
           "turn_order": [
             "A1",
             "A2",
-            "A3"
+            "A3",
+            "A4"
           ],
-          "turn_cap": 12
+          "turn_cap": 14
         },
         "settlement_schema": {
           "decisions": {
             "final_price": "integer",
-            "deadline_kept_at_two_weeks": "boolean"
+            "deadline_kept_at_two_weeks": "boolean",
+            "reference_check_completed": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -5039,16 +5293,18 @@
           ]
         },
         "acceptance_conditions": [
-          "The final price must reach at least $650 to cover the rush premium.",
-          "The final price must not exceed the $700 ceiling Ben knows about.",
+          "The final price must land between $650 and $700.",
           "The two-week deadline must be kept.",
+          "A rush-premium commitment must be logged.",
+          "A reference check with a past client must be completed.",
           "The rush-premium need must be cited as justification for the higher price."
         ],
         "content_checks": {
-          "C1": "decisions['final_price'] >= 650",
-          "C2": "decisions['final_price'] <= 700",
-          "C3": "decisions['deadline_kept_at_two_weeks'] == True",
-          "C4": "any(c['type'] == 'rush_premium' for c in commitments)"
+          "C1": "decisions['final_price'] >= 650 and decisions['final_price'] <= 700",
+          "C2": "decisions['deadline_kept_at_two_weeks'] == True",
+          "C3": "any(c['type'] == 'rush_premium' for c in commitments)",
+          "C4": "decisions['reference_check_completed'] == True",
+          "C5": "any(c['type'] == 'reference_check' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
@@ -5059,7 +5315,7 @@
             "owner": "A2",
             "flips": [
               "C1",
-              "C4",
+              "C3",
               "P1"
             ],
             "why": "Without knowing about the conflicting project, there is no reason to pay a rush premium above the original $500 quote, or to log a rush_premium commitment at all."
@@ -5068,9 +5324,195 @@
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C2"
+              "C1"
             ],
-            "why": "Without knowing Karim's real budget ceiling is $700, a generic settlement might either underpay (missing C1) or, more importantly, has no confirmed room to go as high as $650-700 -- the ceiling is what makes that range known-affordable rather than a guess."
+            "why": "Without knowing Karim's real budget ceiling is $700, a generic settlement has no confirmed room to go as high as $650-700 -- the ceiling is what makes that range known-affordable rather than a guess."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C4",
+              "C5"
+            ],
+            "why": "Without the reference from a past client, a generic settlement would have no reason to complete or log a reference check before committing to the higher price."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_informalcommerce_004",
+        "scenario_type": "scarce_item_allocation",
+        "description": "A friend with one extra concert ticket must decide who gets it and finalize the plans for the other two friends who wanted it, with input from all three friends and a mutual friend.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Nora",
+            "role": "Ticket Holder"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Leo",
+            "role": "Friend"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Friend"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Sam",
+            "role": "Friend"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Mia",
+            "role": "Mutual Friend"
+          }
+        ],
+        "shared_context": {
+          "S1": "Nora has one extra concert ticket for this Friday that she can't use.",
+          "S2": "Nora decides who gets the ticket and how to handle everyone else.",
+          "S3": "Leo, Priya, and Sam have each said they'd love to go.",
+          "S4": "Before deciding, Nora asks around for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Leo already has tentative plans Friday night that he hasn't cancelled, and is only about 50% sure he could actually make it; he mentioned this to Priya casually but hasn't told Nora."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya is a huge fan of the opening act specifically and has mentioned it multiple times this month to Sam, though not directly to Nora."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "Sam mentioned to Leo that he'd happily chip in for Nora's parking too if that would help, regardless of who gets the ticket."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Mia found out this week that the venue requires ID matching the ticket name for entry, and tickets aren't transferable after Thursday; she hasn't mentioned this to the group yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_order": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ],
+          "turn_cap": 18
+        },
+        "settlement_schema": {
+          "decisions": {
+            "ticket_recipient": "string",
+            "leo_raincheck_offered": "boolean",
+            "parking_cost_covered": "boolean",
+            "name_transfer_completed_by": "string"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The ticket must go to Priya, given her specific enthusiasm for the opening act.",
+          "A raincheck must be offered to Leo, given his own uncertainty about Friday.",
+          "Parking costs must be covered, per Sam's offer.",
+          "The name transfer must be completed by Thursday, given the venue's ID rule.",
+          "A raincheck commitment targeting Leo must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['ticket_recipient'] == 'Priya'",
+          "C2": "decisions['leo_raincheck_offered'] == True",
+          "C3": "decisions['parking_cost_covered'] == True",
+          "C4": "decisions['name_transfer_completed_by'] == 'Thursday'",
+          "C5": "any(c['type'] == 'raincheck' and c['target'] == 'Leo' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C2",
+              "C5"
+            ],
+            "why": "Without knowing about Leo's own uncertainty for Friday, there is no specific reason to offer him a raincheck rather than just leaving him out."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "With all three friends equally interested on paper, there's no reason to pick Priya specifically over picking at random or by who asked first."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing about Sam's offer, a generic settlement would not think to cover Nora's parking cost at all."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without knowing about the Thursday transfer deadline, a generic plan would leave the name transfer for whenever, risking the ticket becoming unusable."
           }
         ]
       }
