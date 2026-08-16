@@ -1,0 +1,144 @@
+{
+  "scenario_id": "scenario_2",
+  "scenario_type": "batch_disposition_and_rework",
+  "description": "A quality director must decide how to disposition a held adhesive-bonded component batch and finalize the rework controls and production schedule, with input from a quality engineer and a maintenance lead.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Quality Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Marta",
+      "role": "Maintenance Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "Batch 47, containing 600 adhesive-bonded components, is on hold after cure readings fell below the normal release specification.",
+    "S2": "The available disposition choices are release, scrap, or controlled rework using the plant's thermal oven.",
+    "S3": "Elena makes the final disposition decision and must record the operating controls before the batch is handled.",
+    "S4": "As part of the normal batch-hold review, Elena checks with quality engineering and maintenance for test results, equipment constraints, and any required follow-up."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi completed a lab validation this morning showing that all 600 units in Batch 47 can be restored by heating them at exactly 120 degrees Celsius for exactly 45 minutes, followed by a 100% bond inspection; the validation worksheet is awaiting filing in the quality system."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Marta inspected the thermal oven today and confirmed it requires exactly 4 hours of preheating before this rework and can process no more than 600 units in the approved cycle; she has not entered the maintenance slot because the batch-hold ticket is still awaiting disposition."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "batch_disposition": "string",
+      "rework_temperature_c": "integer",
+      "rework_duration_minutes": "integer",
+      "units_scheduled_for_rework": "integer",
+      "oven_preheat_hours": "integer",
+      "bond_inspection_percentage": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Batch 47 must be assigned to controlled rework.",
+    "The rework temperature must be exactly 120 degrees Celsius.",
+    "The rework duration must be exactly 45 minutes.",
+    "Exactly 600 units must be scheduled for rework.",
+    "The oven preheat must be scheduled for exactly 4 hours.",
+    "A 100% bond inspection must be required after rework.",
+    "The validation worksheet and maintenance slot must be recorded as follow-up commitments."
+  ],
+  "content_checks": {
+    "C1": "decisions['batch_disposition'] == 'controlled_rework'",
+    "C2": "decisions['rework_temperature_c'] == 120",
+    "C3": "decisions['rework_duration_minutes'] == 45",
+    "C4": "decisions['units_scheduled_for_rework'] == 600",
+    "C5": "decisions['oven_preheat_hours'] == 4",
+    "C6": "decisions['bond_inspection_percentage'] == 100",
+    "C7": "any(c['type'] == 'validation_worksheet_filed' for c in commitments)",
+    "C8": "any(c['type'] == 'maintenance_slot_recorded' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C6",
+        "C7",
+        "P1"
+      ],
+      "why": "The validated 120-degree, 45-minute treatment changes the disposition from an unsupported release or scrap decision to controlled rework, sets both operating values, requires 100% inspection, and requires filing the validation worksheet."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C8"
+      ],
+      "why": "The oven's exact 4-hour preheat and 600-unit approved capacity change the schedule to 4 hours and 600 units and require recording the maintenance slot."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

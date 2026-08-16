@@ -1,0 +1,135 @@
+{
+  "scenario_id": "scenario_29",
+  "scenario_type": "tooling_repair_authorization",
+  "description": "An operations director must decide whether to refurbish a worn stamping die or obtain a replacement for an upcoming production order, and must finalize the downtime and inspection plan with input from maintenance and quality.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Grant",
+      "role": "Tooling Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Quality Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Stamping die D-18 has visible wear and is needed for an upcoming customer production order.",
+    "S2": "The available options are to refurbish D-18 or obtain a replacement die; Marisol makes the binding decision.",
+    "S3": "A replacement die would require a new tooling order, while refurbishing would use the existing die and take the line out of service.",
+    "S4": "As part of the normal tooling-release process, Marisol asks maintenance and quality to report any relevant findings before authorizing the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Grant's hands-on inspection found that D-18 can be refurbished by replacing two worn guide inserts, with exactly 10 hours of line downtime; he has not entered the finding in the work-order system because he was waiting for stores to confirm the inserts were available."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena's review of the customer's tooling note confirmed that a refurbished D-18 requires a 40-piece first article and dimensional inspection of the first 200 production pieces before release; she completed the review this morning but has not updated the quality plan because document control has not yet posted the note."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "die_plan": "string",
+      "downtime_hours": "integer",
+      "first_article_pieces": "integer",
+      "full_inspection_pieces": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "D-18 must be refurbished rather than replaced.",
+    "The refurbishment plan must reserve exactly 10 hours of line downtime.",
+    "The plan must require a 40-piece first article.",
+    "The plan must require dimensional inspection of exactly the first 200 production pieces.",
+    "A tooling-refurbishment work order must be committed.",
+    "A first-article and dimensional-inspection commitment must be logged.",
+    "The customer tooling requirement must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['die_plan'] == 'refurbish'",
+    "C2": "decisions['downtime_hours'] == 10",
+    "C3": "decisions['first_article_pieces'] == 40",
+    "C4": "decisions['full_inspection_pieces'] == 200",
+    "C5": "any(c['type'] == 'tooling_refurbishment_work_order' for c in commitments)",
+    "C6": "any(c['type'] == 'first_article_and_dimensional_inspection' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5"
+      ],
+      "why": "The inspection establishes that refurbishment is technically viable and takes exactly 10 hours, changing the plan from obtaining a replacement to authorizing refurbishment with a tooling work order."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "The customer tooling note changes the release plan to a 40-piece first article and dimensional inspection of exactly the first 200 production pieces, and requires those checks to be committed and cited."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

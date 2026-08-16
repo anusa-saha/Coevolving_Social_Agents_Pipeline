@@ -1,0 +1,148 @@
+{
+  "scenario_id": "scenario_25",
+  "scenario_type": "coating_campaign_authorization",
+  "description": "An operations director must decide whether to authorize a weekend coating campaign in a shared paint booth and finalize the maintenance, emissions-testing, and staffing controls, with input from a maintenance lead and an environmental compliance specialist.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jon",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Environmental Compliance Specialist"
+    }
+  ],
+  "shared_context": {
+    "S1": "The plant has a backlog of coated brackets, and the shared paint booth is available for a proposed weekend campaign.",
+    "S2": "The operations director has authority to authorize the campaign and set its operating controls.",
+    "S3": "The booth normally runs weekday campaigns, and weekend work requires a documented operating plan before the first shift begins.",
+    "S4": "Plant policy requires maintenance and environmental compliance sign-off on every weekend paint-booth operating plan before the first shift begins.",
+    "S5": "The current staffing roster shows that two certified coating operators are assigned and available for the proposed weekend campaign.",
+    "S6": "As part of the standard planning meeting, the maintenance lead and environmental compliance specialist each present their current inspection or review finding using the plant's formal issue-recording step before the operating director settles the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jon's inspection this morning measured the booth exhaust filter differential pressure at 2.4 kPa, above the 1.5 kPa maintenance limit; the replacement filter is in stores and takes exactly 4 hours to install, but he has not entered the reading in the maintenance system yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's permit review confirmed that this booth may operate for exactly 16 hours during the weekend campaign, but only after a VOC capture test records at least 95 percent capture and two currently certified coating operators are assigned; she completed the review yesterday but the updated permit note has not yet been attached to the campaign file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "campaign_authorized": "boolean",
+      "operating_hours": "integer",
+      "filter_replaced_before_campaign": "boolean",
+      "maintenance_downtime_hours": "integer",
+      "voc_capture_test_percent": "integer",
+      "certified_operator_count": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The campaign must be authorized only subject to completion of the required maintenance and environmental prerequisites.",
+    "The campaign must be limited to exactly 16 operating hours.",
+    "The exhaust filter must be replaced before the campaign with exactly 4 hours of maintenance downtime.",
+    "A VOC capture test must record at least 95 percent capture before operation.",
+    "Exactly two certified coating operators must be assigned.",
+    "The maintenance replacement must be recorded as a maintenance commitment.",
+    "The VOC capture test and permit requirements must be recorded as an environmental compliance commitment.",
+    "The permit review finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['campaign_authorized'] == True",
+    "C2": "decisions['operating_hours'] == 16",
+    "C3": "decisions['filter_replaced_before_campaign'] == True and decisions['maintenance_downtime_hours'] == 4",
+    "C4": "decisions['voc_capture_test_percent'] >= 95",
+    "C5": "decisions['certified_operator_count'] == 2",
+    "C6": "any((c['type'] == 'maintenance' or c['type'] == 'maintenance_action' or c['type'] == 'maintenance_sign_off') and c['target'] == 'Jon' for c in commitments) and decisions['maintenance_downtime_hours'] == 4",
+    "C7": "any((c['type'] == 'environmental_compliance' or c['type'] == 'environmental_action' or c['type'] == 'environmental_compliance_sign_off' or c['type'] == 'sign_off') and c['target'] == 'Priya' for c in commitments) and 'PF2' in justification_fact_ids"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The 2.4 kPa reading above the 1.5 kPa limit changes the plan from ordinary operation to filter replacement before the campaign with exactly 4 hours of maintenance downtime and a maintenance commitment assigned to Jon."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2",
+        "C4",
+        "C5",
+        "C7",
+        "P1"
+      ],
+      "why": "The permit review changes the campaign to a conditional authorization capped at exactly 16 hours, requires at least 95 percent VOC capture and exactly two certified operators, and requires an environmental compliance commitment citing the permit finding."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

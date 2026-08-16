@@ -1,0 +1,161 @@
+{
+  "scenario_id": "scenario_36",
+  "scenario_type": "maintenance_downtime_scheduling",
+  "description": "A maintenance manager must schedule the next outage of Boiler 2 and finalize the inspection, repair, backup, and production-readiness plan for the curing ovens, with input from compliance, reliability engineering, and production scheduling.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Maintenance Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Compliance Specialist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Caleb",
+      "role": "Production Scheduler"
+    }
+  ],
+  "shared_context": {
+    "S1": "Boiler 2 supplies steam to the plant's curing ovens, and Boiler 1 is available as a backup source.",
+    "S2": "The standard Boiler 2 maintenance window is Sunday night from 22:00 onward, but an earlier outage can be scheduled when necessary.",
+    "S3": "The maintenance schedule for the coming weekend has not yet been finalized.",
+    "S4": "Before the schedule is locked, the maintenance manager conducts the routine readiness review with compliance, reliability engineering, and production scheduling."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The pressure-vessel certificate for Boiler 2 expires at 23:59 on Saturday, and the applicable compliance rule requires the vessel to be inspected before it operates after that time; Jonas confirmed the expiry and rule in the compliance register this morning, but the register update has not yet reached maintenance scheduling."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The Boiler 2 actuator is showing a failure pattern that requires replacement, and the service contractor has confirmed a Saturday 06:00 slot requiring exactly 10 hours for replacement, pressure testing, and restart checks; Priya received the confirmation yesterday, but the maintenance work order has not been opened."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "A customer curing campaign requires exactly 1,200 units to be completed on Sunday, and production can meet that commitment during the Boiler 2 outage only by commissioning Boiler 1 as the backup steam source; Caleb confirmed the order requirement in the production plan, but the contingency assignment is not yet recorded."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A4",
+      "A1"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "outage_day": "string",
+      "outage_start": "string",
+      "outage_duration_hours": "integer",
+      "inspection_before_restart": "boolean",
+      "backup_boiler_commissioned": "boolean",
+      "sunday_production_commitment_units": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Boiler 2's outage must begin on Saturday at 06:00.",
+    "The outage must be scheduled for exactly 10 hours.",
+    "The pressure-vessel inspection must occur before Boiler 2 restarts.",
+    "Boiler 1 must be commissioned as the backup steam source.",
+    "The Sunday production commitment must be exactly 1,200 units.",
+    "The actuator replacement, pressure test, and restart checks must be recorded as a maintenance commitment.",
+    "The certificate-expiry finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['outage_day'] == 'Saturday' and decisions['outage_start'] == '06:00'",
+    "C2": "decisions['outage_duration_hours'] == 10",
+    "C3": "decisions['inspection_before_restart'] == True",
+    "C4": "decisions['backup_boiler_commissioned'] == True",
+    "C5": "decisions['sunday_production_commitment_units'] == 1200",
+    "C6": "any(c['type'] == 'actuator_replacement_and_pressure_test' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "P1"
+      ],
+      "why": "The exact Saturday 23:59 certificate expiry changes the restart plan from ordinary maintenance to a required pressure-vessel inspection before Boiler 2 can operate again."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2",
+        "C6"
+      ],
+      "why": "The contractor's Saturday 06:00 slot and exact 10-hour actuator replacement and pressure-test duration change the outage to a Saturday 06:00 start and require the specific maintenance commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The exact Sunday requirement for 1,200 units changes the contingency plan from leaving Boiler 1 idle to commissioning it as backup steam capacity for that production commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

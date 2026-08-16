@@ -1,0 +1,171 @@
+{
+  "scenario_id": "scenario_31",
+  "scenario_type": "incoming_material_release",
+  "description": "A supply chain director must decide whether to release an arriving 600-kilogram shipment of battery-grade graphite powder for production and finalize its receiving, customs, and combustible-dust storage controls, with input from quality, logistics, and environmental health and safety.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Supply Chain Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Eli",
+      "role": "Quality Specialist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nora",
+      "role": "Logistics Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Victor",
+      "role": "Environmental Health and Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "A 600-kilogram shipment of battery-grade graphite powder arrived at the plant this morning and is staged at receiving.",
+    "S2": "The graphite is needed for a scheduled electrode-compounding run later this week.",
+    "S3": "The shipment's supplier, product description, and quantity match the purchase order.",
+    "S4": "Plant receiving policy requires quality, logistics, and environmental health and safety to document current release requirements and completion status before any disposition is recorded.",
+    "S5": "A conditional release authorizes the full shipment subject to documented follow-up commitments, while a hold means no quantity is released.",
+    "S6": "The receiving workflow uses a formal release-report entry for each specialist's finding during the routine check-in, and the final disposition records the fact identifiers cited by the director."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Eli's receiving sample test found moisture at 0.14%, below the internal maximum of 0.20%; the graphite release procedure requires samples from exactly 3 locations in the shipment, and he completed that check this morning but has not yet entered it in the electronic lot record."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nora's carrier call confirmed that the container seal number differs from the number on the shipping notice; customs allows conditional release only if the discrepancy is documented in a receiving exception record, which she confirmed with the broker this morning but has not yet filed."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Victor's combustible-dust review requires this graphite to be moved into grounded metal bins with lids before production use; the ordinary raw-material rack is not approved for this powder, and he completed the review this morning but has not yet posted the storage instruction."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "release_status": "string; use 'conditional_release' for a conditional release or 'hold' for a hold",
+      "released_quantity_kg": "integer",
+      "receiving_sample_locations": "integer",
+      "maximum_moisture_percent": "number",
+      "storage_container": "string; use 'grounded metal bins with lids' or 'grounded_metal_bins_with_lids'"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The shipment must receive conditional release for production.",
+    "Exactly 600 kilograms must be released.",
+    "Receiving must use samples from exactly 3 locations.",
+    "The maximum accepted moisture must be set at exactly 0.20 percent.",
+    "The graphite must be stored in grounded metal bins with lids.",
+    "A receiving exception record for the seal discrepancy must be committed.",
+    "The quality test finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions.get('release_status') in ['conditional_release', 'conditional release']",
+    "C2": "decisions.get('released_quantity_kg') == 600",
+    "C3": "decisions.get('receiving_sample_locations') == 3",
+    "C4": "decisions.get('maximum_moisture_percent') == 0.20",
+    "C5": "decisions.get('storage_container') in ['grounded metal bins with lids', 'grounded_metal_bins_with_lids'] or any('grounded metal bins with lids' in c.get('detail', '') or 'grounded_metal_bins_with_lids' in c.get('detail', '') for c in commitments)",
+    "C6": "any(c.get('type') in ['receiving_exception', 'receiving_exception_record', 'customs_exception', 'documentation'] and ('receiving exception' in c.get('detail', '') or 'seal' in c.get('detail')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The exact 0.14 percent moisture result supports releasing all 600 kilograms, while the procedure changes the required sampling count to exactly 3 locations and the applicable maximum to exactly 0.20 percent."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C6"
+      ],
+      "why": "The seal-number discrepancy changes the disposition from an ordinary release path to conditional_release and adds the specific receiving-exception commitment required by customs."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5"
+      ],
+      "why": "The combustible-dust review changes the storage assignment from the ordinary raw-material rack to grounded metal bins with lids before production use."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}
