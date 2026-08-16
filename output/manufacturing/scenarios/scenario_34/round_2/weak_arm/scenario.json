@@ -1,0 +1,165 @@
+{
+  "scenario_id": "scenario_34",
+  "scenario_type": "safety_incident_response",
+  "description": "A plant safety officer must decide whether to reopen a battery-charging room after a smoke alarm and finalize the room's repair, ventilation, monitoring, and charging plan, with input from facilities engineering, production supervision, and environmental compliance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Plant Safety Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Facilities Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Marta",
+      "role": "Production Supervisor"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonas",
+      "role": "Environmental Compliance Specialist"
+    }
+  ],
+  "shared_context": {
+    "S1": "The battery-charging room was closed after its smoke alarm sounded during the afternoon charging cycle.",
+    "S2": "The room is needed for the next production shift's battery charging, and the visible smoke has cleared.",
+    "S3": "Elena, the plant safety officer, has authority to decide whether the room can reopen and under what conditions.",
+    "S4": "As part of the plant's incident-response routine, Elena conducts a pre-reopening check with facilities, production supervision, and environmental compliance before issuing the decision and records each required control in the reopening plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi inspected the room after the alarm and found that the sprinkler isolation valve had been left closed during a prior pipe repair; facilities procedure requires reopening the valve and completing a pressure test before the room can be used, and he has not entered the repair closeout yet because the inspection occurred during the active incident response."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Marta's next-shift production schedule requires exactly 12 battery packs to be charged, and exactly one certified charging attendant is available for that shift; she confirmed the roster with production control this afternoon but has not revised the charging-room work order."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jonas's post-alarm air test measured hydrogen at 1.2%, above the 1.0% room limit; his compliance procedure requires a 45-minute ventilation purge followed by continuous hydrogen monitoring before charging resumes, and he is waiting for the incident review meeting to record the result."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "reopening_status": "string",
+      "reopen_only_after_controls": "boolean",
+      "sprinkler_valve_reopening_committed": "boolean",
+      "pressure_test_committed": "boolean",
+      "repair_closeout_committed": "boolean",
+      "ventilation_purge_minutes": "integer",
+      "continuous_hydrogen_monitoring": "boolean",
+      "environmental_incident_record_committed": "boolean",
+      "battery_packs_authorized": "integer",
+      "certified_attendant_count": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The room must have conditional reopening status and may reopen only after all specified controls are completed.",
+    "The sprinkler isolation valve reopening and pressure test must be committed before use.",
+    "A facilities repair closeout must be committed.",
+    "The room must receive a 45-minute ventilation purge and continuous hydrogen monitoring before charging.",
+    "An environmental incident record must be committed.",
+    "Exactly 12 battery packs must be authorized with exactly one certified charging attendant.",
+    "The hydrogen test finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['reopening_status'] == 'conditional' and decisions['reopen_only_after_controls'] == True",
+    "C2": "decisions['sprinkler_valve_reopening_committed'] == True and decisions['pressure_test_committed'] == True",
+    "C3": "decisions['ventilation_purge_minutes'] == 45 and decisions['continuous_hydrogen_monitoring'] == True",
+    "C4": "decisions['battery_packs_authorized'] == 12 and decisions['certified_attendant_count'] == 1",
+    "C5": "decisions['repair_closeout_committed'] == True",
+    "C6": "decisions['environmental_incident_record_committed'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5"
+      ],
+      "why": "The closed sprinkler valve and required pressure test change the plan to commit to reopening and testing the valve, while the unentered repair closeout changes the plan to include a facilities closeout."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The exact next-shift requirement of 12 battery packs and availability of exactly one certified attendant change the authorized charging quantity and staffing assignment to 12 and 1."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The measured hydrogen level of 1.2% changes the reopening plan to conditional status with a 45-minute purge and continuous monitoring and requires an environmental incident record and citation."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

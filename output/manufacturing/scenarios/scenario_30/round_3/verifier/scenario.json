@@ -1,0 +1,143 @@
+{
+  "scenario_id": "scenario_30",
+  "scenario_type": "automated_packaging_authorization",
+  "description": "A plant manager must authorize a weekend packaging run on a newly installed robotic palletizer and finalize the changeover, barcode verification, and reject-handling controls, with input from maintenance and quality.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Plant Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Quality Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The plant plans to package 900 finished cartons on Line 6 during the weekend shift.",
+    "S2": "Line 6's newly installed robotic palletizer is available for the run, and manual palletizing remains the fallback.",
+    "S3": "The weekend plan favors the robotic palletizer because it reduces labor and keeps the packaging area within its normal staffing level.",
+    "S4": "Before Maya authorizes the run, the standard pre-run meeting includes a maintenance review and a quality review of the operating controls.",
+    "S5": "The robotic palletizer's current validated programming already supports integrated barcode scanning and sorting cartons into the required family groups, so those functions do not require a separate controls integration or capability review for this run."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas's commissioning check found that the 900-carton order contains three carton sizes, so the robotic palletizer requires two programmed gripper changeovers and a total of exactly 90 minutes of pre-run setup; he has not entered this in the maintenance work order because the commissioning packet is still awaiting his supervisor's signature."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya confirmed in the customer's pilot-packaging instruction that all 900 cartons must receive a barcode scan and be palletized into exactly three family groups: 300 cartons of Family X, 280 cartons of Family Y, and 320 cartons of Family Z; she has not uploaded the instruction to the quality system because the customer service team is still linking the purchase-order revision."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A1"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "palletizing_mode": "string",
+      "pre_run_setup_minutes": "integer",
+      "gripper_changeover_count": "integer",
+      "barcode_scan_percent": "integer",
+      "carton_family_counts": {
+        "Family X": "integer",
+        "Family Y": "integer",
+        "Family Z": "integer"
+      },
+      "manual_fallback_for_rejects": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The robotic palletizer must be used for the run.",
+    "The plan must include exactly 90 minutes of pre-run setup.",
+    "The plan must include exactly two programmed gripper changeovers.",
+    "All 900 cartons must receive barcode scanning.",
+    "The cartons must be assigned to the three exact customer family counts.",
+    "Manual handling must be available for rejected cartons.",
+    "The customer family-count instruction must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['palletizing_mode'] == 'robotic'",
+    "C2": "decisions['pre_run_setup_minutes'] == 90",
+    "C3": "decisions['gripper_changeover_count'] == 2",
+    "C4": "decisions['barcode_scan_percent'] == 100",
+    "C5": "decisions['carton_family_counts'] == {'Family X': 300, 'Family Y': 280, 'Family Z': 320}",
+    "C6": "decisions['manual_fallback_for_rejects'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3"
+      ],
+      "why": "The three carton sizes change the robotic plan to exactly 90 minutes of pre-run setup and exactly two programmed gripper changeovers."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "P1"
+      ],
+      "why": "The customer instruction changes verification to 100% scanning and changes the pallet plan to exactly 300 Family X, 280 Family Y, and 320 Family Z cartons, while requiring that instruction to be cited."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

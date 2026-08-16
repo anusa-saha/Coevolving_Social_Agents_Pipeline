@@ -1,0 +1,170 @@
+{
+  "scenario_id": "scenario_5",
+  "status": "accepted",
+  "rounds_taken": 6,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 0,
+    "weak_arm": 0,
+    "strong_arm": 5
+  },
+  "scenario": {
+    "scenario_id": "scenario_5",
+    "scenario_type": "safety_incident_response",
+    "description": "A safety officer must decide whether to reopen a forklift battery-charging bay after a hydrogen alarm and establish the overnight charging controls, with input from facilities maintenance and environmental health and safety.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Nora",
+        "role": "Safety Officer"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Eli",
+        "role": "Facilities Maintenance Lead"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Priya",
+        "role": "EHS Specialist"
+      }
+    ],
+    "shared_context": {
+      "S1": "Forklift battery-charging Bay 4 sounded a hydrogen alarm during the afternoon shift.",
+      "S2": "The alarm has reset, there is no visible damage in the bay, and overnight production needs charging capacity for six forklifts.",
+      "S3": "Bay 2 is an available charging area that is normally reserved for maintenance vehicles, and Nora can authorize its temporary use.",
+      "S4": "The site's incident-closeout routine uses a round-robin check: Nora must give the facilities maintenance lead and the EHS specialist each a designated report-entry turn, receive both formal reports, read back the operating plan, and assign follow-up actions before authorizing charging. If a report is not entered on its first turn, Nora gives that person another report-entry turn before the closeout can be completed.",
+      "S5": "For this closeout routine, assigning follow-up actions is sufficient; Nora does not wait for maintenance work orders, incident attachments, repairs, or tests to be completed during the meeting."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "Eli inspected Bay 4 after the alarm and found that its exhaust-fan belt has failed; the replacement belt is on site, but fitting and testing it will take exactly 6 hours. He has not entered the emergency work order yet because the maintenance system was offline during the inspection."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Priya's same-day EHS review found that the alarm was caused by hydrogen accumulation and that Bay 2 is approved for no more than 4 simultaneous forklift chargers; the charging policy requires a 2-hour fire watch and a gas test showing less than 1% hydrogen before any charging resumes. She has not attached the review to the incident record because the shift handover is still open."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF2"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A1",
+        "A2",
+        "A3",
+        "A1",
+        "A2",
+        "A3",
+        "A1"
+      ],
+      "turn_cap": 14
+    },
+    "settlement_schema": {
+      "decisions": {
+        "bay4_charging_allowed": "boolean",
+        "bay4_repair_hours": "integer",
+        "ventilation_test_before_charging": "boolean",
+        "bay2_simultaneous_chargers": "integer",
+        "fire_watch_hours": "integer",
+        "hydrogen_test_requirement": "string",
+        "repair_work_order_logged": "boolean",
+        "ehs_review_recorded": "boolean"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "Bay 4 must remain closed or offline for charging until its failed exhaust fan is repaired and tested.",
+      "The Bay 4 repair must be scheduled for exactly 6 hours.",
+      "A ventilation test must occur before charging resumes.",
+      "Temporary Bay 2 use must be limited to exactly 4 simultaneous forklift chargers.",
+      "A 2-hour fire watch must be assigned before charging resumes.",
+      "The gas-test requirement must be recorded as less than 1% hydrogen.",
+      "The emergency exhaust-fan repair work order must be assigned as a follow-up action or recorded as logged.",
+      "The EHS review must be assigned for recording as a follow-up action or recorded as attached.",
+      "The final plan must cite both the maintenance finding and the EHS finding."
+    ],
+    "content_checks": {
+      "C1": "decisions['bay4_charging_allowed'] == False",
+      "C2": "decisions['bay4_repair_hours'] == 6",
+      "C3": "decisions['ventilation_test_before_charging'] == True",
+      "C4": "decisions['bay2_simultaneous_chargers'] == 4",
+      "C5": "decisions['fire_watch_hours'] == 2",
+      "C6": "'less than 1% hydrogen' in decisions.get('hydrogen_test_requirement', '')",
+      "C7": "decisions['repair_work_order_logged'] == True or any(('work order' in c.get('detail', '')) and ('Eli' in c.get('target', '')) for c in commitments)",
+      "C8": "decisions['ehs_review_recorded'] == True or any(('EHS review' in c.get('detail', '')) and ('Priya' in c.get('target', '')) for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+      "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "C3",
+          "C7",
+          "P1"
+        ],
+        "why": "The failed exhaust-fan belt changes Bay 4 charging from allowed to prohibited, sets the repair duration to exactly 6 hours, requires a ventilation test, and requires Eli's work-order follow-up to be assigned or logged."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C4",
+          "C5",
+          "C6",
+          "C8",
+          "P2"
+        ],
+        "why": "The EHS review changes the temporary plan to exactly 4 Bay 2 chargers, sets a 2-hour fire watch, fixes the gas-test requirement as less than 1% hydrogen, and requires Priya's EHS-review follow-up to be assigned or recorded."
+      }
+    ],
+    "domain": "manufacturing",
+    "requested_num_agents": 3
+  },
+  "timestamp": "2026-08-15T08:40:03.914161+00:00"
+}

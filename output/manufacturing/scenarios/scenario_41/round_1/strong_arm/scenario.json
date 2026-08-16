@@ -1,0 +1,186 @@
+{
+  "scenario_id": "scenario_41",
+  "scenario_type": "heat_treatment_schedule",
+  "description": "A production control manager must finalize the sequence and startup controls for three heat-treatment batches on Furnace 7 during the next production window, with input from maintenance, quality, logistics, and safety.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Production Control Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jon",
+      "role": "Maintenance Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Carlos",
+      "role": "Logistics Coordinator"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Elena",
+      "role": "Process Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Furnace 7 is available for the next production window and is scheduled to process batches R, Q, and P.",
+    "S2": "Maya makes the final production sequence and startup-control decision for Furnace 7.",
+    "S3": "The three batches are all approved for Furnace 7, and production control normally sequences them during the daily cross-functional huddle.",
+    "S4": "At the huddle, Maya records the proposed sequence and obtains a sign-off from maintenance, quality, logistics, and process safety before releasing the furnace schedule."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jon's maintenance inspection found that Furnace 7's thermocouple calibration certificate expires before this production window; the required recalibration takes exactly 2 hours, but he has not updated the maintenance board because the inspection was completed after the morning planning cutoff."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya confirmed from the customer control plan that batch Q requires exactly 15 first-piece hardness tests to be completed and held for review before the batch is released; the control plan was revised yesterday and has not yet been attached to the production traveler."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Carlos found that the staged alloy charge for batch R will oxidize if it remains at the furnace bay for more than 4 hours, so R must run first in this window; he learned this from the material supplier's handling note received this morning and has not entered it into the scheduling system."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Elena's pre-window safety check found that Furnace 7's installed gas analyzer failed its bump test; safety procedure requires replacing it with the available spare before any heat-treatment run, and she has not filed the check record because the inspection is still awaiting electronic sign-off."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "furnace_sequence": "string",
+      "recalibration_required": "boolean",
+      "recalibration_hours": "integer",
+      "batch_q_first_piece_tests": "integer",
+      "gas_analyzer_replaced": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Batch R must run before batches Q and P.",
+    "Furnace 7 must be recalibrated before the production window.",
+    "The recalibration must be scheduled for exactly 2 hours.",
+    "Exactly 15 first-piece hardness tests must be required for batch Q.",
+    "The failed gas analyzer must be replaced before any heat-treatment run.",
+    "The schedule must include a commitment to perform the recalibration.",
+    "The schedule must include a commitment to replace the gas analyzer."
+  ],
+  "content_checks": {
+    "C1": "decisions['furnace_sequence'] == 'R-Q-P'",
+    "C2": "decisions['recalibration_required'] == True",
+    "C3": "decisions['recalibration_hours'] == 2",
+    "C4": "decisions['batch_q_first_piece_tests'] == 15",
+    "C5": "decisions['gas_analyzer_replaced'] == True",
+    "C6": "any(c['type'] == 'furnace_recalibration' for c in commitments)",
+    "C7": "any(c['type'] == 'gas_analyzer_replacement' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C6"
+      ],
+      "why": "The expired thermocouple certificate changes the startup plan from ordinary production to a required recalibration lasting exactly 2 hours and requiring a recalibration commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The revised customer control plan changes batch Q's first-piece requirement from the unspecified routine check to exactly 15 hardness tests."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The four-hour oxidation limit changes the sequence to R-Q-P, and only this fact explains why batch R must be scheduled first."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C5",
+        "C7"
+      ],
+      "why": "The failed bump test changes the startup equipment decision from using the installed analyzer to replacing it with the spare and recording that replacement commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 5
+}

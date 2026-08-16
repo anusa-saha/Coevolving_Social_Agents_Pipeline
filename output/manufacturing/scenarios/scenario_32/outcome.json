@@ -1,0 +1,180 @@
+{
+  "scenario_id": "scenario_32",
+  "status": "accepted",
+  "rounds_taken": 4,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 1,
+    "weak_arm": 0,
+    "strong_arm": 2
+  },
+  "scenario": {
+    "scenario_id": "scenario_32",
+    "scenario_type": "maintenance_changeover_scheduling",
+    "description": "An operations director must decide whether to authorize a controller-firmware retrofit on Welding Cell 5 before its next production run and finalize the downtime, production recovery, and post-change quality controls, with input from controls engineering, production planning, and quality.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Elena",
+        "role": "Operations Director"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Ravi",
+        "role": "Controls Engineer"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Marta",
+        "role": "Production Planner"
+      },
+      {
+        "agent_id": "A4",
+        "name": "Jonah",
+        "role": "Quality Engineer"
+      }
+    ],
+    "shared_context": {
+      "S1": "Welding Cell 5 uses a controller firmware version that will reach the end of vendor support this month.",
+      "S2": "A firmware retrofit for Welding Cell 5 is tentatively scheduled for Friday before the cell's next production run.",
+      "S3": "The Friday customer order requires 240 finished assemblies from the Welding Cell 5 production family.",
+      "S4": "At the Friday 08:00 change-control huddle, Elena asks controls engineering, production planning, and quality to report any relevant requirements before authorizing the work.",
+      "S5": "The huddle decision record covers authorization, fixed retrofit duration, capacity allocation, and post-change inspection actions; Elena closes the huddle after each function reports its requirements and records the follow-up actions."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "Ravi confirmed with the controller vendor yesterday that a safety bulletin identifies an interlock race in the current firmware; the retrofit must be completed before Welding Cell 5's next production run, and the work requires exactly 6 hours of energized lockout and post-update safety-I/O validation. The vendor bulletin has not yet been attached to the work order."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Marta's production-capacity check shows that alternate Welding Cell 4 can produce exactly 160 of the 240 assemblies by Friday 16:00; the remaining exactly 80 assemblies must be produced on Cell 5 after the retrofit, and the Cell 4 reservation expires Thursday at noon. She has not entered the temporary reservation in the production system."
+      },
+      "PF3": {
+        "owner": "A4",
+        "text": "Jonah verified in the customer's quality portal that exactly the first 20 assemblies made after a controller change must be held for weld-macro and dimensional validation before release. The customer requirement has not yet been copied into the local inspection plan."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF2"
+      ],
+      "A4": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "PF3"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A4"
+      ],
+      "turn_cap": 14
+    },
+    "settlement_schema": {
+      "decisions": {
+        "retrofit_authorized": "boolean",
+        "lockout_downtime_hours": "integer",
+        "alternate_cell_4_units": "integer",
+        "cell_5_post_retrofit_units": "integer",
+        "post_change_validation_hold_units": "integer"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ],
+      "commitment_guidance": "For the post-change quality requirement, use a commitment with target 'quality' and type 'quality', 'documentation', or 'execution', with detail stating that the inspection plan will be updated or that the first 20 post-retrofit assemblies will be held or quarantined for weld-macro and dimensional validation."
+    },
+    "acceptance_conditions": [
+      "The firmware retrofit must be authorized before the next Welding Cell 5 production run.",
+      "The retrofit plan must reserve exactly 6 hours for energized lockout and post-update safety-I/O validation.",
+      "Exactly 160 assemblies must be assigned to alternate Welding Cell 4.",
+      "Exactly 80 assemblies must be assigned to Welding Cell 5 after the retrofit.",
+      "Exactly the first 20 post-retrofit assemblies must be held for weld-macro and dimensional validation before release.",
+      "A safety-I/O or retrofit documentation commitment and a post-change quality-validation commitment must be recorded.",
+      "The vendor safety bulletin must be cited as justification."
+    ],
+    "content_checks": {
+      "C1": "decisions['retrofit_authorized'] == True",
+      "C2": "decisions['lockout_downtime_hours'] == 6",
+      "C3": "decisions['alternate_cell_4_units'] == 160",
+      "C4": "decisions['cell_5_post_retrofit_units'] == 80",
+      "C5": "decisions['post_change_validation_hold_units'] == 20",
+      "C6": "any(c['type'] in ['documentation', 'safety_io_validation', 'schedule'] for c in commitments)",
+      "C7": "decisions['post_change_validation_hold_units'] == 20 and any(c['target'] == 'quality' and c['type'] in ['quality', 'documentation', 'execution'] for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "C6",
+          "P1"
+        ],
+        "why": "The safety bulletin changes authorization from a discretionary support upgrade to a required pre-run retrofit, sets the lockout and validation duration at exactly 6 hours, and requires a retrofit-related documentation or execution commitment."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C3",
+          "C4"
+        ],
+        "why": "The capacity check changes the recovery allocation to exactly 160 assemblies on Cell 4 and exactly 80 assemblies on Cell 5 after the retrofit."
+      },
+      {
+        "fact_id": "PF3",
+        "owner": "A4",
+        "flips": [
+          "C5",
+          "C7"
+        ],
+        "why": "The customer portal requirement changes the release plan to a hold of exactly the first 20 post-change assemblies and requires a quality-targeted commitment to update the inspection plan or hold those assemblies for validation."
+      }
+    ],
+    "domain": "manufacturing",
+    "requested_num_agents": 4
+  },
+  "timestamp": "2026-08-15T15:13:33.215438+00:00"
+}

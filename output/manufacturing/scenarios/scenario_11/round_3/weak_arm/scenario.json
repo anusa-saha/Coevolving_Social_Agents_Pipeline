@@ -1,0 +1,161 @@
+{
+  "scenario_id": "scenario_11",
+  "scenario_type": "night_shift_authorization",
+  "description": "An operations director must decide whether to authorize an overnight run of a newly installed automated inspection cell and finalize its staffing, validation, and pre-start maintenance controls, with input from training supervision, quality engineering, and electrical maintenance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jon",
+      "role": "Training and Shift Supervisor"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Victor",
+      "role": "Electrical Maintenance Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The new automated inspection cell is installed on Line 8, and an overnight customer order is scheduled to run through it.",
+    "S2": "The cell completed a short daytime pilot without an interruption.",
+    "S3": "Maya makes the binding decision on whether the overnight run proceeds and what controls are placed on it.",
+    "S4": "The plant's pre-shift readiness meeting routinely includes training supervision, quality engineering, and electrical maintenance, and Maya asks each function for relevant readiness items before authorizing a new-cell run."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jon's roster check found that only one of tonight's three scheduled operators holds the current automated-cell certification; plant policy requires two certified operators, and a certified day-shift operator is available to cover the second position. Jon confirmed the credentials in the training system this afternoon, but the overnight roster has not been updated because the system synchronization is still pending."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena's review of the customer's release protocol found that the first 50 consecutive inspected parts must pass validation and that the cell's measurement-system check must be completed before any overnight production is released. She received the protocol from the customer quality portal this morning, but it has not yet been added to the cell's local startup checklist."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Victor's pre-shift thermal scan found a loose terminal in the cell's control cabinet. The terminal must be repaired before operation, and the repair will take exactly 90 minutes; Victor recorded the finding in his maintenance notebook, but the electronic work order has not yet been opened."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "night_run_authorized": "boolean",
+      "certified_operators_assigned": "integer",
+      "startup_validation_sample": "integer",
+      "prestart_repair_minutes": "integer",
+      "measurement_system_check_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The overnight run must be authorized.",
+    "Exactly two certified operators must be assigned.",
+    "The startup validation must cover exactly 50 consecutive parts.",
+    "The measurement-system check must be required before release.",
+    "The loose terminal repair must be scheduled for exactly 90 minutes before operation.",
+    "A maintenance work order for the terminal repair must be recorded.",
+    "The customer release protocol must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['night_run_authorized'] == True",
+    "C2": "decisions['certified_operators_assigned'] == 2",
+    "C3": "decisions['startup_validation_sample'] == 50",
+    "C4": "decisions['measurement_system_check_required'] == True",
+    "C5": "decisions['prestart_repair_minutes'] == 90",
+    "C6": "any(c['type'] in ['maintenance', 'maintenance_repair', 'repair', 'work_order', 'terminal_repair_work_order', 'prerequisite'] or 'maintenance' in c['type'] or 'repair' in c['type'] or 'work_order' in c['type'] for c in commitments)",
+    "C7": "any(c['type'] in ['staffing', 'prerequisite'] or 'staff' in c['type'] or 'operator' in c['type'] or 'assignment' in c['type'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in revealed and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C7"
+      ],
+      "why": "The roster changes the operator assignment from the scheduled one certified operator to exactly two certified operators and requires a certified day-shift substitution commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The customer protocol changes startup validation to exactly 50 consecutive parts, makes the measurement-system check mandatory, and supplies the fact that must be cited in the justification."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The thermal scan changes the pre-start plan to an exact 90-minute terminal repair and requires creation of a terminal-repair work-order commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

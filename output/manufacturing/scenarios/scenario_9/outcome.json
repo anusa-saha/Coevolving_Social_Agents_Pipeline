@@ -1,0 +1,171 @@
+{
+  "scenario_id": "scenario_9",
+  "status": "accepted",
+  "rounds_taken": 2,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 0,
+    "weak_arm": 0,
+    "strong_arm": 1
+  },
+  "scenario": {
+    "scenario_id": "scenario_9",
+    "scenario_type": "batch_disposition_and_rework",
+    "description": "A quality director must decide how to disposition a held batch of precision castings after an abnormal cooling event and finalize the repair, inspection, and machining plan, with input from metrology, maintenance, and production control.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Elena",
+        "role": "Quality Director"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Ravi",
+        "role": "Metrology Engineer"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Jo",
+        "role": "Maintenance Supervisor"
+      },
+      {
+        "agent_id": "A4",
+        "name": "Marta",
+        "role": "Production Control Planner"
+      }
+    ],
+    "shared_context": {
+      "S1": "A batch of 480 precision castings from Cell 7 is on quality hold after an abnormal cooling event during yesterday's run.",
+      "S2": "The initial visual inspection found no visible cracks, and the castings have not yet been released to machining.",
+      "S3": "Cell 7's cooling system can be repaired during a planned production pause, and the machining department is waiting for the disposition.",
+      "S4": "Elena makes the final batch disposition, and the normal pre-disposition review includes a check with metrology, maintenance, and production control."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "Ravi completed a dimensional review of all 480 castings: 312 meet the flatness limit of 0.30 mm or less, while 168 measure above 0.30 mm and must be reworked before release. He finished the measurement report this morning, but it is still in the metrology report queue and has not reached Elena."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Jo's inspection found that the Cell 7 cooling-fan belt is damaged and must be replaced before another production run; the replacement takes exactly 2 hours. Jo confirmed the repair duration with the maintenance technician this morning, but the work order has not yet been entered."
+      },
+      "PF3": {
+        "owner": "A4",
+        "text": "Marta checked the machining schedule and confirmed that the 312 conforming castings can start machining at exactly Thursday 14:00; the 168 nonconforming castings must remain out of that machining slot. She received the scheduler's confirmation today, but has not updated the production plan."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF2"
+      ],
+      "A4": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF3"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A4"
+      ],
+      "turn_cap": 14
+    },
+    "settlement_schema": {
+      "decisions": {
+        "released_quantity": "integer",
+        "rework_quantity": "integer",
+        "cell_7_fan_belt_replaced": "boolean",
+        "cell_7_pause_hours": "integer",
+        "machining_start": "string"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "Exactly 312 castings must be released to machining.",
+      "Exactly 168 castings must be assigned to rework.",
+      "The Cell 7 cooling-fan belt must be replaced before another production run.",
+      "The Cell 7 production pause must be exactly 2 hours.",
+      "Machining for the conforming castings must start at exactly Thursday 14:00.",
+      "A commitment must explicitly record that the 168 nonconforming castings are held, excluded, or kept out of the machining release."
+    ],
+    "content_checks": {
+      "C1": "decisions['released_quantity'] == 312",
+      "C2": "decisions['rework_quantity'] == 168",
+      "C3": "decisions['cell_7_fan_belt_replaced'] == True",
+      "C4": "decisions['cell_7_pause_hours'] == 2",
+      "C5": "decisions['machining_start'] == 'Thursday 14:00'",
+      "C6": "any(('168 nonconforming castings' in c['detail'] or '168 nonconforming' in c['detail']) and ('held' in c['detail'] or 'hold' in c['detail'] or 'excluded' in c['detail'] or 'excluding' in c['detail'] or 'out of' in c['detail']) for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "P1"
+        ],
+        "why": "The all-part metrology result changes the disposition from an unspecified batch release or hold to exactly 312 castings released and exactly 168 castings assigned to rework."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C3",
+          "C4"
+        ],
+        "why": "The damaged belt and confirmed repair duration change the Cell 7 plan to require belt replacement and an exact 2-hour production pause."
+      },
+      {
+        "fact_id": "PF3",
+        "owner": "A4",
+        "flips": [
+          "C5",
+          "C6"
+        ],
+        "why": "The scheduler's confirmation changes the machining plan to a Thursday 14:00 start for only the 312 conforming castings and requires the 168 nonconforming castings to be explicitly held out of machining."
+      }
+    ],
+    "domain": "manufacturing",
+    "requested_num_agents": 4
+  },
+  "timestamp": "2026-08-15T09:10:18.602978+00:00"
+}
