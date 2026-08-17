@@ -1,0 +1,166 @@
+{
+  "scenario_id": "scenario_1",
+  "scenario_type": "venue_safety_capacity_decision",
+  "description": "A venue operations director must approve the operating plan for a film festival premiere, including the venue, audience capacity, insurance filing, and post-screening guest appearance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Venue Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonah",
+      "role": "Production Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Leila",
+      "role": "Insurance Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Sofia",
+      "role": "Talent Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "The festival's premiere screening is scheduled for Saturday evening at the Riverside Courtyard, with the Harbor Hall available as an alternate venue.",
+    "S2": "The courtyard has been advertised as the premiere location, while Harbor Hall is licensed for festival screenings.",
+    "S3": "Mara has final authority to approve the operating plan and audience admission for the screening.",
+    "S4": "Under the festival's normal pre-opening routine, production, insurance, and talent coordination each give their final relevant status in turn; after those reports are received, Mara records the operating plan and makes the approval without waiting for information outside those departments.",
+    "S5": "The screening is followed by a moderated audience question-and-answer session with the film's lead guest."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonah's production safety check found that the courtyard screen rig is rated for sustained wind up to 18 mph, while the Saturday forecast is 22 mph; Harbor Hall has a certified indoor rig and a maximum audience capacity of 600. Jonah completed the check this morning but has not yet entered the result in the shared production log."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Leila confirmed with the insurer today that the event policy covers the screening only if the certificate of insurance naming the festival and Harbor Hall is filed before doors open; the certificate for the courtyard does not satisfy that endorsement. She received the insurer's written confirmation but has not uploaded it to the venue file."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Sofia confirmed with the lead guest's agent this afternoon that the guest is available for the question-and-answer session only from 7:45 PM to 8:10 PM, so the session must begin at exactly 7:45 PM. The agent's confirmation is still in Sofia's email and has not been added to the festival schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "venue": "string",
+      "audience_admitted": "integer",
+      "insurance_certificate_filed": "boolean",
+      "qa_start_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The premiere must be moved to Harbor Hall.",
+    "Audience admission must be capped at exactly 600 people.",
+    "The Harbor Hall insurance certificate must be filed before doors open.",
+    "The question-and-answer session must begin at exactly 7:45 PM.",
+    "Technical relocation, insurance filing, and guest scheduling commitments must be logged.",
+    "The production safety finding must be cited by the decision-maker."
+  ],
+  "content_checks": {
+    "C1": "decisions['venue'] == 'Harbor Hall'",
+    "C2": "decisions['audience_admitted'] == 600",
+    "C3": "decisions['insurance_certificate_filed'] == True",
+    "C4": "decisions['qa_start_time'] == '7:45 PM'",
+    "C5": "any(c.get('type') in ['technical_relocation', 'venue_change', 'safety_log_entry', 'log_entry'] for c in commitments) and any(c.get('type') in ['insurance_certificate', 'insurance_filing', 'document_filing'] for c in commitments) and any(c.get('type') in ['guest_schedule', 'guest_scheduling', 'scheduling', 'schedule_update'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The 22 mph forecast makes the courtyard rig unsafe and changes the venue to Harbor Hall, whose exact safe audience capacity is 600, while requiring a technical relocation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C5"
+      ],
+      "why": "The insurer's endorsement changes the required filing from a generic venue certificate to a Harbor Hall certificate filed before doors open and requires an insurance commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The lead guest's confirmed 7:45 PM to 8:10 PM window changes the question-and-answer start time to exactly 7:45 PM and requires a guest-scheduling commitment."
+    }
+  ],
+  "domain": "entertainment",
+  "requested_num_agents": 4
+}
