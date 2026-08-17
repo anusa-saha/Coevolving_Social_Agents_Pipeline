@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_11",
+  "scenario_type": "festival_competition_eligibility",
+  "description": "A festival director must finalize whether a submitted film enters the national competition or the panorama program and must lock the exact screening master and catalog status before the program goes to press.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Festival Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonah",
+      "role": "Submissions Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elise",
+      "role": "Technical Screening Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The festival has accepted the film 'Glass Harbor' for consideration in either the national competition or the panorama program.",
+    "S2": "National-competition entries must be national premieres and must run no longer than 90 minutes.",
+    "S3": "Panorama entries do not require a national premiere and may use the festival's approved screening master.",
+    "S4": "The current catalog draft lists 'Glass Harbor' as 94 minutes, with its premiere status still marked for confirmation.",
+    "S5": "Mara makes the final programming and delivery decision, and the festival's routine pre-publication check-in asks submissions and technical screening staff to report any status or master-file issues."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonah checked the national festival database yesterday and confirmed that 'Glass Harbor' already had a public screening at the Coastline Film Week in this country; he recorded the result in his local review notes, but the database export feeding Mara's catalog review has not refreshed."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elise completed ingest quality control this morning and confirmed that the filmmaker's approved festival cut is an 88-minute DCP, not the 94-minute catalog draft; the QC report is waiting in the technical queue and has not yet been attached to the programming record."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "program": "string",
+      "screening_runtime_minutes": "integer",
+      "screening_master": "string",
+      "national_competition_eligible": "boolean",
+      "catalog_premiere_status": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The film must be placed in the panorama program because it is not a national premiere.",
+    "The screening runtime must be set to exactly 88 minutes.",
+    "The approved 88-minute festival DCP must be selected as the screening master.",
+    "The film must be marked not eligible for the national competition.",
+    "A premiere-status catalog update must be logged.",
+    "An ingest-record update for the 88-minute DCP must be logged."
+  ],
+  "content_checks": {
+    "C1": "decisions['program'] == 'Panorama'",
+    "C2": "decisions['screening_runtime_minutes'] == 88",
+    "C3": "decisions['screening_master'] == 'Approved 88-minute festival DCP'",
+    "C4": "decisions['national_competition_eligible'] == False",
+    "C5": "decisions['catalog_premiere_status'] == 'Previously screened nationally'",
+    "C6": "any(c['type'] == 'premiere_status_update' and c['target'] == 'Glass Harbor' for c in commitments)",
+    "C7": "any(c['type'] == 'dcp_ingest_update' and c['target'] == 'Glass Harbor' and c['detail'] == 'Use approved 88-minute festival DCP' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "C5",
+        "C6",
+        "P1"
+      ],
+      "why": "The confirmed Coastline Film Week screening changes the film from a possible national-competition entry to panorama, changes national_competition_eligible to False, and changes the catalog status to 'Previously screened nationally'."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C7"
+      ],
+      "why": "The ingest QC result changes screening_runtime_minutes from the catalog draft's 94 to exactly 88, selects the 'Approved 88-minute festival DCP', and requires the matching ingest-record update."
+    }
+  ],
+  "domain": "entertainment",
+  "requested_num_agents": 3
+}
