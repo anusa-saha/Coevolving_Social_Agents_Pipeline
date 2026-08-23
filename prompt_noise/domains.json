@@ -149,56 +149,56 @@
       },
       {
         "scenario_id": "domain_healthcare_003",
-        "scenario_type": "or_scheduling",
-        "description": "A surgical scheduling director must decide which of two surgeons gets an open Thursday operating-room block, with input from each surgeon's clinic coordinator and the sterile processing manager.",
+        "scenario_type": "oncall_staffing_assignment",
+        "description": "A pharmacy director must finalize this holiday weekend's on-call coverage across three shifts, with input from three staff pharmacists.",
         "agents": [
           {
             "agent_id": "A1",
             "name": "Marcus",
-            "role": "Surgical Scheduling Director"
+            "role": "Pharmacy Director"
           },
           {
             "agent_id": "A2",
             "name": "Elena",
-            "role": "Dr. Reyes's Clinic Coordinator"
+            "role": "Staff Pharmacist"
           },
           {
             "agent_id": "A3",
-            "name": "Tobias",
-            "role": "Dr. Okonkwo's Clinic Coordinator"
+            "name": "Devon",
+            "role": "Staff Pharmacist"
           },
           {
             "agent_id": "A4",
-            "name": "Grace",
-            "role": "Sterile Processing Manager"
+            "name": "Aisha",
+            "role": "Staff Pharmacist"
           }
         ],
         "shared_context": {
-          "S1": "Thursday afternoon has one open 3-hour OR block that has not yet been assigned.",
-          "S2": "Marcus makes the final block assignment.",
-          "S3": "Both Dr. Reyes and Dr. Okonkwo have patients waiting for a similar elective procedure.",
-          "S4": "Before finalizing, Marcus checks in with both clinic coordinators and sterile processing for anything relevant."
+          "S1": "Three on-call shifts need coverage this holiday weekend: Friday night, Saturday day, and Sunday day.",
+          "S2": "Marcus finalizes the on-call schedule.",
+          "S3": "All three pharmacists are equally qualified to cover any of the three shifts.",
+          "S4": "Before finalizing, Marcus checks with each pharmacist for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Dr. Reyes's patient's biopsy came back showing a fast-growing tumor type requiring urgent surgical scheduling; Elena knows the exact guideline window but would only state the specific deadline (surgery within 10 days) if asked directly, rather than volunteering it upfront -- the results landed in her inbox this morning and she hasn't updated the shared schedule yet."
+            "text": "Elena confirmed this week she has a family commitment Friday night she can't move, but she's free Saturday and Sunday."
           },
           "PF2": {
             "owner": "A3",
-            "text": "Dr. Okonkwo already secured a backup Saturday-morning slot at the outpatient surgical center for this same patient earlier this week -- Tobias arranged it directly with the center and it isn't logged in the main scheduling system."
+            "text": "Devon confirmed he's the only one of the three currently certified to handle this weekend's scheduled chemotherapy-mixing requests, which specifically fall on Saturday's shift."
           },
           "PF3": {
-            "owner": "A4",
-            "text": "The specialized instrument tray Dr. Reyes's procedure requires takes 48 hours to sterilize and reprocess, so it must be requested by Tuesday morning to be ready for Thursday -- this lead time only shows up in sterile processing's own tracking log, not the scheduling software."
+            "owner": "A3",
+            "text": "Devon also confirmed that if a chemo-mixing emergency comes in during a different shift, whoever is on call that day needs a specific quick-reference protocol sheet, which isn't part of the standard on-call packet."
           },
           "PF4": {
-            "owner": "A2",
-            "text": "Elena mentioned Dr. Reyes's waiting patient called with a routine question about parking for their upcoming appointment."
+            "owner": "A4",
+            "text": "Aisha mentioned she already worked last holiday weekend's on-call rotation."
           },
           "PF5": {
-            "owner": "A3",
-            "text": "Tobias mentioned Dr. Okonkwo's waiting patient asked a routine question about pre-op fasting instructions this week."
+            "owner": "A4",
+            "text": "Aisha mentioned she'd like to know her assignment as early as possible so she can arrange childcare."
           }
         },
         "views": {
@@ -213,8 +213,7 @@
             "S2",
             "S3",
             "S4",
-            "PF1",
-            "PF4"
+            "PF1"
           ],
           "A3": [
             "S1",
@@ -222,25 +221,27 @@
             "S3",
             "S4",
             "PF2",
-            "PF5"
+            "PF3"
           ],
           "A4": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF3"
+            "PF4",
+            "PF5"
           ]
         },
         "decision_maker": "A1",
         "interaction_config": {
-          "turn_cap": 14
+          "turn_cap": 16
         },
         "settlement_schema": {
           "decisions": {
-            "thursday_block_assigned_to": "string",
-            "instrument_tray_requested_by": "string",
-            "backup_slot_confirmed_for_okonkwo": "boolean"
+            "friday_night_assigned_to": "string",
+            "saturday_day_assigned_to": "string",
+            "sunday_day_assigned_to": "string",
+            "protocol_included_in_packet": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -257,19 +258,20 @@
           ]
         },
         "acceptance_conditions": [
-          "The Thursday block must go to Dr. Reyes, given the 10-day surgical window on the biopsy finding.",
-          "The instrument tray must be requested by Tuesday, given the 48-hour sterilization lead time.",
-          "The existing backup Saturday slot for Dr. Okonkwo's patient must be explicitly confirmed in the plan.",
-          "The biopsy finding must be cited as justification for the block assignment."
+          "Saturday must go to Devon, given his chemo-mixing certification.",
+          "Friday night must go to Aisha, and Sunday to Elena, since Elena cannot cover Friday.",
+          "The quick-reference protocol sheet must be added to the on-call packet.",
+          "A schedule-confirmation commitment must be logged."
         ],
         "content_checks": {
-          "C1": "decisions['thursday_block_assigned_to'] == 'Dr. Reyes'",
-          "C2": "decisions['instrument_tray_requested_by'] == 'Tuesday'",
-          "C3": "decisions['backup_slot_confirmed_for_okonkwo'] == True",
-          "C4": "any(c['type'] == 'instrument_request' and c['target'] == 'Sterile Processing' for c in commitments)"
+          "C1": "decisions['friday_night_assigned_to'] == 'Aisha'",
+          "C2": "decisions['saturday_day_assigned_to'] == 'Devon'",
+          "C3": "decisions['sunday_day_assigned_to'] == 'Elena'",
+          "C4": "decisions['protocol_included_in_packet'] == True",
+          "C5": "any(c['type'] == 'schedule_confirmation' for c in commitments)"
         },
         "provenance_checks": {
-          "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
         },
         "decisive_facts": [
           {
@@ -277,26 +279,28 @@
             "owner": "A2",
             "flips": [
               "C1",
-              "P1"
+              "C3"
             ],
-            "why": "Nothing public favors either surgeon; without the biopsy urgency, a scheduler has no forcing reason to give the block to Dr. Reyes over Dr. Okonkwo."
+            "why": "Elena's own Friday unavailability is one half of why the schedule lands the way it does; combined with Devon's Saturday tie, it's what forces Aisha onto Friday and Elena onto Sunday by elimination."
           },
           {
             "fact_id": "PF2",
             "owner": "A3",
             "flips": [
-              "C3"
+              "C1",
+              "C2",
+              "C3",
+              "P1"
             ],
-            "why": "Without knowing a backup slot already exists, reassigning the block away from Dr. Okonkwo would look like an unaddressed access problem rather than a settled non-issue."
+            "why": "Without knowing Devon is the only one certified for Saturday's chemo-mixing requests, any of the three could plausibly be assigned Saturday, and the elimination that places Aisha on Friday and Elena on Sunday wouldn't hold either."
           },
           {
             "fact_id": "PF3",
-            "owner": "A4",
+            "owner": "A3",
             "flips": [
-              "C2",
               "C4"
             ],
-            "why": "Without knowing the 48-hour sterilization lead time, there's no reason to request the tray specifically by Tuesday or log that request at all -- a generic plan would leave it until closer to Thursday."
+            "why": "Without knowing about the protocol sheet requirement, a generic schedule would leave the standard on-call packet unchanged."
           }
         ]
       },
@@ -616,65 +620,65 @@
       },
       {
         "scenario_id": "domain_healthcare_007",
-        "scenario_type": "multi_unit_equipment_and_staffing_coordination",
-        "description": "A nursing supervisor must finalize which unit receives a newly available portable dialysis machine and the staffing plan around it, with input from a nephrology charge nurse, a biomedical technician, a float-pool coordinator, and a unit clerk.",
+        "scenario_type": "referral_prioritization",
+        "description": "A referral coordinator must decide which two of four pending referrals get this week's open specialist slots and set next week's priority order, with input from three referring providers and a scheduling assistant.",
         "agents": [
           {
             "agent_id": "A1",
             "name": "Renee",
-            "role": "Nursing Supervisor"
+            "role": "Referral Coordinator"
           },
           {
             "agent_id": "A2",
-            "name": "Nadia Alvarez",
-            "role": "Nephrology Charge Nurse"
+            "name": "Dr. Kessler",
+            "role": "Referring Provider"
           },
           {
             "agent_id": "A3",
-            "name": "Sam",
-            "role": "Biomedical Technician"
+            "name": "Dr. Vance",
+            "role": "Referring Provider"
           },
           {
             "agent_id": "A4",
-            "name": "Devon",
-            "role": "Float-Pool Coordinator"
+            "name": "Dr. Osei",
+            "role": "Referring Provider"
           },
           {
             "agent_id": "A5",
             "name": "Priya",
-            "role": "Unit Clerk"
+            "role": "Scheduling Assistant"
           }
         ],
         "shared_context": {
-          "S1": "A newly available portable dialysis machine can go to either the ICU or the general medical floor tonight.",
-          "S2": "Renee makes the final assignment and staffing call.",
-          "S3": "Both units have patients who could plausibly benefit from portable dialysis access tonight.",
-          "S4": "Before deciding, Renee checks with nephrology, biomed, float pool, and the unit clerk for anything relevant."
+          "S1": "Four patients (Referrals A, B, C, and D) are waiting for the same specialist, but only two slots are open this week: Tuesday and Thursday.",
+          "S2": "Renee finalizes which two referrals get this week's slots and the order for the rest.",
+          "S3": "All four referrals were submitted around the same time this month.",
+          "S4": "Before finalizing, Renee checks with each referring provider and the scheduling assistant for anything relevant."
         },
         "private_facts": {
           "PF1": {
             "owner": "A2",
-            "text": "Nadia Alvarez confirmed this evening that the ICU patient's potassium level came back critically elevated an hour ago, a level that specifically requires dialysis access within 4 hours; this hasn't been charted as urgent yet."
+            "text": "Dr. Kessler confirmed this morning that Referral A's insurance authorization expires in 5 days, after which the referral would need to be resubmitted from scratch."
+          },
+          "PF2": {
+            "owner": "A2",
+            "text": "Dr. Kessler also confirmed Referral A's patient will need a translator present, which the specialist's office requires 48 hours' notice to arrange."
           },
           "PF3": {
             "owner": "A3",
-            "text": "Sam found during this week's routine equipment check that the machine requires a specific power adapter only the ICU's outlets support; the general floor would need a compatible adapter shipped in, which takes about 6 hours."
+            "text": "Dr. Vance mentioned Referral B is for a routine follow-up, and she'll be seeing this same patient again next month for an unrelated routine screening regardless of this week's outcome."
           },
           "PF4": {
-            "owner": "A4",
-            "text": "Devon confirmed tonight that only one float nurse credentialed on this specific dialysis model is available, and she's already assigned to the ICU for a reason tonight."
+            "owner": "A3",
+            "text": "Dr. Vance also mentioned Referral B's patient asked whether the appointment could be moved earlier in the day, once it's actually scheduled."
           },
           "PF5": {
-            "owner": "A5",
-            "text": "Priya mentioned the ICU patient's family called to ask about tonight's visiting policy."
+            "owner": "A4",
+            "text": "Dr. Osei confirmed Referral C's patient has a caregiver who can only bring them in on Tuesday or Wednesday this week, due to a work schedule."
           },
           "PF6": {
-            "owner": "A2",
-            "text": "Nadia Alvarez mentioned the ICU patient's morning labs were otherwise stable."
-          },
-          "PF7": {
-            "owner": "A3",
-            "text": "Sam mentioned the general floor's existing monitor passed its routine check this week."
+            "owner": "A5",
+            "text": "Priya confirmed this week that the specialist's Thursday slot specifically requires a referral with pre-authorization already on file, which only Referral A currently has among the four."
           }
         },
         "views": {
@@ -690,7 +694,7 @@
             "S3",
             "S4",
             "PF1",
-            "PF6"
+            "PF2"
           ],
           "A3": [
             "S1",
@@ -698,21 +702,21 @@
             "S3",
             "S4",
             "PF3",
-            "PF7"
+            "PF4"
           ],
           "A4": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF4"
+            "PF5"
           ],
           "A5": [
             "S1",
             "S2",
             "S3",
             "S4",
-            "PF5"
+            "PF6"
           ]
         },
         "decision_maker": "A1",
@@ -721,9 +725,10 @@
         },
         "settlement_schema": {
           "decisions": {
-            "machine_assigned_to": "string",
-            "adapter_shipping_needed": "boolean",
-            "credentialed_nurse_reassigned": "boolean"
+            "slot_tuesday_assigned_to": "string",
+            "slot_thursday_assigned_to": "string",
+            "next_week_priority_referral": "string",
+            "translator_arranged": "boolean"
           },
           "credited_facts": [
             "fact_id"
@@ -740,49 +745,57 @@
           ]
         },
         "acceptance_conditions": [
-          "The machine must go to the ICU, given the critical potassium level and the power constraint.",
-          "No adapter shipping should be flagged as needed, since the machine is staying on ICU power.",
-          "The credentialed nurse must be confirmed as reassigned to cover the machine, since she's already on the unit.",
-          "A commitment logging the reassignment must exist."
+          "Referral C must get the Tuesday slot, given the caregiver's availability constraint.",
+          "Referral A must get the Thursday slot, given both the expiring authorization and the pre-authorization requirement.",
+          "Referral D must be set as next week's priority referral, ahead of Referral B.",
+          "A translator must be arranged for Referral A's Thursday appointment.",
+          "A patient-notification commitment must be logged for the referrals not scheduled this week."
         ],
         "content_checks": {
-          "C1": "decisions['machine_assigned_to'] == 'ICU'",
-          "C2": "decisions['adapter_shipping_needed'] == False",
-          "C3": "decisions['credentialed_nurse_reassigned'] == True",
-          "C4": "any(c['type'] == 'staffing_reassignment' for c in commitments)"
+          "C1": "decisions['slot_tuesday_assigned_to'] == 'Referral C'",
+          "C2": "decisions['slot_thursday_assigned_to'] == 'Referral A'",
+          "C3": "decisions['next_week_priority_referral'] == 'Referral D'",
+          "C4": "decisions['translator_arranged'] == True",
+          "C5": "any(c['type'] == 'patient_notification' for c in commitments)"
         },
         "provenance_checks": {
           "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
-          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+          "P2": "'PF6' in justification_fact_ids and 'PF6' in revealed"
         },
         "decisive_facts": [
           {
             "fact_id": "PF1",
             "owner": "A2",
             "flips": [
-              "C1",
+              "C2",
               "P1"
             ],
-            "why": "Without knowing the ICU patient's critical potassium level, the general floor's patient looks like an equally plausible recipient."
+            "why": "Without knowing Referral A's authorization expires in 5 days, there's no forcing reason to give it a slot this week over the other three referrals."
           },
           {
-            "fact_id": "PF3",
-            "owner": "A3",
+            "fact_id": "PF2",
+            "owner": "A2",
             "flips": [
-              "C1",
+              "C4"
+            ],
+            "why": "Without knowing about the translator requirement and its 48-hour lead time, a generic plan would not think to arrange one at all."
+          },
+          {
+            "fact_id": "PF5",
+            "owner": "A4",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing Referral C's caregiver can only manage Tuesday or Wednesday, a generic plan might assign it the Thursday slot instead, which doesn't fit."
+          },
+          {
+            "fact_id": "PF6",
+            "owner": "A5",
+            "flips": [
               "C2",
               "P2"
             ],
-            "why": "Without knowing about the power-adapter constraint, sending the machine to the general floor looks feasible; combined with PF1, it's specifically the power limitation that rules the general floor out even if its patient were equally urgent."
-          },
-          {
-            "fact_id": "PF4",
-            "owner": "A4",
-            "flips": [
-              "C3",
-              "C4"
-            ],
-            "why": "Without knowing only one credentialed nurse is available and she's already on the ICU, there's no specific reason to log a staffing reassignment for her rather than assume someone else can cover it."
+            "why": "Without knowing Thursday specifically requires existing pre-authorization, there's no reason Referral A -- rather than any other referral needing a slot -- must be the one placed on Thursday specifically."
           }
         ]
       }
