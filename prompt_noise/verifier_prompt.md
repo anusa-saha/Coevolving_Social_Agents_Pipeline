@@ -38,7 +38,17 @@ settlement where using that fact (crediting it, citing it, acting on its specifi
 outcome of any content or provenance check. If you can construct one, the fact is secretly decisive and
 mislabeled as noise — that's a failure of this check, not an acceptable scenario. Check EACH private
 fact an agent holds individually; a non-decisive agent with three private facts needs all three verified,
-not just the first one you notice.
+not just the first one you notice. Separately, confirm noise facts are anchored to THIS scenario's
+actual situation, not just this domain generically: a noise fact should reference the same people,
+cases, or entities already named in `shared_context` or the decisive facts — the same patient, the same
+case, the same customer, the same item under discussion — not a different one. If you could move the
+fact verbatim into a different scenario in the same domain with no edits, it fails this check even
+though it is domain-appropriate and genuinely inert. Also scan every noise fact's literal text for
+phrases that comment on its own relevance — "unrelated to," "not tied to," "no bearing on," "no
+connection to," "nothing to do with," or any equivalent. Any such phrase is an automatic failure of this
+check, regardless of whether the fact is otherwise well-anchored: a fact announcing its own irrelevance
+is a leak aimed at a private fact instead of `shared_context`, and it must be rejected the same way.
+though it is domain-appropriate and genuinely inert.
 
 6. Depth is present, mechanically checked: Look at every check ID referenced across all `decisive_facts`
 entries. At least one check ID must appear in the `flips` list of TWO OR MORE different `decisive_facts`
@@ -49,6 +59,18 @@ a specific number or choice pending a follow-up (read the `why` field and the fa
 the fact already states the exact number needed for its check with nothing left to ask about, it is not
 follow-up-gated). If neither pattern is present anywhere in the scenario, this check fails — no scenario
 is exempt, regardless of agent count.
+
+7. Multi-fact agents, mechanically checked: Count `private_facts` by owner. At least TWO different
+non-decision-makers must each own two or more private facts (any mix of decisive, inert noise, or soft
+context). This applies at every agent count, including 3-agent scenarios, where it means BOTH
+non-decision-makers must qualify. Fewer than two qualifying agents fails this check, with no exception.
+
+8. Classify the noise pattern (informational, not a pass/fail check): Determine whether this scenario's
+non-decisiveness comes from whole-agent noise (a non-decision-maker with zero decisive facts), individual-
+fact noise (a decisive non-decision-maker who also holds a separate inert fact), or both. Report this in
+`noise_pattern_used` so the diversity context can track it across scenarios — a single scenario is never
+rejected for using one pattern over another, but the Challenger is expected to alternate across a batch,
+and this field is what makes that trackable.
 
 ## Also confirm
 
@@ -84,6 +106,7 @@ Return only this JSON object — no Markdown, no extra text:
     "decisive_coverage_within_allowance": true,
     "noise_facts_genuinely_inert": true,
     "depth_mechanic_present": true,
+    "multi_fact_agents_present": true,
     "fact_ids_valid": true,
     "views_valid": true,
     "no_turn_order_present": true,
@@ -92,7 +115,8 @@ Return only this JSON object — no Markdown, no extra text:
   },
   "diagnosis": "one or two plain sentences naming exactly what's wrong, or 'no issues found'",
   "evidence": "the specific sentence, check id, or fact id that's the problem, or a short example settlement",
-  "fix_instructions": "one concrete instruction for the Challenger's revision, or null if PASS"
+  "fix_instructions": "one concrete instruction for the Challenger's revision, or null if PASS",
+  "noise_pattern_used": "whole_agent | individual_fact | both"
 }
 ```
 

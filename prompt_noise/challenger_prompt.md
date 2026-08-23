@@ -19,6 +19,7 @@ This benchmark is COOPERATIVE, not adversarial. Every agent ultimately wants the
 6. A shared fact must give everyone a normal reason to speak before the decision is final — written as an ordinary process step (a habit, a policy, a routine check-in), never as a hint that something is being withheld.
 7. Every scenario has at least one non-decision-maker who holds no decisive fact — see "Noise participants" below for the exact count per agent size. No exceptions, at any agent count.
 8. Every scenario uses at least one layered fact or one follow-up-gated fact — see "Depth" below. No exceptions.
+9. At least two different non-decision-makers each hold two or more private facts — see "Multi-fact agents" below. No exceptions, at any agent count.
 
 ## Vary the decision's underlying shape, not just its label
 
@@ -41,10 +42,37 @@ Never go further than the ceiling above. If more than the allowed number of non-
 
 A non-decision-maker with no decisive fact still needs a reason to be in the scenario. What matters for this allowance is whether the agent holds at least one decisive fact — not how many total private facts they hold. A non-decisive agent may hold several private facts, not just one or zero:
 
-- **Inert noise**: genuinely irrelevant — an unrelated personal update, ordinary small talk. Adds realism, nothing else.
+- **Inert noise**: tied to THIS scenario's actual situation, not a random domain-flavored item disconnected from it. It should reference the same people, cases, or entities already named in `shared_context` or the decisive facts — a detail about the same patient, the same case, the same customer, the same item — not a different patient, a different case, a different customer, a different item. "A different patient on the unit was discharged" is domain-appropriate but still random with respect to this scenario; "the patient in Bay 3's family asked about visiting hours" is anchored to this scenario's actual situation while still changing no check. If a fact could be moved to a different scenario in the same domain without any edits, it isn't anchored enough — rewrite it so it's specific to what's actually happening here.
+
+**Never write a fact that comments on its own relevance.** A noise fact's text must never contain phrases like "unrelated to this decision," "with no bearing on X," "not tied to this," or any variant that tells the reader the fact doesn't matter. A real person mentioning something in passing does not append a disclaimer about whether it's important — they just say it. Announcing a fact's own irrelevance is itself a leak: it hints at the scenario's hidden/decisive structure exactly the way a leaked `shared_context` sentence would, just aimed at a private fact instead. The fact's irrelevance must come entirely from it not being referenced by any check — never from the sentence saying so.
 - **Soft context**: realistic and relevant to the conversation itself — it explains why someone feels a certain way, or gives texture to the scenario — but still never changes any check's outcome.
 
 Both kinds must pass the same test before you label them non-decisive: would any check's outcome change if this fact were used? If yes, it is decisive, no matter how you intended to label it — add it to `decisive_facts`.
+
+## Multi-fact agents — compulsory, at least two per scenario
+
+**At least two different non-decision-makers must each hold two or more private facts, at every agent count including 3-agent scenarios. There is no exception.** One agent holding multiple facts is not enough on its own — the requirement is about the number of *agents* who each carry more than one fact, not the total count of facts in the scenario.
+
+This combines naturally with the rules above rather than adding new narrative burden:
+- The agent required to be non-decisive by "Noise participants" is a natural first candidate — give them a second private fact (another inert or soft-context one) instead of stopping at one.
+- A second, decisive agent can simply hold two decisive facts (each flipping different checks), or one decisive fact plus one inert noise fact.
+- In a 3-agent scenario, this means BOTH non-decision-makers must each hold two or more private facts — there is no smaller cast to hide this requirement in.
+
+A fact added purely to satisfy this rule must still pass every other rule in this document: if it's not decisive, it must be genuinely, verifiably inert (see above); if it is decisive, it needs its own entry in `decisive_facts` with a real `flips` and `why`. Padding an agent with a fact that isn't true to their role, or that quietly turns out to matter, fails this requirement rather than satisfying it.
+
+## Two different ways to have a non-decisive fact — vary which one you use
+
+There are two distinct mechanisms in this prompt for a private fact to be non-decisive, and they are not the same thing:
+
+- **Whole-agent noise**: a non-decision-maker who holds ZERO decisive facts. Every private fact they own is inert or soft-context. This is what "Noise participants" requires — at least one such agent, at every agent count.
+- **Individual-fact noise**: a non-decision-maker who owns at least one decisive fact AND also owns a separate, genuinely inert private fact alongside it. This agent is decisive overall — one of their facts just isn't.
+
+**Do not default to always combining both in the same way every time. Alternate across the scenarios you write:**
+- Some scenarios should have a whole-agent-noise participant AND no other agent carries an extra individual-fact noise item — the multi-fact requirement is met by that agent alone holding 2+ inert facts, or by two separate decisive agents each simply holding two decisive facts.
+- Some scenarios should have NO whole-agent-noise participant beyond what "Noise participants" requires, but satisfy variety through individual-fact noise on one or more otherwise-decisive agents.
+- Some scenarios should combine both: a whole-agent-noise participant AND a separate decisive agent who also carries an individual noise fact.
+
+All three patterns are valid and expected to appear across your output. A batch where every scenario resolves this the same way — always exactly one dedicated noise agent, always exactly one decisive agent with a bonus noise fact, every time — has failed this requirement even though each individual scenario might look fine on its own.
 
 ## Private facts and decisive facts
 
@@ -111,10 +139,12 @@ Verify all of these are true. If any is false, fix it before returning — do no
 7. Noise facts verified — every private fact NOT in `decisive_facts` has been explicitly checked to have zero effect on every check, whether inert or soft-context, however many a single non-decisive agent holds.
 8. Non-decisive participant present — you can name which agent is non-decisive and what they hold instead, at every agent count including 3. This is never optional.
 9. Depth present — you can name the layered fact (which two agents' facts combine) or the follow-up-gated fact (what's withheld until asked) this scenario uses. This is never optional.
-10. Mechanic named — you can state in one phrase what decision shape this scenario is, and it differs from what recent scenarios in this domain already used.
-11. Enough checks — 4+ content checks, 1+ provenance check.
-12. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
-13. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when, and it's sized generously for the layered or follow-up-gated fact this scenario always has.
+10. Multi-fact agents present — you can name at least two different non-decision-makers who each hold two or more private facts. This is never optional, at any agent count.
+11. Noise pattern varied — you can state which of the two non-decisiveness mechanisms (whole-agent, individual-fact, or both) this scenario uses, and it's not the same combination you defaulted to last time. Check the diversity context for what recent scenarios in this domain used, and choose differently if they've clustered on one pattern.
+12. Mechanic named — you can state in one phrase what decision shape this scenario is, and it differs from what recent scenarios in this domain already used.
+13. Enough checks — 4+ content checks, 1+ provenance check.
+14. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
+15. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when, and it's sized generously for the layered or follow-up-gated fact this scenario always has.
 
 ## Output format
 
@@ -147,8 +177,8 @@ Return the complete scenario object again, in the same JSON format. Return JSON 
 
 ### The three rejection tags — what each one actually means
 
-MALFORMED — a check is broken: unsatisfiable, always-true, `shared_context` leaked the setup, decisive coverage falls outside the allowance, a fact labeled as noise turns out to actually change a check's outcome, zero non-decision-makers lack a decisive fact, or no layered or follow-up-gated fact is present anywhere in the scenario.
-→ Fix: rewrite the leaking sentence, rewrite the check so it is genuinely conditional, adjust decisive-fact coverage back within the allowance, re-verify that a noise fact is genuinely inert, move one agent's decisive fact to noise (reassigning its checks if needed) so at least one non-decision-maker is non-decisive, or split one decisive fact into a layered pair across two agents.
+MALFORMED — a check is broken: unsatisfiable, always-true, `shared_context` leaked the setup, decisive coverage falls outside the allowance, a fact labeled as noise turns out to actually change a check's outcome, zero non-decision-makers lack a decisive fact, no layered or follow-up-gated fact is present anywhere in the scenario, or fewer than two non-decision-makers each hold two or more private facts.
+→ Fix: rewrite the leaking sentence, rewrite the check so it is genuinely conditional, adjust decisive-fact coverage back within the allowance, re-verify that a noise fact is genuinely inert, move one agent's decisive fact to noise (reassigning its checks if needed) so at least one non-decision-maker is non-decisive, split one decisive fact into a layered pair across two agents, or give a second non-decision-maker an additional private fact.
 
 LEAKED — the lone decision-maker passed too often. The hidden information was not actually required.
 → Fix: tighten every loose check back to exactly what the private fact states. Close every path by which a generic, fair, or stereotyped settlement could pass by accident.
