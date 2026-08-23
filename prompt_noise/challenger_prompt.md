@@ -7,6 +7,8 @@ You write ONE scenario at a time for a benchmark. A group of people must make a 
 
 If either half is false, the scenario is worthless. A scenario solvable alone teaches nothing about coordination. A scenario the group also can't solve teaches nothing at all.
 
+This benchmark is COOPERATIVE, not adversarial. Every agent ultimately wants the group to land on the truth. Nobody lies. Nobody fabricates a fact to win. The difficulty comes from information being split, never from deception.
+
 ## Non-negotiable structural rules
 
 1. 3, 4, or 5 agents. Nothing in the scenario's logic may depend on the specific count — it must work at any count in that range.
@@ -15,6 +17,12 @@ If either half is false, the scenario is worthless. A scenario solvable alone te
 4. Zero hints that information is hidden or split. Read every sentence in `shared_context` and ask: could a person standing in this room actually observe this? If a sentence describes the scenario's own structure instead of the world, delete it and rewrite it.
 5. No agent's private facts appear in another agent's view. Ever.
 6. A shared fact must give everyone a normal reason to speak before the decision is final — written as an ordinary process step (a habit, a policy, a routine check-in), never as a hint that something is being withheld.
+
+## Vary the decision's underlying shape, not just its label
+
+Two scenarios with completely different `scenario_type` labels can still be the same mechanic wearing a different costume. "Assign N items to N time-slots, each pinned down by one independent fact" is a single decision shape whether the items are trucks, personnel, or inventory — this exact pattern has previously been found repeating across as much as 74% of a single domain's generated batch, with every individual scenario technically valid and the batch still badly undiverse. The same has happened with "record a declined competing offer" as the sole resolution mechanism across a large share of a bargaining batch.
+
+Before finalizing a scenario, name its decision shape in one phrase: a binary choice between two named options; a distribution of a fixed resource across several recipients; a ranking or sequencing of items under constraints; an accept/reject on a single proposal; a selection of one candidate among several; setting several independent terms of one agreement. If the diversity context you're given shows recent scenarios in this domain already used this shape, deliberately pick a different one, even when the surface topic feels similar. Do not let an entire domain converge on one shape just because it's the easiest one to write.
 
 ## Noise participants — some non-decision-makers should NOT be decisive
 
@@ -27,18 +35,20 @@ Real groups aren't uniform: not everyone in the room always has something pivota
 
 Never go further than this. If more than the allowed number of non-decision-makers lack a decisive fact, the scenario stops being a genuine test of group coordination and starts being a test of guessing who to listen to — that is a different, weaker property, and it is not what this benchmark measures.
 
-A non-decision-maker with no decisive fact still needs a reason to be in the scenario — they should hold an ordinary, plausible private fact (see "Noise facts" below), or participate in the conversation naturally without one. Do not include an agent for no reason at all.
+A non-decision-maker with no decisive fact still needs a reason to be in the scenario. What matters for this allowance is whether the agent holds at least one decisive fact — not how many total private facts they hold. A non-decisive agent may hold several private facts, not just one or zero:
 
-## Private facts, decisive facts, and noise facts
+- **Inert noise**: genuinely irrelevant — an unrelated personal update, ordinary small talk. Adds realism, nothing else.
+- **Soft context**: realistic and relevant to the conversation itself — it explains why someone feels a certain way, or gives texture to the scenario — but still never changes any check's outcome.
 
-Every private fact must read like something the owner would plausibly know from their own role or situation. It does NOT need to change the outcome.
+Both kinds must pass the same test before you label them non-decisive: would any check's outcome change if this fact were used? If yes, it is decisive, no matter how you intended to label it — add it to `decisive_facts`.
 
-- A **decisive fact** flips a check from fail to pass once revealed and used. Every decisive fact must be listed in `decisive_facts` (see below).
-- A **noise fact** is a private fact that is realistic but has zero effect on any check — ordinary personal context, an unrelated update, ordinary small talk relevant to the person but not to this decision. Noise facts are not listed in `decisive_facts`.
+## Private facts and decisive facts
 
-Before labeling anything a noise fact, verify it explicitly: would any content check or provenance check change outcome if this fact were revealed and cited, or withheld? If yes, it is decisive, not noise — add it to `decisive_facts`. A noise fact that turns out to secretly matter is a MALFORMED scenario, not an interesting twist.
+Every private fact must read like something the owner would plausibly know from their own role or situation. A decisive fact flips a check from fail to pass once revealed and used. Every decisive fact must be listed in `decisive_facts`.
 
-A private fact that is neither decisive nor a genuine, verified-irrelevant noise fact does not belong in the scenario. Cut it.
+Before labeling anything noise (inert or soft-context — see above), verify it explicitly: would any content check or provenance check change outcome if this fact were revealed and cited, or withheld? If yes, it is decisive, not noise — add it to `decisive_facts`. A noise fact that turns out to secretly matter is a MALFORMED scenario, not an interesting twist.
+
+A private fact that is neither decisive nor a genuine, verified noise fact does not belong in the scenario. Cut it.
 
 For every decisive fact, list in `decisive_facts`:
 - `fact_id`, `owner`
@@ -47,15 +57,18 @@ For every decisive fact, list in `decisive_facts`:
 
 This is checked mechanically against the allowance above. Too few decisive facts for the checks that need them is an automatic rejection.
 
-The decision-maker must not be able to pass by being generous, fair, or by guessing a stereotype. If a generically kind or "reasonable" settlement would satisfy your checks without the hidden facts, your checks are wrong. Make the private facts specific enough that only genuine use of them — not good manners — passes.
+The decision-maker must not be able to pass by being generous, fair, or by guessing a stereotype. If a generically kind or "reasonable" settlement would satisfy your checks without the hidden facts, your checks are wrong. Make the private facts specific enough that only genuine use of them — not good manners, and not simply favoring whoever spoke most persuasively — passes.
 
-## Views
+## Depth: make the correct answer require several turns to assemble
 
-Each agent's view = every shared fact + only that agent's own private facts (decisive or noise — both belong in the owner's view only). The decision-maker's view alone is the entire "alone test." Leaking one agent's fact into another agent's view invalidates the scenario.
+A scenario where one agent reveals one fact and the decision-maker instantly has everything they need is too easy, even when it technically passes every gate. A meaningful share of scenarios — not necessarily every one — should require combining facts from at least two different agents, or a genuine follow-up question, before the answer is assemblable. Two techniques:
+
+- **Layered facts**: Agent A reveals a fact that is necessary but not sufficient on its own (a raw number, a constraint). Agent B reveals a second fact that only becomes meaningful once combined with the first (a threshold the first number must be checked against). Neither fact alone determines a check; only using both together does.
+- **Follow-up-gated facts**: an agent's first mention of a fact is deliberately partial — enough to flag that something matters, not enough to compile into a passing check — and the specific number or choice that actually satisfies the check only comes out if the decision-maker follows up and asks. The norm in `shared_context` should already invite that follow-up; don't make it hard to think of. The fact itself just shouldn't arrive fully-formed unprompted.
 
 ## Interaction setup
 
-Do not specify a fixed turn order. A real conversation does not move in a predictable rotation — people speak when something occurs to them, interrupt, follow up, or go quiet, not in a scripted sequence everyone could predict in advance. Set only `turn_cap`, dynamically per agent count — roughly 3-4 turns per agent, enough for every fact-holder to get a natural opportunity to speak and for the decision-maker to settle. Never hardcode the same turn_cap across scenarios of different sizes.
+Do not specify a fixed turn order. A real conversation does not move in a predictable rotation — people speak when something occurs to them, interrupt, follow up, or go quiet, not in a scripted sequence everyone could predict in advance. Set only `turn_cap`, dynamically per agent count — roughly 3-4 turns per agent as a floor, enough for every fact-holder to get a natural opportunity to speak and for the decision-maker to settle. For scenarios using layered or follow-up-gated facts, use the higher end of that range or slightly above it — a scenario relying on combining two agents' facts, or on a genuine follow-up, needs the extra room; a scenario solvable in the first two turns did not need it. Never hardcode the same turn_cap across scenarios of different sizes.
 
 ## Compiling checks
 
@@ -89,10 +102,11 @@ Verify all of these are true. If any is false, fix it before returning — do no
 4. Faithful — no threshold from a private fact was softened.
 5. No leaks — no sentence in `shared_context` hints at hidden or missing information.
 6. Decisive coverage within allowance — every check that depends on hidden information is reachable by at least one decisive fact, and the number of non-decisive non-decision-makers does not exceed the allowance for this agent count.
-7. Noise facts verified — every private fact NOT in `decisive_facts` has been explicitly checked to have zero effect on every check.
-8. Enough checks — 4+ content checks, 1+ provenance check.
-9. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
-10. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when.
+7. Noise facts verified — every private fact NOT in `decisive_facts` has been explicitly checked to have zero effect on every check, whether inert or soft-context, however many a single non-decisive agent holds.
+8. Mechanic named — you can state in one phrase what decision shape this scenario is, and it differs from what recent scenarios in this domain already used.
+9. Enough checks — 4+ content checks, 1+ provenance check.
+10. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
+11. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when, and it's sized generously if this scenario uses layered or follow-up-gated facts.
 
 ## Output format
 
@@ -132,5 +146,5 @@ LEAKED — the lone decision-maker passed too often. The hidden information was 
 → Fix: tighten every loose check back to exactly what the private fact states. Close every path by which a generic, fair, or stereotyped settlement could pass by accident.
 
 UNCOORDINATED — the information gap is real, but the group still failed too often. Nobody with a decisive fact got a genuine opening to surface it.
-→ Fix: strengthen the shared consultation norm in `shared_context` so every agent holding a decisive fact gets a real, unmissable moment to speak.
+→ Fix: strengthen the shared consultation norm in `shared_context` so every agent holding a decisive fact gets a real, unmissable moment to speak. If the scenario uses layered or follow-up-gated facts, confirm the norm actually invites the needed follow-up rather than assuming the decision-maker will think to ask.
 → Absolute rule: never fix this by making an agent more talkative, assertive, or forthcoming. That manufactures a pass instead of earning one, and it will be treated as a worse failure than the one you started with. Fix the environment — facts, norms, checks — never the agents.

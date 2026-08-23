@@ -25,13 +25,16 @@ how many non-decision-makers own zero decisive facts, and confirm it does not ex
    - 4 agents (3 non-decision-makers): at most 1 may lack a decisive fact.
    - 5 agents (4 non-decision-makers): at most 2 may lack a decisive fact.
    Too many non-decisive non-decision-makers, or a check with no decisive fact behind it, both fail this
-   check.
+   check. A non-decisive agent may legitimately hold several private facts at once — that alone is not a
+   failure; check whether they hold at least one decisive fact, not how many facts they hold in total.
 
-5. Noise facts are genuinely inert: For every private fact NOT listed in `decisive_facts`, actively try
-to construct a settlement where using that fact (crediting it, citing it, acting on its specific content)
-changes the outcome of any content or provenance check. If you can construct one, the fact is secretly
-decisive and mislabeled as noise — that's a failure of this check, not an acceptable scenario. A noise
-fact must be verifiably inert, not just unlisted.
+5. Noise facts are genuinely inert: For every private fact NOT listed in `decisive_facts` — whether it's
+inert noise or realistic "soft context" — actively try to construct a
+settlement where using that fact (crediting it, citing it, acting on its specific content) changes the
+outcome of any content or provenance check. If you can construct one, the fact is secretly decisive and
+mislabeled as noise — that's a failure of this check, not an acceptable scenario. Check EACH private
+fact an agent holds individually; a non-decisive agent with three private facts needs all three verified,
+not just the first one you notice.
 
 ## Also confirm
 
@@ -40,9 +43,13 @@ fact must be verifiably inert, not just unlisted.
 - Every fact ID used anywhere (`content_checks`, `provenance_checks`, `decisive_facts`) actually exists
   in `shared_context` or `private_facts`.
 - Every entry in `views` is exactly that agent's shared facts plus only their own private facts — no
-  other agent's private fact IDs leak in. This applies identically whether the fact is decisive or noise.
+  other agent's private fact IDs leak in. This applies identically whether a fact is decisive, inert
+  noise, or soft context, and regardless of how many facts one agent holds.
 - `interaction_config` contains only `turn_cap` — no fixed turn order or speaker sequence. A scripted
-  rotation is itself a MALFORMED finding under this pipeline's current design.
+  rotation is itself a MALFORMED finding under this pipeline's current design. If the scenario relies on
+  a layered fact (needs two agents' facts combined) or a follow-up-gated fact, `turn_cap` should sit at
+  the higher end of the roughly-3-to-4-turns-per-agent range or above it — a cramped `turn_cap` on a
+  scenario built to need real back-and-forth is itself worth flagging in `fix_instructions`.
 - Every check in `content_checks` and `provenance_checks` is one Python expression, using only these
   five names: `decisions`, `credited_facts`, `commitments`, `justification_fact_ids`, `revealed`. Every
   string literal (dict keys, fact IDs, agent IDs, commitment values) must be quoted. **Each check must
@@ -65,6 +72,7 @@ Return only this JSON object — no Markdown, no extra text:
     "fact_ids_valid": true,
     "views_valid": true,
     "no_turn_order_present": true,
+    "turn_cap_sized_for_depth": true,
     "checks_are_valid_python": true
   },
   "diagnosis": "one or two plain sentences naming exactly what's wrong, or 'no issues found'",
@@ -72,6 +80,9 @@ Return only this JSON object — no Markdown, no extra text:
   "fix_instructions": "one concrete instruction for the Challenger's revision, or null if PASS"
 }
 ```
+
+If the scenario doesn't use layered or follow-up-gated facts, set `"turn_cap_sized_for_depth": true`
+automatically — a short, direct scenario with a small `turn_cap` is fine on its own terms.
 
 If anything above fails, set `"verdict": "REJECT"` and `"tag": "MALFORMED"`. You are the only stage that
 produces `MALFORMED` — `LEAKED` and `UNCOORDINATED` come later, from the weak-arm and strong-arm

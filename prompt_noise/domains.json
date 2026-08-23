@@ -453,6 +453,288 @@
             "why": "Without knowing the daughter is unexpectedly unavailable, there is no reason to log a specific commitment to update her on the plan."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_healthcare_006",
+        "scenario_type": "antibiotic_regimen_selection",
+        "description": "A hospitalist must finalize the antibiotic regimen for a patient with a newly positive blood culture, with input from a clinical pharmacist and a lab technician.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dr. Reyes",
+            "role": "Hospitalist"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Priya",
+            "role": "Clinical Pharmacist"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Sam",
+            "role": "Lab Technician"
+          }
+        ],
+        "shared_context": {
+          "S1": "A patient's blood culture came back positive for a bacterial infection and needs an antibiotic regimen finalized today.",
+          "S2": "Dr. Reyes finalizes the regimen.",
+          "S3": "The hospital's standard first-line regimen for this infection type is a broad-spectrum antibiotic for 7 days.",
+          "S4": "Before finalizing, Dr. Reyes checks with pharmacy and the lab for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Priya confirmed this morning that the patient's chart shows a documented allergic reaction to the standard first-line antibiotic's drug class, recorded during a prior admission; this hasn't been flagged on the current visit's active problem list yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Sam's sensitivity panel, finalized an hour ago, shows the organism is fully sensitive to a narrower-spectrum alternative, which hospital antibiotic-stewardship policy requires using over broad-spectrum when equally effective, at a 10-14 day course for this organism; this hasn't been entered into the order system yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "antibiotic_regimen": "string",
+            "regimen_duration_days": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The regimen must switch to the narrow-spectrum alternative, given the allergy and stewardship policy.",
+          "Duration must be set between 10 and 14 days, matching the sensitivity panel.",
+          "The allergy flag must be updated on the active problem list.",
+          "The stewardship order must be logged as updated."
+        ],
+        "content_checks": {
+          "C1": "decisions['antibiotic_regimen'] == 'narrow_spectrum_alternative'",
+          "C2": "decisions['regimen_duration_days'] >= 10 and decisions['regimen_duration_days'] <= 14",
+          "C3": "any(c['type'] == 'allergy_flag_updated' for c in commitments)",
+          "C4": "any(c['type'] == 'stewardship_order_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "Without the documented allergy, the standard broad-spectrum first-line regimen looks correct and there's no reason to flag or change it."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C2",
+              "C4"
+            ],
+            "why": "Without the sensitivity panel, there's no specific reason to pick the narrow-spectrum alternative over any other option, or to set the 10-14 day duration specifically."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_healthcare_007",
+        "scenario_type": "multi_unit_equipment_and_staffing_coordination",
+        "description": "A nursing supervisor must finalize which unit receives a newly available portable dialysis machine and the staffing plan around it, with input from a nephrology charge nurse, a biomedical technician, a float-pool coordinator, and a unit clerk.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Nursing Supervisor"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Dr. Alvarez",
+            "role": "Nephrology Charge Nurse"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Sam",
+            "role": "Biomedical Technician"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Devon",
+            "role": "Float-Pool Coordinator"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Unit Clerk"
+          }
+        ],
+        "shared_context": {
+          "S1": "A newly available portable dialysis machine can go to either the ICU or the general medical floor tonight.",
+          "S2": "Renee makes the final assignment and staffing call.",
+          "S3": "Both units have patients who could plausibly benefit from portable dialysis access tonight.",
+          "S4": "Before deciding, Renee checks with nephrology, biomed, float pool, and the unit clerk for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Dr. Alvarez confirmed this evening that the ICU patient's potassium level came back critically elevated an hour ago, a level that specifically requires dialysis access within 4 hours; this hasn't been charted as urgent yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Sam found during this week's routine equipment check that the machine requires a specific power adapter only the ICU's outlets support; the general floor would need a compatible adapter shipped in, which takes about 6 hours."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "Devon confirmed tonight that only one float nurse credentialed on this specific dialysis model is available, and she's already assigned to the ICU for an unrelated reason tonight."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Priya mentioned the unit's supply cabinet is being restocked this week, unrelated to tonight's equipment decision."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "machine_assigned_to": "string",
+            "adapter_shipping_needed": "boolean",
+            "credentialed_nurse_reassigned": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The machine must go to the ICU, given the critical potassium level and the power constraint.",
+          "No adapter shipping should be flagged as needed, since the machine is staying on ICU power.",
+          "The credentialed nurse must be confirmed as reassigned to cover the machine, since she's already on the unit.",
+          "A commitment logging the reassignment must exist."
+        ],
+        "content_checks": {
+          "C1": "decisions['machine_assigned_to'] == 'ICU'",
+          "C2": "decisions['adapter_shipping_needed'] == False",
+          "C3": "decisions['credentialed_nurse_reassigned'] == True",
+          "C4": "any(c['type'] == 'staffing_reassignment' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing the ICU patient's critical potassium level, the general floor's patient looks like an equally plausible recipient."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C2",
+              "P2"
+            ],
+            "why": "Without knowing about the power-adapter constraint, sending the machine to the general floor looks feasible; combined with PF1, it's specifically the power limitation that rules the general floor out even if its patient were equally urgent."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C3",
+              "C4"
+            ],
+            "why": "Without knowing only one credentialed nurse is available and she's already on the ICU, there's no specific reason to log a staffing reassignment for her rather than assume someone else can cover it."
+          }
+        ]
       }
     ]
   },
@@ -914,6 +1196,284 @@
               "C1"
             ],
             "why": "Without knowing postponing risks missing Friday's mandatory patch deadline, the generic cautious choice given three other open risks (PF1-PF3) would be to postpone the whole migration rather than proceed."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_swtech_006",
+        "scenario_type": "architecture_choice",
+        "description": "An engineering manager must decide between two proposed architectures for a new internal service, with input from a backend engineer and a site-reliability engineer.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Engineering Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Backend Engineer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "Site Reliability Engineer"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two architectures are on the table: a single shared database, or a per-tenant sharded database.",
+          "S2": "Renee makes the final architecture call.",
+          "S3": "The shared-database approach is faster to ship and is the team's default pattern for new services.",
+          "S4": "Before deciding, Renee checks with the backend engineer and SRE for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus confirmed this week that the largest anticipated tenant's projected data volume would require a single-table size the shared database's current tier cannot support within a year, based on the growth numbers sales shared with him; this hasn't been added to the design doc yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Aisha found that the sharded approach requires an on-call rotation change, needing at least 2 engineers cross-trained on shard rebalancing before launch, a lead time of about 3 weeks; this hasn't been flagged to the launch timeline yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "architecture_selected": "string",
+            "launch_delayed_weeks": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The sharded architecture must be selected, given the shared database's capacity limit.",
+          "Launch must be delayed between 2 and 3 weeks for on-call cross-training.",
+          "A cross-training commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['architecture_selected'] == 'sharded'",
+          "C2": "decisions['launch_delayed_weeks'] >= 2 and decisions['launch_delayed_weeks'] <= 3",
+          "C3": "any(c['type'] == 'oncall_cross_training' for c in commitments)",
+          "C4": "any(c['type'] == 'design_doc_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C4",
+              "P1"
+            ],
+            "why": "The shared database is the team's default and ships faster; without knowing about the capacity ceiling, there's no reason to choose the slower sharded approach."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C3"
+            ],
+            "why": "Without knowing about the on-call cross-training lead time, a generic plan would launch the sharded architecture on the original timeline with no delay and no training commitment."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_swtech_007",
+        "scenario_type": "multi_service_outage_root_cause",
+        "description": "An incident commander must determine the root cause of a multi-service outage and finalize the remediation plan, with input from a database engineer, a network engineer, a frontend engineer, and a customer support lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dana",
+            "role": "Incident Commander"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Owen",
+            "role": "Database Engineer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ines",
+            "role": "Network Engineer"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Leo",
+            "role": "Frontend Engineer"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Customer Support Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "Multiple services began throwing intermittent errors starting about 40 minutes ago.",
+          "S2": "Dana coordinates the incident and finalizes the root-cause determination and remediation.",
+          "S3": "A routine frontend deploy went out around the same time the errors started.",
+          "S4": "Before finalizing the root cause, Dana checks with database, network, frontend, and support for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Owen found this morning that a scheduled database index rebuild started 45 minutes ago and is holding a lock longer than expected on a high-traffic table; he hasn't posted this in the incident channel yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Ines confirmed the network layer's connection pool to that same database has a timeout setting that, combined with long-held locks, causes cascading retries that look like unrelated service errors elsewhere; this specific interaction isn't documented anywhere yet."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "Leo checked the frontend deploy and confirmed it only touched an unrelated UI component with no backend calls, so it can't be the cause; he hasn't posted this ruling-out in the channel yet."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Priya mentioned support tickets are up but she also has an unrelated headcount review due this week."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "root_cause_identified": "string",
+            "frontend_deploy_ruled_out": "boolean",
+            "index_rebuild_cancelled": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The root cause must be identified as the database lock and network timeout interaction.",
+          "The frontend deploy must be explicitly ruled out as the cause.",
+          "The index rebuild must be cancelled to release the lock.",
+          "A postmortem commitment documenting the lock-timeout interaction must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['root_cause_identified'] == 'db_lock_network_timeout_interaction'",
+          "C2": "decisions['frontend_deploy_ruled_out'] == True",
+          "C3": "decisions['index_rebuild_cancelled'] == True",
+          "C4": "any(c['type'] == 'postmortem_documentation' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C3",
+              "P1"
+            ],
+            "why": "Without knowing about the index rebuild holding a lock, there's no reason to cancel it specifically rather than investigate the recent frontend deploy first."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "P2"
+            ],
+            "why": "Without knowing how the timeout setting interacts with long-held locks to cause cascading errors elsewhere, the lock alone doesn't explain why unrelated services are also failing."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without Leo's explicit ruling-out, the recent frontend deploy remains the most visible and plausible suspect, given its suspicious timing."
           }
         ]
       }
@@ -1383,6 +1943,294 @@
             "why": "Without knowing about Thursday's operation-specific reserve requirement, there is no reason to set aside the additional 150 gallons."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_defense_006",
+        "scenario_type": "route_selection_with_safety_constraint",
+        "description": "A convoy commander must select the return route for a supply convoy and finalize the departure time, with input from an intelligence officer and a vehicle maintenance chief.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Maj. Torres",
+            "role": "Convoy Commander"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Capt. Reyes",
+            "role": "Intelligence Officer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Sgt. Owens",
+            "role": "Vehicle Maintenance Chief"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two return routes are available: the northern highway route and the southern secondary route.",
+          "S2": "Maj. Torres selects the return route and departure time.",
+          "S3": "The northern route is 40 minutes faster and is the route the convoy used on the way out.",
+          "S4": "Before finalizing, Maj. Torres checks with intelligence and maintenance for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Capt. Reyes received a confirmed report this afternoon of recent unexploded ordnance found along a 2-mile stretch of the northern route, still under clearance; this hasn't been posted to the shared routing board yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Sgt. Owens confirmed this afternoon that one vehicle's brakes need inspection before any route requiring sustained downhill grades, which the southern route includes for about 5 miles; the inspection takes about 90 minutes and hasn't been scheduled yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "route_selected": "string",
+            "departure_delayed_minutes": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The southern route must be selected, given the unexploded ordnance on the northern route.",
+          "Departure must be delayed between 80 and 100 minutes for the brake inspection.",
+          "A brake inspection commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['route_selected'] == 'southern'",
+          "C2": "decisions['departure_delayed_minutes'] >= 80 and decisions['departure_delayed_minutes'] <= 100",
+          "C3": "any(c['type'] == 'brake_inspection' for c in commitments)",
+          "C4": "any(c['type'] == 'routing_board_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C4",
+              "P1"
+            ],
+            "why": "The northern route is faster and already familiar; without knowing about the unexploded ordnance, there's no reason to take the slower southern route."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C3"
+            ],
+            "why": "Without knowing about the brake issue and the southern route's downhill grades, a generic plan would depart on the original schedule with no inspection."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_defense_007",
+        "scenario_type": "multi_unit_logistics_coordination",
+        "description": "A battalion logistics officer must finalize tonight's fuel and ammunition resupply allocation across three forward units, with input from each unit's supply liaison and the battalion's transportation officer.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Maj. Kessler",
+            "role": "Battalion Logistics Officer"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Lt. Vance",
+            "role": "Alpha Company Supply Liaison"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Lt. Ruiz",
+            "role": "Bravo Company Supply Liaison"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Lt. Osei",
+            "role": "Charlie Company Supply Liaison"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Capt. Dunn",
+            "role": "Transportation Officer"
+          }
+        ],
+        "shared_context": {
+          "S1": "Tonight's resupply run has enough fuel and ammunition capacity to fully resupply two of the three forward companies.",
+          "S2": "Maj. Kessler decides tonight's allocation across the three companies.",
+          "S3": "All three companies report similar consumption rates so far this week.",
+          "S4": "Before finalizing, Maj. Kessler checks with each company's liaison and transportation for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Lt. Vance confirmed this evening that Alpha Company's fuel reserve is critically low, enough for only 6 more hours of operations, following an unplanned equipment relocation earlier today; this hasn't been reported up yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Lt. Ruiz confirmed Bravo Company received a partial resupply from a neighboring unit this afternoon and can comfortably wait until tomorrow's scheduled run."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "Lt. Osei confirmed Charlie Company's ammunition reserve is at standard levels but their fuel is also getting low, at about 10 hours remaining, following the same equipment relocation as Alpha."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Capt. Dunn confirmed the transport route to Alpha's position has a load-bearing bridge weight limit that caps tonight's delivery to Alpha at 70% of a full resupply regardless of what's allocated on paper; this hasn't been factored into the run's planning yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "companies_resupplied_tonight": "string",
+            "alpha_delivery_percent": "integer",
+            "bravo_deferred_to_tomorrow": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Alpha and Charlie must be the two companies resupplied tonight.",
+          "Alpha's delivery must be capped at 70%, given the bridge weight limit.",
+          "Bravo must be explicitly deferred to tomorrow's run.",
+          "A bridge-constraint commitment must be logged for the transport plan."
+        ],
+        "content_checks": {
+          "C1": "decisions['companies_resupplied_tonight'] == 'Alpha and Charlie'",
+          "C2": "decisions['alpha_delivery_percent'] <= 70 and decisions['alpha_delivery_percent'] >= 50",
+          "C3": "decisions['bravo_deferred_to_tomorrow'] == True",
+          "C4": "any(c['type'] == 'bridge_constraint_logged' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF5' in justification_fact_ids and 'PF5' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "With all three companies reporting similar consumption, there's no reason to prioritize Alpha specifically without knowing about its critical 6-hour fuel reserve."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C3"
+            ],
+            "why": "Without knowing Bravo already received a partial resupply, a generic plan might include Bravo instead of correctly deferring it."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing Charlie's fuel is also getting low, Charlie might not be picked as the second priority company alongside Alpha."
+          },
+          {
+            "fact_id": "PF5",
+            "owner": "A5",
+            "flips": [
+              "C2",
+              "C4",
+              "P2"
+            ],
+            "why": "Without knowing about the bridge weight limit, a generic plan would allocate Alpha a full resupply on paper with no cap and no logged constraint."
+          }
+        ]
       }
     ]
   },
@@ -1835,6 +2683,285 @@
               "C5"
             ],
             "why": "Without knowing about the new disclosure rule, a generic hedge execution would not file any regulatory disclosure at all."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_finance_006",
+        "scenario_type": "credit_limit_decision",
+        "description": "A credit risk manager must finalize a corporate client's credit line renewal terms, with input from a relationship manager and a collections analyst.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renata",
+            "role": "Credit Risk Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Owen",
+            "role": "Relationship Manager"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ines",
+            "role": "Collections Analyst"
+          }
+        ],
+        "shared_context": {
+          "S1": "A corporate client's $500,000 credit line is up for renewal this week.",
+          "S2": "Renata finalizes the renewal terms.",
+          "S3": "The client has been a customer in good standing for five years.",
+          "S4": "Before finalizing, Renata checks with the relationship manager and collections for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Owen confirmed this week that the client is opening a large new business line that will roughly double their monthly transaction volume, information the client shared with him directly but which isn't in the account file yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Ines found this week that the client's payments have been arriving 10-12 days late for the last three billing cycles, though never so late as to be formally flagged; this pattern isn't reflected in the client's good-standing summary yet."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "credit_line_usd": "integer",
+            "payment_terms_reviewed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The credit line must increase to between $650,000 and $750,000, reflecting the new business line.",
+          "Payment terms must be explicitly reviewed given the late-payment pattern.",
+          "A payment-monitoring commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['credit_line_usd'] >= 650000 and decisions['credit_line_usd'] <= 750000",
+          "C2": "decisions['payment_terms_reviewed'] == True",
+          "C3": "any(c['type'] == 'payment_monitoring' for c in commitments)",
+          "C4": "any(c['type'] == 'account_file_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C4",
+              "P1"
+            ],
+            "why": "Without knowing about the new business line, a generic renewal would keep the credit line flat at $500,000 rather than increase it to accommodate higher volume."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C3"
+            ],
+            "why": "The client's good standing looks clean on paper; without the late-payment pattern, there's no reason to review payment terms or add monitoring."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_finance_007",
+        "scenario_type": "multi_factor_risk_review",
+        "description": "A trading desk head must approve or restrict a proposed large trade and finalize the risk conditions, with input from a market risk analyst, a compliance officer, a settlements specialist, and a client coverage lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Elena",
+            "role": "Trading Desk Head"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Market Risk Analyst"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Compliance Officer"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Settlements Specialist"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Sam",
+            "role": "Client Coverage Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "A client has requested a large single-day trade in a moderately liquid security.",
+          "S2": "Elena gives final approval and sets any risk conditions.",
+          "S3": "The client has an established trading relationship and has executed similar-sized trades before.",
+          "S4": "Before approving, Elena checks with market risk, compliance, settlements, and client coverage for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus found this morning that the security's average daily volume has dropped 60% over the past two weeks due to an unrelated market event, meaning this trade size would now represent an unusually large share of daily volume; this hasn't been reflected in the standard risk model yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Priya confirmed this week that trades of this size in this security newly require a pre-trade disclosure filed at least 4 hours before execution, under a rule that took effect this month."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "David confirmed the settlement cycle for this security specifically requires T+2 settlement with pre-funding confirmed by the client's custodian, which hasn't been arranged for this trade yet."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Sam mentioned the client's annual relationship review is coming up next month, unrelated to this specific trade."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "trade_size_reduced": "boolean",
+            "disclosure_filed_hours_before": "integer",
+            "custodian_prefunding_confirmed": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The trade size must be reduced, given the drop in average daily volume.",
+          "The pre-trade disclosure must be filed between 4 and 8 hours before execution.",
+          "Custodian pre-funding must be explicitly confirmed before settlement.",
+          "A settlement-readiness commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['trade_size_reduced'] == True",
+          "C2": "decisions['disclosure_filed_hours_before'] >= 4 and decisions['disclosure_filed_hours_before'] <= 8",
+          "C3": "decisions['custodian_prefunding_confirmed'] == True",
+          "C4": "any(c['type'] == 'settlement_readiness' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The client's established relationship makes the full trade size look routine; without knowing about the volume drop, there's no reason to reduce it."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing about the new disclosure rule, a generic approval wouldn't build in any pre-trade filing window at all."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C3",
+              "C4",
+              "P2"
+            ],
+            "why": "Without knowing about the custodian pre-funding requirement, the trade could proceed to settlement without confirming funding is in place."
           }
         ]
       }
@@ -2302,6 +3429,286 @@
             "why": "Without knowing about the family's schedule conflict and the confirmed alternative, the plan would keep the unworkable Tuesday/Thursday slot."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_education_006b",
+        "scenario_type": "grade_appeal_decision",
+        "description": "A department head must decide the outcome of a student's grade appeal, with input from the course instructor and a teaching assistant.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dr. Patel",
+            "role": "Department Head"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Mr. Owens",
+            "role": "Course Instructor"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Teaching Assistant"
+          }
+        ],
+        "shared_context": {
+          "S1": "A student has formally appealed their final grade in a course, requesting a regrade of the final project.",
+          "S2": "Dr. Patel decides the outcome of the appeal.",
+          "S3": "The course's published rubric lists four criteria for the final project.",
+          "S4": "Before deciding, Dr. Patel checks with the instructor and teaching assistant for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Mr. Owens confirmed this week that he applied a fifth, unpublished criterion when grading this particular project, one not listed on the rubric students received; he hasn't corrected the grade himself yet since he wasn't sure it warranted a full regrade."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya, who did the first-pass grading, confirmed that under the four published criteria alone, the student's project would score one full letter grade higher than the final grade recorded."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "appeal_outcome": "string",
+            "grade_change_letter_levels": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The appeal must be granted, given the unpublished grading criterion.",
+          "The grade must be raised by exactly one letter level.",
+          "A rubric-clarification commitment must be logged for future sections."
+        ],
+        "content_checks": {
+          "C1": "decisions['appeal_outcome'] == 'granted'",
+          "C2": "decisions['grade_change_letter_levels'] == 1",
+          "C3": "any(c['type'] == 'rubric_clarification' for c in commitments)",
+          "C4": "any(c['type'] == 'regrade_documented' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "Without knowing an unpublished criterion was applied, the grade looks like a normal judgment call the department shouldn't overturn."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without the first-pass scoring under the published criteria alone, there's no specific basis for raising the grade by exactly one letter level rather than some other amount."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_education_007",
+        "scenario_type": "multi_stakeholder_resource_decision",
+        "description": "A principal must decide how to allocate a one-time technology grant across the school's needs and finalize a rollout plan, with input from a curriculum coordinator, an IT coordinator, a special education coordinator, and a parent-teacher association representative.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dr. Hayes",
+            "role": "Principal"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Curriculum Coordinator"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "IT Coordinator"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Special Education Coordinator"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "PTA Representative"
+          }
+        ],
+        "shared_context": {
+          "S1": "The school received a one-time $40,000 technology grant with broad discretion on how to spend it.",
+          "S2": "Dr. Hayes decides the final allocation and rollout plan.",
+          "S3": "Several teachers have informally requested new classroom tablets.",
+          "S4": "Before deciding, Dr. Hayes checks with curriculum, IT, special education, and the PTA for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus confirmed this week that the district's new reading curriculum, adopted for next year, requires specific software licenses costing about $18,000 for the whole school; this wasn't factored into the grant discussion yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Aisha found this week that the school's wireless network cannot support more than 15 additional devices without a $9,000 infrastructure upgrade, a hard technical limit regardless of how many tablets are purchased."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "David confirmed this week that three students' individualized education plans specifically require assistive-technology devices costing about $6,000 total, a legal obligation independent of the general tablet request."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Priya mentioned the PTA is separately fundraising for a new playground structure, unrelated to the technology grant."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "curriculum_licenses_funded": "boolean",
+            "network_upgrade_funded": "boolean",
+            "assistive_tech_funded": "boolean",
+            "new_devices_purchased": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The curriculum licenses must be funded, given next year's requirement.",
+          "The network upgrade must be funded to support additional devices.",
+          "The assistive-technology devices must be funded, given the legal IEP obligation.",
+          "New device purchases must be capped at 15, matching the network limit."
+        ],
+        "content_checks": {
+          "C1": "decisions['curriculum_licenses_funded'] == True",
+          "C2": "decisions['network_upgrade_funded'] == True",
+          "C3": "decisions['assistive_tech_funded'] == True",
+          "C4": "decisions['new_devices_purchased'] >= 1 and decisions['new_devices_purchased'] <= 15"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing about the curriculum license requirement, the grant would likely go entirely toward classroom tablets, the more visible request."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without knowing about the 15-device network ceiling, the school might buy more tablets than the network can actually support."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C3",
+              "P2"
+            ],
+            "why": "Without knowing about the legally required assistive-technology devices, that obligation could be missed entirely in favor of general classroom requests."
+          }
+        ]
       }
     ]
   },
@@ -2759,6 +4166,284 @@
             "why": "Without knowing about the fire marshal limit, all 280 confirmed attendees would be admitted."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_entertainment_006",
+        "scenario_type": "casting_decision",
+        "description": "A casting director must decide which of two actors is cast in a lead role, with input from the director and a dialect coach.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Casting Director"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Director"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Dialect Coach"
+          }
+        ],
+        "shared_context": {
+          "S1": "Two actors, both strong on-camera, are finalists for the lead role.",
+          "S2": "Renee makes the final casting decision.",
+          "S3": "Both actors have comparable prior credits in similar roles.",
+          "S4": "Before deciding, Renee checks with the director and dialect coach for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus confirmed this week that the role requires fluency in a specific regional accent for at least a third of the film's dialogue, a requirement from the script that wasn't in the original casting brief."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya, who ran both actors through a dialect read this week, confirmed only one of the two could perform the required accent convincingly without extensive coaching; the other would need significantly more session time than the production schedule allows."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "actor_cast": "string",
+            "dialect_coaching_sessions_scheduled": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The actor who can perform the accent must be cast.",
+          "A modest number of coaching sessions, between 1 and 3, must still be scheduled for polish.",
+          "A commitment confirming the accent requirement must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['actor_cast'] == 'Actor_B'",
+          "C2": "decisions['dialect_coaching_sessions_scheduled'] >= 1 and decisions['dialect_coaching_sessions_scheduled'] <= 3",
+          "C3": "any(c['type'] == 'accent_requirement_confirmed' for c in commitments)",
+          "C4": "any(c['type'] == 'casting_brief_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C3",
+              "C4"
+            ],
+            "why": "Without knowing about the script's accent requirement, there's no reason to confirm or document it as a casting criterion at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C2",
+              "P1"
+            ],
+            "why": "Both actors look comparably strong on paper; without the dialect read results, there's no way to know which one can actually deliver the required accent on the production's timeline."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_entertainment_007",
+        "scenario_type": "album_release_licensing_decision",
+        "description": "A label's release manager must decide whether to proceed with an album's scheduled release date and finalize the licensing and credits, with input from a licensing coordinator, a mastering engineer, a marketing lead, and a featured artist's manager.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Elena",
+            "role": "Release Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Owen",
+            "role": "Licensing Coordinator"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ines",
+            "role": "Mastering Engineer"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Marcus",
+            "role": "Marketing Lead"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Featured Artist's Manager"
+          }
+        ],
+        "shared_context": {
+          "S1": "The album is scheduled to release in two weeks.",
+          "S2": "Elena gives final go/no-go on the release date and finalizes licensing and credits.",
+          "S3": "All tracks have completed mixing and initial quality review.",
+          "S4": "Before finalizing, Elena checks with licensing, mastering, marketing, and the featured artist's manager for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Owen found this week that one track's sample clearance from the original rights holder has not been finalized and the rights holder's standard turnaround is 10-14 days; he hasn't flagged this against the release date yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Ines confirmed the same track has a mastering issue that requires a re-render, which takes about 3 days once the final sample clearance comes through, since the cleared version may need different levels."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Priya confirmed the featured artist's name must appear in the same font size as the lead artist on all cover art, per a contractual credit requirement; the current artwork doesn't yet reflect this."
+          },
+          "PF5": {
+            "owner": "A4",
+            "text": "Marcus mentioned the marketing team is also finalizing a separate social media campaign calendar, unrelated to this specific delay."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "release_delayed_days": "integer",
+            "cover_art_credit_corrected": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The release must be delayed between 13 and 17 days, accounting for clearance plus re-render.",
+          "The cover art credit must be corrected to match the contractual font-size requirement.",
+          "A sample-clearance follow-up commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['release_delayed_days'] >= 13 and decisions['release_delayed_days'] <= 17",
+          "C2": "decisions['cover_art_credit_corrected'] == True",
+          "C3": "any(c['type'] == 'clearance_followup' for c in commitments)",
+          "C4": "any(c['type'] == 'artwork_revision' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "All tracks look complete after mixing and initial review; without knowing about the unresolved sample clearance, there's no reason to delay the release at all."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C1"
+            ],
+            "why": "Without knowing the mastering re-render depends on the clearance finishing first and takes 3 more days, a delay estimate based on clearance alone would fall short of what's actually needed."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C2",
+              "C4",
+              "P2"
+            ],
+            "why": "Without knowing about the contractual credit requirement, the cover art would ship with the featured artist's name in the wrong size."
+          }
+        ]
       }
     ]
   },
@@ -3202,6 +4887,284 @@
               "C4"
             ],
             "why": "Without knowing about the co-ownership gap, the disclosed patent would be treated as clean and the title issue would go unresolved."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_legal_006",
+        "scenario_type": "evidence_admissibility_decision",
+        "description": "A lead litigator must decide whether to introduce a piece of evidence at trial and finalize the filing plan, with input from a junior associate and a paralegal.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Ms. Alvarez",
+            "role": "Lead Litigator"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Jon",
+            "role": "Junior Associate"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Renata",
+            "role": "Paralegal"
+          }
+        ],
+        "shared_context": {
+          "S1": "A key document was obtained during discovery and could be introduced as evidence.",
+          "S2": "Ms. Alvarez decides whether to introduce it and how to file it.",
+          "S3": "The document appears to directly support the client's position.",
+          "S4": "Before deciding, Ms. Alvarez asks the associate and paralegal for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Jon found this week, while researching a related motion, that this exact document's chain of custody has a two-week gap that opposing counsel could plausibly challenge; a supplemental custody affidavit could close the gap but hasn't been drafted yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Renata confirmed the court's local rules require any document with a custody gap to be filed with a supplemental affidavit at least 5 business days before the evidence deadline, not just before trial."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "evidence_introduced": "boolean",
+            "affidavit_filed_days_before_deadline": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The evidence must still be introduced, provided the custody gap is addressed.",
+          "The supplemental affidavit must be filed at least 5 business days before the evidence deadline.",
+          "A commitment to draft the affidavit must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['evidence_introduced'] == True",
+          "C2": "decisions['affidavit_filed_days_before_deadline'] >= 5 and decisions['affidavit_filed_days_before_deadline'] <= 10",
+          "C3": "any(c['type'] == 'affidavit_drafted' for c in commitments)",
+          "C4": "any(c['type'] == 'custody_gap_addressed' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C3",
+              "C4",
+              "P1"
+            ],
+            "why": "The document looks straightforwardly favorable; without knowing about the custody gap, there's no reason to draft any affidavit or flag the gap at all."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2"
+            ],
+            "why": "Without knowing the specific 5-business-day filing rule, a generic plan might file the affidavit any time before trial rather than meeting the actual evidence deadline."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_legal_007",
+        "scenario_type": "regulatory_filing_decision",
+        "description": "A deputy general counsel must decide whether a recent product change requires a regulatory filing and finalize the filing plan, with input from a regulatory counsel, a product compliance manager, a outside-counsel liaison, and a communications lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Deputy General Counsel"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Regulatory Counsel"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "Product Compliance Manager"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Outside-Counsel Liaison"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Communications Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "The product team shipped a minor feature update to an existing regulated product last week.",
+          "S2": "Renee decides whether a regulatory filing is required and finalizes the plan.",
+          "S3": "The product team classified the update internally as a routine, non-material change.",
+          "S4": "Before deciding, Renee checks with regulatory counsel, compliance, outside counsel, and communications for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Marcus confirmed this week that the specific feature changed falls under a regulatory category requiring notification within 30 days of any change, material or not, under a rule updated this year; this wasn't reflected in the product team's classification."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Aisha found this week that the feature change affects a data field covered by a separate consent requirement, meaning affected customers must be notified directly, not just the regulator."
+          },
+          "PF4": {
+            "owner": "A4",
+            "text": "David confirmed outside counsel's standard turnaround for reviewing a filing like this is 10 business days, which must be factored into the 30-day notification window."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Priya mentioned the communications team is separately preparing an unrelated product announcement for next month."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "regulatory_filing_required": "boolean",
+            "filing_submitted_within_days": "integer",
+            "customer_notification_required": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "A regulatory filing must be required, regardless of the internal materiality classification.",
+          "The filing must be submitted within 20-30 days, leaving room for outside counsel's review.",
+          "Direct customer notification must also be required.",
+          "An outside-counsel review commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['regulatory_filing_required'] == True",
+          "C2": "decisions['filing_submitted_within_days'] >= 20 and decisions['filing_submitted_within_days'] <= 30",
+          "C3": "decisions['customer_notification_required'] == True",
+          "C4": "any(c['type'] == 'outside_counsel_review' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "The product team's internal classification says routine and non-material; without the updated rule, there's no reason to file anything at all."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C3",
+              "P2"
+            ],
+            "why": "Without knowing about the consent-covered data field, the response would address only the regulator and miss the separate customer notification obligation."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A4",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without knowing outside counsel needs 10 business days, a generic filing plan might leave too little runway within the 30-day window."
           }
         ]
       }
@@ -3655,6 +5618,285 @@
             "why": "Without knowing about the calibration drift signal, a generic restart would skip any recalibration check."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_manufacturing_006",
+        "scenario_type": "batch_quality_disposition",
+        "description": "A quality manager must decide whether to release, rework, or scrap a finished production batch, with input from a quality inspector and a production scheduler.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Diane",
+            "role": "Quality Manager"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Hector",
+            "role": "Quality Inspector"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Yusuf",
+            "role": "Production Scheduler"
+          }
+        ],
+        "shared_context": {
+          "S1": "A finished batch of 500 units is awaiting final disposition before shipment.",
+          "S2": "Diane makes the final disposition decision.",
+          "S3": "The batch passed the standard automated inspection line with no flags.",
+          "S4": "Before deciding, Diane checks with the inspector and scheduler for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Hector performed a manual spot-check this morning, beyond the automated line, and found a dimensional defect in 8% of sampled units, above the 5% threshold that requires rework rather than release; this hasn't been logged in the quality system yet."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Yusuf confirmed the rework line has capacity to process this batch within 2 days if scheduled today, but that capacity is only guaranteed if the rework order is placed before end of day."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "batch_disposition": "string",
+            "rework_order_placed_same_day": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The batch must be sent to rework, given the defect rate above threshold.",
+          "The rework order must be placed the same day to secure capacity.",
+          "A quality system log update must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['batch_disposition'] == 'rework'",
+          "C2": "decisions['rework_order_placed_same_day'] == True",
+          "C3": "any(c['type'] == 'quality_log_updated' for c in commitments)",
+          "C4": "any(c['type'] == 'rework_order_placed' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "The batch passed automated inspection cleanly; without the manual spot-check finding, there's no reason to send it to rework rather than release it."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without knowing the rework capacity is only guaranteed if ordered same-day, a generic decision might place the order later and lose the guaranteed slot."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_manufacturing_007",
+        "scenario_type": "multi_plant_capacity_reallocation",
+        "description": "An operations director must decide how to reallocate production capacity across two plants after an unplanned equipment failure and finalize the logistics plan, with input from each plant's manager, a logistics coordinator, and a customer accounts lead.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Operations Director"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Plant A Manager"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "Plant B Manager"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "Logistics Coordinator"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Customer Accounts Lead"
+          }
+        ],
+        "shared_context": {
+          "S1": "Plant A's main line went down this morning and will be offline for at least a week.",
+          "S2": "Renee decides how to reallocate this week's production commitments.",
+          "S3": "Plant B has some available capacity and has covered for Plant A before.",
+          "S4": "Before deciding, Renee checks with both plant managers, logistics, and customer accounts for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A3",
+            "text": "Aisha confirmed Plant B can absorb up to 70% of Plant A's weekly output, but only if the changeover happens within 24 hours, since Plant B has its own scheduled maintenance window starting in 2 days."
+          },
+          "PF3": {
+            "owner": "A4",
+            "text": "David found this week that shipping the overflow from Plant B to Plant A's usual customers adds 2 extra transit days due to a different regional shipping lane; this hasn't been communicated to customer accounts yet."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Priya confirmed one of Plant A's customers has a contractual on-time delivery penalty clause that triggers after 3 days late, meaning the extra transit time from Plant B would just barely avoid triggering it if shipped promptly."
+          },
+          "PF5": {
+            "owner": "A2",
+            "text": "Marcus mentioned Plant A's team is using the downtime to do some routine facility cleaning, unrelated to the reallocation decision."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "plant_b_output_share_percent": "integer",
+            "changeover_completed_within_hours": "integer",
+            "expedited_shipping_used": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Plant B's output share must be set at 70%, its maximum absorbable capacity.",
+          "The changeover must be completed within 24 hours, before Plant B's maintenance window.",
+          "Expedited shipping must be used to avoid the contractual late-delivery penalty.",
+          "A customer notification commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['plant_b_output_share_percent'] == 70",
+          "C2": "decisions['changeover_completed_within_hours'] <= 24 and decisions['changeover_completed_within_hours'] >= 1",
+          "C3": "decisions['expedited_shipping_used'] == True",
+          "C4": "any(c['type'] == 'customer_notification' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A3",
+            "flips": [
+              "C1",
+              "C2",
+              "P1"
+            ],
+            "why": "Without knowing Plant B's 24-hour changeover window and 70% ceiling, a generic plan might not size the reallocation correctly or move fast enough."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A4",
+            "flips": [
+              "C4"
+            ],
+            "why": "Without knowing about the extra transit time on the new shipping lane, there's no reason to proactively notify affected customers."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C3",
+              "P2"
+            ],
+            "why": "Without knowing about the contractual penalty clause and how close the extra transit time cuts it, a generic plan might use standard shipping and inadvertently trigger the penalty."
+          }
+        ]
       }
     ]
   },
@@ -4101,6 +6343,286 @@
               "C5"
             ],
             "why": "Without knowing about the equity-policy trigger, a generic reassignment would not think to document a capacity review at all."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_workplace_006",
+        "scenario_type": "mentorship_assignment",
+        "description": "A team lead must decide which senior engineer is assigned to mentor a struggling new hire, with input from both senior engineers.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Carlos",
+            "role": "Team Lead"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Beatriz",
+            "role": "Senior Engineer"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Owen",
+            "role": "Senior Engineer"
+          }
+        ],
+        "shared_context": {
+          "S1": "A new hire has been struggling with onboarding and needs a dedicated mentor.",
+          "S2": "Carlos decides who is assigned as mentor.",
+          "S3": "Both Beatriz and Owen have mentored new hires successfully before.",
+          "S4": "Before deciding, Carlos checks with both senior engineers for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Beatriz confirmed this week that the new hire's specific struggles are in an area of the codebase she personally rebuilt last year and knows in more depth than anyone else on the team."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Owen confirmed he is already mentoring two other new hires this quarter and would need to deprioritize one of them to take on a third."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "mentor_assigned": "string",
+            "owen_mentorship_load_adjusted": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Beatriz must be assigned as mentor, given her specific codebase expertise.",
+          "Owen's existing mentorship load must be explicitly confirmed as not needing adjustment.",
+          "A mentorship assignment commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['mentor_assigned'] == 'Beatriz'",
+          "C2": "decisions['owen_mentorship_load_adjusted'] == False",
+          "C3": "any(c['type'] == 'mentorship_assignment' and c['target'] == 'Beatriz' for c in commitments)",
+          "C4": "any(c['type'] == 'workload_check' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "Both engineers have successfully mentored before; without knowing about Beatriz's specific depth in the relevant codebase area, either could seem like a reasonable pick."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without knowing Owen is already mentoring two others, a generic decision might not think to check whether assigning him a third would overload him."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_workplace_007",
+        "scenario_type": "team_restructuring",
+        "description": "A department head must decide how to restructure two teams following a reorganization and finalize reporting lines, with input from both team's current managers, an HR partner, and a longtime individual contributor.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Renee",
+            "role": "Department Head"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Team A Manager"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Aisha",
+            "role": "Team B Manager"
+          },
+          {
+            "agent_id": "A4",
+            "name": "David",
+            "role": "HR Partner"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Individual Contributor"
+          }
+        ],
+        "shared_context": {
+          "S1": "Teams A and B are being merged into one team following a reorganization.",
+          "S2": "Renee decides the new reporting structure and who leads the merged team.",
+          "S3": "Both Marcus and Aisha have led their respective teams successfully for over two years.",
+          "S4": "Before deciding, Renee checks with both managers, HR, and a longtime IC for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A4",
+            "text": "David confirmed this week that Marcus has an approved, previously-scheduled 6-week leave starting next month, information HR has but which wasn't shared with Renee's planning yet."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Aisha confirmed she has already led a team through a similar merge at a previous company, successfully retaining the whole team through the transition."
+          },
+          "PF4": {
+            "owner": "A5",
+            "text": "Priya, who has worked under both managers, mentioned that Team A's current sprint process would need significant rework to match Team B's tooling, a integration detail neither manager has fully scoped yet."
+          },
+          "PF5": {
+            "owner": "A2",
+            "text": "Marcus mentioned he's been meaning to update his team's documentation wiki, unrelated to the merge decision."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "merged_team_lead": "string",
+            "tooling_integration_planned": "boolean",
+            "leave_coverage_arranged": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Aisha must lead the merged team, given Marcus's upcoming leave.",
+          "Leave coverage must be explicitly arranged for Marcus's transition period.",
+          "A tooling integration plan must be confirmed, given the sprint process mismatch.",
+          "A commitment addressing the tooling integration must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['merged_team_lead'] == 'Aisha'",
+          "C2": "decisions['leave_coverage_arranged'] == True",
+          "C3": "decisions['tooling_integration_planned'] == True",
+          "C4": "any(c['type'] == 'tooling_integration_plan' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF4' in justification_fact_ids and 'PF4' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A4",
+            "flips": [
+              "C1",
+              "C2",
+              "P1"
+            ],
+            "why": "Both managers look like reasonable, equally experienced choices; without knowing about Marcus's upcoming 6-week leave, there's no clear reason to pick Aisha over him specifically."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C1"
+            ],
+            "why": "Aisha's prior successful merge experience reinforces she's the stronger specific choice for this transition, not just the available one."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A5",
+            "flips": [
+              "C3",
+              "C4",
+              "P2"
+            ],
+            "why": "Without knowing about the sprint-tooling mismatch, a generic merge plan wouldn't think to plan for that integration work at all."
           }
         ]
       }
@@ -4567,6 +7089,285 @@
             "why": "Without the physical therapist's recommendation, a generic plan would install items in an arbitrary or convenience-based order rather than addressing the more urgent fall risk first."
           }
         ]
+      },
+      {
+        "scenario_id": "domain_friendsfamily_006",
+        "scenario_type": "group_celebration_planning",
+        "description": "A friend coordinating a surprise 40th birthday party must finalize the venue and guest list, with input from two other close friends.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Nora",
+            "role": "Party Coordinator"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Leo",
+            "role": "Close Friend"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Close Friend"
+          }
+        ],
+        "shared_context": {
+          "S1": "The party is being planned for a mutual friend's 40th birthday, with a backyard venue as the default plan.",
+          "S2": "Nora finalizes the venue and guest list.",
+          "S3": "The weather forecast for the planned date has looked fine so far this week.",
+          "S4": "Before finalizing, Nora checks with Leo and Priya for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Leo checked the updated forecast this morning and found a specific rain warning has been issued for the afternoon of the party, not reflected in the general weekly outlook everyone saw earlier."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya confirmed the birthday person's estranged cousin is on the default guest list draft, someone Priya happens to know they haven't spoken to in over a year and would not want invited."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "venue_type": "string",
+            "cousin_invited": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The venue must move indoors, given the specific rain warning.",
+          "The estranged cousin must not be invited.",
+          "A backup-venue commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['venue_type'] == 'indoor'",
+          "C2": "decisions['cousin_invited'] == False",
+          "C3": "any(c['type'] == 'backup_venue_booked' for c in commitments)",
+          "C4": "any(c['type'] == 'guest_list_updated' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "C3",
+              "P1"
+            ],
+            "why": "The week's general forecast has looked fine; without the specific rain warning, there's no reason to move the party indoors."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4"
+            ],
+            "why": "Without knowing about the estrangement, the cousin would stay on the guest list by default since they're a relative."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_friendsfamily_007",
+        "scenario_type": "shared_asset_usage_decision",
+        "description": "A sibling managing the family's jointly-owned boat must decide this month's usage schedule and maintenance plan, with input from two other siblings and the marina's dockmaster.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Teresa",
+            "role": "Managing Sibling"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marco",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Elena",
+            "role": "Sibling"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Sam",
+            "role": "Dockmaster"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Sibling"
+          }
+        ],
+        "shared_context": {
+          "S1": "Three siblings share ownership of a boat and want to schedule their usage for the upcoming month.",
+          "S2": "Teresa finalizes the schedule and any maintenance needs.",
+          "S3": "All three siblings have said they'd like at least one weekend with the boat this month.",
+          "S4": "Before finalizing, Teresa checks with her siblings and the dockmaster for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A4",
+            "text": "Sam confirmed this week that the boat's annual safety inspection is due this month and the marina requires it be completed before any further outings, taking the boat out of use for 2 days once scheduled."
+          },
+          "PF3": {
+            "owner": "A2",
+            "text": "Marco confirmed he's the only one of the three certified to operate the boat's newer navigation system, needed for the one weekend everyone wants to take a longer trip."
+          },
+          "PF4": {
+            "owner": "A3",
+            "text": "Elena confirmed she already has a non-refundable deposit on a marina slip elsewhere for one specific weekend this month, meaning she cannot use the shared boat that weekend regardless of the schedule."
+          },
+          "PF5": {
+            "owner": "A5",
+            "text": "Priya mentioned she's been looking at boat cleaning supplies to restock the cabin, unrelated to the scheduling decision."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF4"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "inspection_scheduled": "boolean",
+            "longer_trip_operator": "string",
+            "elena_weekend_excluded": "boolean"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The safety inspection must be scheduled this month.",
+          "Marco must be assigned as operator for the longer trip, given his certification.",
+          "Elena's committed weekend must be excluded from her boat allocation.",
+          "A commitment confirming the inspection booking must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['inspection_scheduled'] == True",
+          "C2": "decisions['longer_trip_operator'] == 'Marco'",
+          "C3": "decisions['elena_weekend_excluded'] == True",
+          "C4": "any(c['type'] == 'inspection_booked' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A4",
+            "flips": [
+              "C1",
+              "C4",
+              "P1"
+            ],
+            "why": "Without knowing about the required annual inspection, a generic schedule wouldn't set aside any days for it at all."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A2",
+            "flips": [
+              "C2",
+              "P2"
+            ],
+            "why": "Without knowing only Marco is certified on the navigation system, any of the three siblings might be assumed to operate the longer trip."
+          },
+          {
+            "fact_id": "PF4",
+            "owner": "A3",
+            "flips": [
+              "C3"
+            ],
+            "why": "Without knowing about Elena's non-refundable deposit elsewhere, a generic schedule might assign her that same weekend with the shared boat."
+          }
+        ]
       }
     ]
   },
@@ -5022,6 +7823,276 @@
               "C4"
             ],
             "why": "Without knowing about the Thursday transfer deadline, a generic plan would leave the name transfer for whenever, risking the ticket becoming unusable."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_informalcommerce_006",
+        "scenario_type": "informal_loan_repayment_negotiation",
+        "description": "A friend who lent money to another friend must decide the repayment terms for an overdue informal loan, with input from the borrower and a mutual friend who helped arrange the loan.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Nora",
+            "role": "Lender"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Leo",
+            "role": "Borrower"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Priya",
+            "role": "Mutual Friend"
+          }
+        ],
+        "shared_context": {
+          "S1": "Nora lent Leo $800 four months ago, with an informal agreement to repay \"when things settled down.\"",
+          "S2": "Nora decides the final repayment terms.",
+          "S3": "Leo has mentioned generally that things have been tight lately.",
+          "S4": "Before finalizing terms, Nora checks with Leo and Priya for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A2",
+            "text": "Leo confirmed he started a new job with steady pay two weeks ago, something he hasn't mentioned yet since he wasn't sure how to bring up the loan."
+          },
+          "PF2": {
+            "owner": "A3",
+            "text": "Priya, who was there when the loan was arranged, confirmed the original understanding was repayment in installments of at least $100 a month once Leo was working again, not a lump sum."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 14
+        },
+        "settlement_schema": {
+          "decisions": {
+            "repayment_plan_started": "boolean",
+            "monthly_installment_usd": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "The repayment plan must start now that Leo is working again.",
+          "The monthly installment must be at least $100, matching the original understanding.",
+          "A repayment schedule commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['repayment_plan_started'] == True",
+          "C2": "decisions['monthly_installment_usd'] >= 100 and decisions['monthly_installment_usd'] <= 200",
+          "C3": "any(c['type'] == 'repayment_schedule' for c in commitments)",
+          "C4": "any(c['type'] == 'plan_confirmation' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A2",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "\"Things have been tight\" sounds like repayment still isn't realistic; without knowing Leo started steady work two weeks ago, there's no reason to start the plan now."
+          },
+          {
+            "fact_id": "PF2",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C3"
+            ],
+            "why": "Without the original understanding Priya witnessed, a generic settlement might set an arbitrary or much lower installment instead of the agreed $100 minimum."
+          }
+        ]
+      },
+      {
+        "scenario_id": "domain_informalcommerce_007",
+        "scenario_type": "group_purchase_cost_split",
+        "description": "A friend coordinating a bulk group purchase of festival tickets must finalize the cost split and refund handling, with input from three other friends who are part of the group buy.",
+        "agents": [
+          {
+            "agent_id": "A1",
+            "name": "Dana",
+            "role": "Group Buy Coordinator"
+          },
+          {
+            "agent_id": "A2",
+            "name": "Marcus",
+            "role": "Group Member"
+          },
+          {
+            "agent_id": "A3",
+            "name": "Ines",
+            "role": "Group Member"
+          },
+          {
+            "agent_id": "A4",
+            "name": "Owen",
+            "role": "Group Member"
+          },
+          {
+            "agent_id": "A5",
+            "name": "Priya",
+            "role": "Group Member"
+          }
+        ],
+        "shared_context": {
+          "S1": "Dana bought a 4-pack of festival tickets for $600 total, to be split evenly among the group.",
+          "S2": "Dana finalizes how the cost is split and how any refund is handled.",
+          "S3": "All four group members confirmed they wanted in on the group buy when it was proposed.",
+          "S4": "Before finalizing, Dana checks with the group for anything relevant."
+        },
+        "private_facts": {
+          "PF1": {
+            "owner": "A4",
+            "text": "Owen confirmed this week he can no longer attend due to a scheduling conflict that came up after the purchase, and has already found a friend outside the group willing to buy his ticket at face value."
+          },
+          "PF3": {
+            "owner": "A3",
+            "text": "Ines found this week that one of the four tickets is technically a discounted companion ticket that legally must stay registered to the original buyer's name, meaning it can't simply be transferred to Owen's replacement without a separate name-change fee of $25."
+          },
+          "PF5": {
+            "owner": "A2",
+            "text": "Marcus mentioned he's planning to carpool to the festival with some other friends, unrelated to the cost split."
+          },
+          "PF6": {
+            "owner": "A5",
+            "text": "Priya mentioned she's deciding between two outfits for the festival, unrelated to the cost split."
+          }
+        },
+        "views": {
+          "A1": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "A2": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF5"
+          ],
+          "A3": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF3"
+          ],
+          "A4": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1"
+          ],
+          "A5": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF6"
+          ]
+        },
+        "decision_maker": "A1",
+        "interaction_config": {
+          "turn_cap": 20
+        },
+        "settlement_schema": {
+          "decisions": {
+            "owen_ticket_transferred": "boolean",
+            "name_change_fee_charged_to": "string",
+            "cost_per_person_usd": "integer"
+          },
+          "credited_facts": [
+            "fact_id"
+          ],
+          "commitments": [
+            {
+              "type": "string",
+              "target": "string",
+              "detail": "string"
+            }
+          ],
+          "justification_fact_ids": [
+            "fact_id"
+          ]
+        },
+        "acceptance_conditions": [
+          "Owen's ticket must be transferred to his replacement buyer.",
+          "The $25 name-change fee must be charged to Owen, since it's specific to his ticket's transfer.",
+          "The remaining three group members' cost per person must stay at $150.",
+          "A transfer-processing commitment must be logged."
+        ],
+        "content_checks": {
+          "C1": "decisions['owen_ticket_transferred'] == True",
+          "C2": "decisions['name_change_fee_charged_to'] == 'Owen'",
+          "C3": "decisions['cost_per_person_usd'] == 150",
+          "C4": "any(c['type'] == 'transfer_processed' for c in commitments)"
+        },
+        "provenance_checks": {
+          "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+          "P2": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+        },
+        "decisive_facts": [
+          {
+            "fact_id": "PF1",
+            "owner": "A4",
+            "flips": [
+              "C1",
+              "P1"
+            ],
+            "why": "Without knowing Owen already lined up a replacement buyer, a generic settlement might just leave his ticket unused or ask the group to absorb the cost."
+          },
+          {
+            "fact_id": "PF3",
+            "owner": "A3",
+            "flips": [
+              "C2",
+              "C4",
+              "P2"
+            ],
+            "why": "Without knowing about the companion-ticket registration rule, there'd be no reason to charge a name-change fee to anyone or process a special transfer at all."
           }
         ]
       }
