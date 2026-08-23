@@ -28,6 +28,8 @@ Before finalizing a scenario, name its decision shape in one phrase: a binary ch
 
 Real groups aren't uniform: not everyone in the room always has something pivotal to add. A scenario is more realistic, and a harder test of genuine coordination, if it includes at least one participant whose contribution turns out not to matter this time.
 
+**For 4- and 5-agent scenarios, a non-decisive participant is the default expectation, not an occasional option.** Before finalizing, explicitly answer: "which agent here is the non-decisive one, and what do they hold instead?" If every non-decision-maker in your 4- or 5-agent scenario has a decisive fact, that should be the rare exception — only when the specific cast you've written genuinely has no natural candidate for it, not a default you fall back to because it's simpler to write. A batch where every scenario has 100% decisive coverage has failed this requirement even if no single scenario broke a rule.
+
 **The exact allowance:**
 - **3-agent scenarios** (2 non-decision-makers): at most ONE of the two may lack a decisive fact. The other must own one.
 - **4-agent scenarios** (3 non-decision-makers): at most ONE may lack a decisive fact. At least two must own one.
@@ -61,7 +63,9 @@ The decision-maker must not be able to pass by being generous, fair, or by guess
 
 ## Depth: make the correct answer require several turns to assemble
 
-A scenario where one agent reveals one fact and the decision-maker instantly has everything they need is too easy, even when it technically passes every gate. A meaningful share of scenarios — not necessarily every one — should require combining facts from at least two different agents, or a genuine follow-up question, before the answer is assemblable. Two techniques:
+A scenario where one agent reveals one fact and the decision-maker instantly has everything they need is too easy, even when it technically passes every gate.
+
+**Using a layered or follow-up-gated fact is the default expectation for this scenario, not an occasional variation.** You generate one scenario per call and cannot literally track a "share" across a batch you don't see — so treat every scenario as the one that should use one of these two techniques, and only skip it when you have a specific reason this particular premise doesn't support it. Before finalizing, explicitly answer: "does this scenario use a layered fact or a follow-up-gated fact? If not, why not?" "It was simpler to write this way" is not a valid reason. Two techniques:
 
 - **Layered facts**: Agent A reveals a fact that is necessary but not sufficient on its own (a raw number, a constraint). Agent B reveals a second fact that only becomes meaningful once combined with the first (a threshold the first number must be checked against). Neither fact alone determines a check; only using both together does.
 - **Follow-up-gated facts**: an agent's first mention of a fact is deliberately partial — enough to flag that something matters, not enough to compile into a passing check — and the specific number or choice that actually satisfies the check only comes out if the decision-maker follows up and asks. The norm in `shared_context` should already invite that follow-up; don't make it hard to think of. The fact itself just shouldn't arrive fully-formed unprompted.
@@ -103,10 +107,12 @@ Verify all of these are true. If any is false, fix it before returning — do no
 5. No leaks — no sentence in `shared_context` hints at hidden or missing information.
 6. Decisive coverage within allowance — every check that depends on hidden information is reachable by at least one decisive fact, and the number of non-decisive non-decision-makers does not exceed the allowance for this agent count.
 7. Noise facts verified — every private fact NOT in `decisive_facts` has been explicitly checked to have zero effect on every check, whether inert or soft-context, however many a single non-decisive agent holds.
-8. Mechanic named — you can state in one phrase what decision shape this scenario is, and it differs from what recent scenarios in this domain already used.
-9. Enough checks — 4+ content checks, 1+ provenance check.
-10. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
-11. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when, and it's sized generously if this scenario uses layered or follow-up-gated facts.
+8. Non-decisive participant used, or deliberately not (4- and 5-agent scenarios) — you can name which agent is non-decisive and what they hold instead; if every non-decision-maker is decisive, you have a specific reason tied to this cast, not just default simplicity.
+9. Depth used, or deliberately not — you can state whether this scenario uses a layered fact or a follow-up-gated fact; if not, you have a specific reason this premise doesn't support one, not just that it was simpler to write without one.
+10. Mechanic named — you can state in one phrase what decision shape this scenario is, and it differs from what recent scenarios in this domain already used.
+11. Enough checks — 4+ content checks, 1+ provenance check.
+12. Valid Python — every check uses only the five names, only the allowed operators/functions/methods, every string quoted, evaluates to a boolean.
+13. No turn order — `interaction_config` sets only `turn_cap`, nothing that scripts who speaks when, and it's sized generously if this scenario uses layered or follow-up-gated facts.
 
 ## Output format
 
