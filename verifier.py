@@ -36,7 +36,7 @@ def run_verifier(scenario: dict) -> dict:
         model=config.VERIFIER_MODEL,
         messages=messages,
         temperature=0.2,
-        max_tokens=1500,
+        max_tokens=4000,
         json_mode=True,
     )
     return extract_json(raw)

@@ -104,8 +104,8 @@ def build_feedback_message(reject_tag: str, diagnosis: str, evidence: str, fix_i
     return (
         f"Your previous scenario was REJECTED. Tag: {reject_tag}\n\n"
         f"What went wrong: {diagnosis}\n\n"
-        f"Evidence: {evidence}\n\n"
         f"What to fix: {fix_instructions}\n\n"
+        f"Evidence: {evidence}\n\n"
         f"Rules for your revision:\n"
         f"- Keep everything that already works. Change only what caused the rejection.\n"
         f"- Return the complete scenario object again, in the same JSON format as before.\n"
@@ -132,7 +132,7 @@ def revise_scenario(previous_scenario: dict, reject_tag: str, diagnosis: str,
         model=config.CHALLENGER_MODEL,
         messages=messages,
         temperature=0.2,
-        max_tokens=10000,
+        max_tokens=12000,
         json_mode=True,
     )
     scenario = extract_json(raw)

@@ -103,7 +103,7 @@ def build_turn_prompt(scenario: dict, speaker_id: str, transcript: list, settle_
         f"and will NOT be credited to you.\n"
         f"2. Never assume, reference, or act on information you were not explicitly given in the "
         f"blocks above or explicitly told by another speaker earlier in this conversation. If you "
-        f"were not told something, you do not know it. You should never speak more than 4-5 lines maximum\n"
+        f"were not told something, you do not know it.\n"
         f"3. Take exactly ONE action this turn. Do not combine actions.\n"
         f"4. If you are the decision-maker settling, cite ONLY facts that were either your own "
         f"private facts, shared facts, or facts another agent explicitly revealed earlier in this "

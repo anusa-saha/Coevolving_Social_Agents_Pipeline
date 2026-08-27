@@ -10,6 +10,24 @@ from cascade import run_cascade
 from storage import write_json_array, next_scenario_id, set_scenario_counter, current_scenario_counter
 
 
+def _apply_output_dir(args):
+    """Point config.OUTPUT_DIR (used by storage.py for the scenarios/ tree, the scenario
+    counter, and all the .jsonl logs) at whatever --output-dir was given, before any
+    storage function runs. Assigning through the module object -- not a bound import --
+    means every other module that did `import config` and reads config.OUTPUT_DIR sees
+    the override too, with no changes needed anywhere else."""
+    if getattr(args, "output_dir", None):
+        config.OUTPUT_DIR = args.output_dir
+        Path(config.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+
+
+def _default_out_path(args, filename: str) -> str:
+    """Resolve a per-command output file's default path relative to --output-dir if the
+    user didn't explicitly override that specific file with its own flag."""
+    base = args.output_dir if getattr(args, "output_dir", None) else "output"
+    return str(Path(base) / filename)
+
+
 def load_scenarios(path: str) -> list:
     with open(path) as f:
         data = json.load(f)
@@ -61,6 +79,7 @@ def cmd_domains(args):
 
 
 def cmd_reset_counter(args):
+    _apply_output_dir(args)
     before = current_scenario_counter()
     if args.set is None:
         print(f"Current scenario counter: {before} (next scenario would be scenario_{before + 1})")
@@ -71,6 +90,9 @@ def cmd_reset_counter(args):
 
 
 def cmd_challenger(args):
+    _apply_output_dir(args)
+    out_path = args.out if args.out is not None else _default_out_path(args, "challenger_scenarios.json")
+
     results = []
     for i in range(args.n):
         scenario = generate_scenario(args.scenario_type, args.num_agents)
@@ -78,11 +100,15 @@ def cmd_challenger(args):
         results.append(entry)
         print(f"[{i + 1}/{args.n}] generated scenario_id={scenario['scenario_id']}")
 
-    write_json_array(args.out, results)
-    print(f"Wrote {len(results)} scenario(s) to {args.out}")
+    write_json_array(out_path, results)
+    print(f"Wrote {len(results)} scenario(s) to {out_path}")
 
 
 def _run_gated_stage(args, target_stage: str):
+    _apply_output_dir(args)
+    out_accepted = args.out_accepted if args.out_accepted is not None else _default_out_path(args, f"{target_stage}_accepted.json")
+    out_rejected = args.out_rejected if args.out_rejected is not None else _default_out_path(args, f"{target_stage}_rejected.json")
+
     scenarios = load_scenarios(args.input)
     total_loaded = len(scenarios)
     scenarios = filter_by_scenario_range(scenarios, args.start_from, args.end_at)
@@ -107,11 +133,11 @@ def _run_gated_stage(args, target_stage: str):
             print(f"scenario_id={scenario.get('scenario_id')} EXHAUSTED at "
                   f"{result['exhausted_stage']} after {result['rounds_taken']} round(s)")
 
-    write_json_array(args.out_accepted, accepted)
-    write_json_array(args.out_rejected, rejected)
+    write_json_array(out_accepted, accepted)
+    write_json_array(out_rejected, rejected)
     print(f"{len(accepted)} accepted, {len(rejected)} rejected attempts logged")
-    print(f"Accepted -> {args.out_accepted}")
-    print(f"Rejected -> {args.out_rejected}")
+    print(f"Accepted -> {out_accepted}")
+    print(f"Rejected -> {out_rejected}")
 
 
 def cmd_verifier(args):
@@ -137,13 +163,20 @@ def main():
     p.add_argument("--set", type=int, default=None,
                     help="Set the scenario counter to this value. Next scenario generated will be "
                          "scenario_<value+1>. Omit to just print the current value.")
+    p.add_argument("--output-dir", type=str, default=None,
+                    help="Directory the scenario counter (and all other pipeline storage) lives in. "
+                         "Overrides config.OUTPUT_DIR for this run. Defaults to config.py's built-in path.")
     p.set_defaults(func=cmd_reset_counter)
 
     p = sub.add_parser("challenger")
     p.add_argument("--n", type=int, default=1)
     p.add_argument("--scenario-type", type=str, default=None)
     p.add_argument("--num-agents", type=int, default=None, choices=VALID_AGENT_COUNTS)
-    p.add_argument("--out", type=str, default="output/challenger_scenarios.json")
+    p.add_argument("--out", type=str, default=None,
+                    help="Defaults to <output-dir>/challenger_scenarios.json")
+    p.add_argument("--output-dir", type=str, default=None,
+                    help="Directory all pipeline storage (scenarios/ tree, counter, .jsonl logs, and "
+                         "this command's default --out) lives in. Overrides config.OUTPUT_DIR.")
     p.set_defaults(func=cmd_challenger)
 
     p = sub.add_parser("verifier")
@@ -151,8 +184,12 @@ def main():
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--start-from", type=int, default=None)
     p.add_argument("--end-at", type=int, default=None)
-    p.add_argument("--out-accepted", type=str, default="output/verifier_accepted.json")
-    p.add_argument("--out-rejected", type=str, default="output/verifier_rejected.json")
+    p.add_argument("--out-accepted", type=str, default=None,
+                    help="Defaults to <output-dir>/verifier_accepted.json")
+    p.add_argument("--out-rejected", type=str, default=None,
+                    help="Defaults to <output-dir>/verifier_rejected.json")
+    p.add_argument("--output-dir", type=str, default=None,
+                    help="Directory all pipeline storage lives in. Overrides config.OUTPUT_DIR.")
     p.set_defaults(func=cmd_verifier)
 
     p = sub.add_parser("weak-arm")
@@ -160,8 +197,12 @@ def main():
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--start-from", type=int, default=None)
     p.add_argument("--end-at", type=int, default=None)
-    p.add_argument("--out-accepted", type=str, default="output/weak_arm_accepted.json")
-    p.add_argument("--out-rejected", type=str, default="output/weak_arm_rejected.json")
+    p.add_argument("--out-accepted", type=str, default=None,
+                    help="Defaults to <output-dir>/weak_arm_accepted.json")
+    p.add_argument("--out-rejected", type=str, default=None,
+                    help="Defaults to <output-dir>/weak_arm_rejected.json")
+    p.add_argument("--output-dir", type=str, default=None,
+                    help="Directory all pipeline storage lives in. Overrides config.OUTPUT_DIR.")
     p.set_defaults(func=cmd_weak_arm)
 
     p = sub.add_parser("strong-arm")
@@ -169,8 +210,12 @@ def main():
     p.add_argument("--max-rounds", type=int, default=config.MAX_REFINEMENT_ROUNDS)
     p.add_argument("--start-from", type=int, default=None)
     p.add_argument("--end-at", type=int, default=None)
-    p.add_argument("--out-accepted", type=str, default="output/strong_arm_accepted.json")
-    p.add_argument("--out-rejected", type=str, default="output/strong_arm_rejected.json")
+    p.add_argument("--out-accepted", type=str, default=None,
+                    help="Defaults to <output-dir>/strong_arm_accepted.json")
+    p.add_argument("--out-rejected", type=str, default=None,
+                    help="Defaults to <output-dir>/strong_arm_rejected.json")
+    p.add_argument("--output-dir", type=str, default=None,
+                    help="Directory all pipeline storage lives in. Overrides config.OUTPUT_DIR.")
     p.set_defaults(func=cmd_strong_arm)
 
     args = parser.parse_args()

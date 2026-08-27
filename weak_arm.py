@@ -1,8 +1,7 @@
 import random
 
 import config
-import weak_arm_model
-from llm_clients import extract_json
+from llm_clients import extract_json, weak_arm_chat
 from prompt_builder import build_weak_arm_prompt
 from grader import grade_content
 
@@ -10,7 +9,7 @@ from grader import grade_content
 def run_weak_arm_rollout(scenario: dict) -> dict:
     temperature = round(random.uniform(*config.WEAK_ARM_TEMPERATURE_RANGE), 3)
     messages = build_weak_arm_prompt(scenario)
-    raw = weak_arm_model.generate(messages, temperature=temperature)
+    raw = weak_arm_chat(messages, temperature=temperature)
 
     try:
         settlement = extract_json(raw)

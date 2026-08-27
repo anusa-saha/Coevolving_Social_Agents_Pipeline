@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 
 from openai import OpenAI
 
@@ -11,20 +12,36 @@ client = OpenAI(
     api_key=os.environ.get(config.OPENROUTER_API_KEY_ENV, ""),
 )
 
+EMPTY_CONTENT_RETRIES = 2
+EMPTY_CONTENT_RETRY_BACKOFF_S = 2.0
+
+
+def _create_with_content_retry(model: str, **create_kwargs) -> str:
+    last_error = None
+    for attempt in range(EMPTY_CONTENT_RETRIES + 1):
+        resp = client.chat.completions.create(model=model, **create_kwargs)
+        choice = resp.choices[0]
+        if choice.message.content is not None:
+            return choice.message.content
+        last_error = ValueError(
+            f"Model {model!r} returned no content (finish_reason={choice.finish_reason!r}) on "
+            f"attempt {attempt + 1}/{EMPTY_CONTENT_RETRIES + 1}. This usually means the response "
+            f"was refused or content-filtered, the call produced only a tool call with no text, or "
+            f"it hit a length/stop condition before emitting any content. Full choice: {choice!r}"
+        )
+        if attempt < EMPTY_CONTENT_RETRIES:
+            time.sleep(EMPTY_CONTENT_RETRY_BACKOFF_S * (attempt + 1))
+    raise last_error
+
 
 def gpt_chat(model: str, messages: list, temperature: float = 0.7,
              max_tokens: int = 2048, json_mode: bool = False) -> str:
     kwargs = {}
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
-    resp = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        **kwargs,
+    return _create_with_content_retry(
+        model, messages=messages, temperature=temperature, max_tokens=max_tokens, **kwargs
     )
-    return resp.choices[0].message.content
 
 
 def strong_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = None,
@@ -32,8 +49,8 @@ def strong_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = 
     kwargs = {}
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
-    resp = client.chat.completions.create(
-        model=config.STRONG_ARM_MODEL,
+    return _create_with_content_retry(
+        config.STRONG_ARM_MODEL,
         messages=messages,
         temperature=temperature,
         max_tokens=config.STRONG_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
@@ -44,7 +61,27 @@ def strong_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = 
         },
         **kwargs,
     )
-    return resp.choices[0].message.content
+
+
+def weak_arm_chat(messages: list, temperature: float = 0.4, max_tokens: int = None,
+                   reasoning_enabled: bool = None, json_mode: bool = False) -> str:
+    kwargs = {}
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+    return _create_with_content_retry(
+        config.WEAK_ARM_MODEL,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=config.WEAK_ARM_MAX_TOKENS if max_tokens is None else max_tokens,
+        top_p=config.WEAK_ARM_TOP_P,
+        presence_penalty=config.WEAK_ARM_PRESENCE_PENALTY,
+        extra_body={
+            "reasoning": {
+                "enabled": config.WEAK_ARM_REASONING_ENABLED if reasoning_enabled is None else reasoning_enabled
+            }
+        },
+        **kwargs,
+    )
 
 
 def strip_reasoning(text: str) -> str:
