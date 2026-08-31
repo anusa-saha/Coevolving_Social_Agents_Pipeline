@@ -1,0 +1,38 @@
+# Sotopia-RL on CSA.
+#
+#   pip install -r requirements.txt
+#   python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+#   python compat.py     # prints what this box has and what blocks the run
+#   python selftest.py   # logic checks, no GPU needed
+#
+# This package is self-contained: it imports no code from any other baseline. It reads
+# the raw scenario JSON and rebuilds the split itself. Point CSA_RAW_DIR at the folder
+# holding <domain>_scenarios.json if the search cannot find it.
+#
+# No API key is needed anywhere. Reward attribution is computed from the dataset's own
+# decisive_facts, not annotated by a judge.
+
+# ---------------------------------------------------------------- core
+# 4.37 is a HARD floor: Qwen2 architecture support landed there and no shim helps below
+# it. Everything above is handled by compat.py, notably from_pretrained(dtype=), which
+# was spelled torch_dtype= before 4.56.
+transformers>=4.37
+torch>=2.1
+peft>=0.6               # LoRA for the policy and the reward model
+
+# Strongly recommended. Without it device_map is unavailable, so models load on CPU and
+# are then moved -- slower to start, and the whole model must fit one device.
+accelerate
+
+# Sentence trimming when a model starts speaking for someone else. Without it trimming
+# is skipped, which changes transcripts relative to the other baselines.
+nltk
+
+# Fetches the scenario JSON when CSA_HF_REPO is set, the same way transformers fetches
+# the model. Already a transitive dependency of transformers; named here because
+# paths.download_raw() imports it directly.
+huggingface_hub
+
+# ---------------------------------------------------------------- docs
+reportlab               # make_sr_changes_pdf.py only
+matplotlib              # supplies the DejaVu TTFs that PDF needs for maths glyphs

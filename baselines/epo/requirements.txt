@@ -1,0 +1,39 @@
+# EPO-on-CSA requirements.
+#
+#   pip install -r requirements.txt
+#   python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+#   python compat.py          # prints what this box has, and what blocks the run
+#
+# This package reads ppdpp_csa/verifier.py, ppdpp_csa/prompt.py and the splits in
+# ppdpp_csa/data/ by path. config.py finds that directory by walking up the tree, so the
+# two folders no longer have to be siblings; if it lives somewhere unusual, set
+# CSA_PPDPP_DIR to point at it.
+
+# ---------------------------------------------------------------- core
+# 4.37 is a HARD floor: it is where Qwen2 architecture support landed, and no shim can
+# work around its absence. Everything above that floor is handled by compat.py --
+# notably from_pretrained(dtype=), which was spelled torch_dtype= before 4.56.
+transformers>=4.37
+torch>=2.1
+peft>=0.6               # LoRA on LLM_s. Vanilla EPO full-FTs; see epo-vs-vanilla.pdf.
+numpy
+
+# Strongly recommended, not required. Without it device_map is unavailable, so models
+# load on CPU and are then moved -- slower to start, and the whole model must fit one
+# device. compat.load_causal_lm falls back automatically.
+accelerate
+
+# Sentence trimming, mirroring ppdpp_csa/env.py. Without it trimming is skipped, which
+# is a real behavioural difference from the baseline -- install it.
+nltk
+
+# ---------------------------------------------------------------- stage 1 / judge PRM
+# make_strategies.py and prm.JudgePRM use the MODERN OpenAI v1 client. Note this is the
+# opposite pin from ppdpp_csa, whose env.py calls the removed pre-1.0 ChatCompletion
+# API. Nothing here calls that path, so a v1 client in the same environment is fine.
+# Optional: stage 1 runs without it via --fallback_only.
+openai>=1.0
+
+# ---------------------------------------------------------------- docs
+reportlab               # make_epo_changes_pdf.py only
+matplotlib              # supplies the DejaVu TTFs that PDF needs for maths glyphs
