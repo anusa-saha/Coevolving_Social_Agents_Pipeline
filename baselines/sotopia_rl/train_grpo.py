@@ -120,6 +120,10 @@ def main():
     p.add_argument('--grad_checkpointing', action='store_true')
     p.add_argument('--seed', type=int, default=config.Defaults.seed)
     p.add_argument('--dry_run', type=int, default=0)
+    p.add_argument('--save_rollouts', action='store_true', default=True,
+                   help='complete and save full episodes for each candidate')
+    p.add_argument('--no_save_rollouts', dest='save_rollouts',
+                   action='store_false')
     cli = p.parse_args()
 
     if compat.report():
@@ -152,7 +156,11 @@ def main():
 
     tag = 'grpo-%s-seed%d' % (cli.reward_source, cli.seed)
     hist = open(os.path.join(paths.LOGS, '%s-history.jsonl' % tag), 'a', encoding='utf-8')
-    collapsed = total = 0
+    rollout_f = None
+    if cli.save_rollouts:
+        rollout_path = os.path.join(paths.LOGS, '%s-rollouts.jsonl' % tag)
+        rollout_f = open(rollout_path, 'a', encoding='utf-8')
+    collapsed = total = n_rollouts = 0
     t0 = time.time()
 
     for g in range(cli.groups):
@@ -213,6 +221,33 @@ def main():
             'collapsed': all(a == 0.0 for a in adv),
             'elapsed_s': round(time.time() - t0, 1)}, ensure_ascii=False) + '\n')
         hist.flush()
+        # ---- complete and save full episode rollouts ----
+        if rollout_f is not None:
+            snap_rl = env.snapshot()
+            with torch.no_grad():
+                for ci, cand_text in enumerate(texts):
+                    env.restore(snap_rl)
+                    _conv, done = env.step(cand_text)
+                    while not done:
+                        utt = env.chair_say(
+                            temperature=cli.temperature)
+                        _conv, done = env.step(utt)
+                    ep = env.episode()
+                    ep['group'] = g
+                    ep['candidate'] = ci
+                    ep['fork_turn'] = snap_rl['step_i']
+                    ep['grpo_score'] = round(scores[ci], 4)
+                    ep['grpo_advantage'] = round(adv[ci], 3)
+                    if env.last_score:
+                        ep['score'] = {
+                            k: v for k, v in env.last_score.items()
+                            if k not in ('content', 'provenance',
+                                         'settlement_resolved')}
+                    rollout_f.write(
+                        json.dumps(ep, ensure_ascii=False) + '\n')
+                    n_rollouts += 1
+                rollout_f.flush()
+            env.restore(snap_rl)
         if (g + 1) % 10 == 0:
             print('group %3d/%d  loss %.4f  score mean %.3f sd %.3f  collapsed %d/%d '
                   '(%.0f%%)' % (g + 1, cli.groups, loss_val,
@@ -225,13 +260,16 @@ def main():
 
     policy.save(os.path.join(cli.out, tag, 'final'))
     hist.close()
+    if rollout_f is not None:
+        rollout_f.close()
     summary = {'groups': cli.groups, 'group_size': cli.group,
                'reward_source': cli.reward_source,
                'collapsed_groups': collapsed, 'total_groups': total,
                'collapsed_frac': round(collapsed / max(1, total), 4),
                'calls': {'lookahead': scorer.n_lookahead, 'rm': scorer.n_rm,
                          'exact': scorer.n_exact},
-               'minutes': round((time.time() - t0) / 60, 1)}
+               'minutes': round((time.time() - t0) / 60, 1),
+               'rollouts_saved': n_rollouts}
     with open(os.path.join(paths.LOGS, '%s-summary.json' % tag), 'w',
               encoding='utf-8') as f:
         json.dump(summary, f, indent=1)
