@@ -1,0 +1,786 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "C1 (migration_approved must be false): MISAPPLIED in rollouts 1 and 3. In rollout 1, PF1 and PF2 were both revealed (turns 0 and 1), both cited in justification_fact_ids, and the settlement correctly used all the hidden values (dual_write_days=14, legacy_pipelines_covered=9, artifact_retention_days=30, monthly_cost_alert_usd=9000). Yet migration_approved=true. The group had the right information and reached the wrong conclusion \u2014 A1 said 'I'm prepared to approve a revised plan' and settled with approval despite both facts explicitly contributing to the decision not to approve the draft. In rollout 3, both facts were revealed (turns 0 and 2), both cited in justification_fact_ids, all values correct, yet migration_approved=true. A1 said 'I can approve the migration plan for next Wednesday's maintenance window' after incorporating the four changes. This is consistent across two rollouts and suggests the decisive facts' implication \u2014 that these findings should cause non-approval of the current draft \u2014 is not stated unambiguously enough. The facts say the plan 'requires' changes and 'directly impacts' the draft, but never explicitly say the approver must NOT approve the draft as-is. The model reasonably interprets 'I'll approve once these changes are incorporated' as approval.\n\nC7 (migration-plan update commitment required): ENCODING MISMATCH in rollout 0. PF1 was revealed (turn 0) and cited in justification_fact_ids. The settlement includes a commitment: {type: 'revise proposal', target: 'migration proposal draft', detail: 'Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.'}. This is functionally a migration-plan update commitment, but the check apparently expects a specific type string like 'migration-plan update' or similar, and 'revise proposal' does not match. The content is correct; the encoding of the commitment type does not match what the check expects.\n\nC8 (cost-control commitment required): ENCODING MISMATCH in rollouts 0 and 2. In rollout 0, PF2 was revealed (turn 2) and cited in justification_fact_ids. The settlement includes: {type: 'revise proposal', target: 'migration proposal draft', detail: 'Add a dedicated monthly cost alert set at $9,000.'}. This is functionally a cost-control commitment, but the type is 'revise proposal' rather than 'cost-control' or similar. In rollout 2, PF2 was revealed (turn 2) and cited. The settlement includes: {type: 'plan_revision', target: 'Morgan', detail: 'File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.'}. Again the content is a cost-control commitment but the type string 'plan_revision' does not match what C8 expects. Both are encoding mismatches \u2014 the model naturally encodes the commitment with a generic revision type rather than the specific type string the check requires.\n\nC8 in rollout 1: ENCODING MISMATCH. PF2 revealed (turn 0), cited in justification. Settlement includes {type: 'cost_alert', target: 'Morgan', detail: 'Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.'} and {type: 'retention_change', ...}. The cost_alert commitment is present and correctly typed, but C8 still failed \u2014 suggesting the check may require a combined 'cost-control' type or a specific field name that 'cost_alert' alone does not satisfy, or the check looks for a single commitment of a specific type rather than accepting the cost_alert commitment. This is still an encoding mismatch since the content is correct.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 2,\n    \"C2\": 4,\n    \"C3\": 4,\n    \"C4\": 4,\n    \"C5\": 4,\n    \"C6\": 4,\n    \"C7\": 2,\n    \"C8\": 1\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 4\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C8\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The invoice review changes artifact retention from the draft's 90 days to exactly 30 days, changes the absent cost control to an alert at exactly $9,000 per month, requires a cost-control commitment, and contributes to the decision not to approve the draft.\"\n      }\n    ],\n    \"C7\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The visible draft permits a direct cutover, but the compatibility rehearsal changes the mode to dual-writing for exactly 14 days, changes the covered pipeline count to exactly 9, requires a migration-plan update commitment, and contributes to the decision not to approve the draft.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The visible draft permits a direct cutover, but the compatibility rehearsal changes the mode to dual-writing for exactly 14 days, changes the covered pipeline count to exactly 9, requires a migration-plan update commitment, and contributes to the decision not to approve the draft.\"\n      },\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The invoice review changes artifact retention from the draft's 90 days to exactly 30 days, changes the absent cost control to an alert at exactly $9,000 per month, requires a cost-control commitment, and contributes to the decision not to approve the draft.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.242,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 4,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"migration_approved\": false,\n          \"cutover_mode\": \"dual-write transition\",\n          \"dual_write_days\": 14,\n          \"legacy_pipelines_covered\": 9,\n          \"artifact_retention_days\": 30,\n          \"monthly_cost_alert_usd\": 9000\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"revise proposal\",\n            \"target\": \"migration proposal draft\",\n            \"detail\": \"Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.\"\n          },\n          {\n            \"type\": \"revise proposal\",\n            \"target\": \"migration proposal draft\",\n            \"detail\": \"Change artifact retention from 90 days to 30 days.\"\n          },\n          {\n            \"type\": \"revise proposal\",\n            \"target\": \"migration proposal draft\",\n            \"detail\": \"Add a dedicated monthly cost alert set at $9,000.\"\n          },\n          {\n            \"type\": \"re-review\",\n            \"target\": \"updated migration proposal\",\n            \"detail\": \"Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"revise proposal\",\n          \"target\": \"migration proposal draft\",\n          \"detail\": \"Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.\"\n        },\n        {\n          \"type\": \"revise proposal\",\n          \"target\": \"migration proposal draft\",\n          \"detail\": \"Change artifact retention from 90 days to 30 days.\"\n        },\n        {\n          \"type\": \"revise proposal\",\n          \"target\": \"migration proposal draft\",\n          \"detail\": \"Add a dedicated monthly cost alert set at $9,000.\"\n        },\n        {\n          \"type\": \"re-review\",\n          \"target\": \"updated migration proposal\",\n          \"detail\": \"Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something important before we go any further with this migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 of our legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline, and I haven't updated the migration proposal yet. This directly impacts the direct cutover approach in the current draft.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something important before we go any further with this migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 of our legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline, and I haven't updated the migration proposal yet. This directly impacts the direct cutover approach in the current draft.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for flagging this, Ravi. This is a significant finding. A direct cutover would break those 9 legacy pipelines, so the current draft's approach won't work as-is. Before I can approve any migration plan, the release-readiness checklist requires both compatibility coverage and monthly cost controls to be confirmed. Right now, compatibility coverage is clearly not met with a direct cutover. We need to revise the proposal to include the 14-day dual-write period for those 9 pipelines. I'd also like to hear from anyone who can speak to the monthly cost controls piece \\u2014 the current draft has no dedicated monthly cost alert, and that's another checklist item I need addressed before approval. Let's get the proposal updated and re-reviewed before next Wednesday's window.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging this, Ravi. This is a significant finding. A direct cutover would break those 9 legacy pipelines, so the current draft's approach won't work as-is. Before I can approve any migration plan, the release-readiness checklist requires both compatibility coverage and monthly cost controls to be confirmed. Right now, compatibility coverage is clearly not met with a direct cutover. We need to revise the proposal to include the 14-day dual-write period for those 9 pipelines. I'd also like to hear from anyone who can speak to the monthly cost controls piece \\u2014 the current draft has no dedicated monthly cost alert, and that's another checklist item I need addressed before approval. Let's get the proposal updated and re-reviewed before next Wednesday's window.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I can speak to the monthly cost controls piece. I just reviewed the latest provider invoice minutes ago and confirmed that the projected egress pattern means this migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Because of that, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days in the current draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this threshold is confirmed. So the current draft's 90-day retention and lack of a monthly alert both need to be corrected before this plan can meet the release-readiness checklist.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF2\\\",\\\"text\\\":\\\"I can speak to the monthly cost controls piece. I just reviewed the latest provider invoice minutes ago and confirmed that the projected egress pattern means this migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Because of that, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days in the current draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this threshold is confirmed. So the current draft's 90-day retention and lack of a monthly alert both need to be corrected before this plan can meet the release-readiness checklist.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"migration_approved\": false,\n              \"cutover_mode\": \"dual-write transition\",\n              \"dual_write_days\": 14,\n              \"legacy_pipelines_covered\": 9,\n              \"artifact_retention_days\": 30,\n              \"monthly_cost_alert_usd\": 9000\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"revise proposal\",\n                \"target\": \"migration proposal draft\",\n                \"detail\": \"Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.\"\n              },\n              {\n                \"type\": \"revise proposal\",\n                \"target\": \"migration proposal draft\",\n                \"detail\": \"Change artifact retention from 90 days to 30 days.\"\n              },\n              {\n                \"type\": \"revise proposal\",\n                \"target\": \"migration proposal draft\",\n                \"detail\": \"Add a dedicated monthly cost alert set at $9,000.\"\n              },\n              {\n                \"type\": \"re-review\",\n                \"target\": \"updated migration proposal\",\n                \"detail\": \"Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"migration_approved\\\": false,\\n      \\\"cutover_mode\\\": \\\"dual-write transition\\\",\\n      \\\"dual_write_days\\\": 14,\\n      \\\"legacy_pipelines_covered\\\": 9,\\n      \\\"artifact_retention_days\\\": 30,\\n      \\\"monthly_cost_alert_usd\\\": 9000\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"revise proposal\\\",\\n        \\\"target\\\": \\\"migration proposal draft\\\",\\n        \\\"detail\\\": \\\"Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"revise proposal\\\",\\n        \\\"target\\\": \\\"migration proposal draft\\\",\\n        \\\"detail\\\": \\\"Change artifact retention from 90 days to 30 days.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"revise proposal\\\",\\n        \\\"target\\\": \\\"migration proposal draft\\\",\\n        \\\"detail\\\": \\\"Add a dedicated monthly cost alert set at $9,000.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"re-review\\\",\\n        \\\"target\\\": \\\"updated migration proposal\\\",\\n        \\\"detail\\\": \\\"Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.365,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"migration_approved\": true,\n          \"cutover_mode\": \"dual-write-then-switch\",\n          \"dual_write_days\": 14,\n          \"legacy_pipelines_covered\": 9,\n          \"artifact_retention_days\": 30,\n          \"monthly_cost_alert_usd\": 9000\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"retention_change\",\n            \"target\": \"Morgan\",\n            \"detail\": \"Artifact retention reduced from 90 days to 30 days per cost review findings.\"\n          },\n          {\n            \"type\": \"cost_alert\",\n            \"target\": \"Morgan\",\n            \"detail\": \"Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.\"\n          },\n          {\n            \"type\": \"dual_write_period\",\n            \"target\": \"Ravi\",\n            \"detail\": \"14-day dual-write period to both stores before final switch to cover 9 legacy pipelines.\"\n          },\n          {\n            \"type\": \"cutover_mode_change\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"retention_change\",\n          \"target\": \"Morgan\",\n          \"detail\": \"Artifact retention reduced from 90 days to 30 days per cost review findings.\"\n        },\n        {\n          \"type\": \"cost_alert\",\n          \"target\": \"Morgan\",\n          \"detail\": \"Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.\"\n        },\n        {\n          \"type\": \"dual_write_period\",\n          \"target\": \"Ravi\",\n          \"detail\": \"14-day dual-write period to both stores before final switch to cover 9 legacy pipelines.\"\n        },\n        {\n          \"type\": \"cutover_mode_change\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a cost issue before this migration plan goes to Taylor for approval. I just reviewed the latest provider invoice and confirmed that the projected egress pattern will push us over our approved spend once monthly storage and transfer costs reach $9,000. To stay within budget, the plan needs to set artifact retention to exactly 30 days \\u2014 not 90 \\u2014 and we need a monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this directly affects whether the plan meets the release-readiness checklist requirement for monthly cost controls.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a cost issue before this migration plan goes to Taylor for approval. I just reviewed the latest provider invoice and confirmed that the projected egress pattern will push us over our approved spend once monthly storage and transfer costs reach $9,000. To stay within budget, the plan needs to set artifact retention to exactly 30 days \\u2014 not 90 \\u2014 and we need a monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this directly affects whether the plan meets the release-readiness checklist requirement for monthly cost controls.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to share something critical before this plan goes to Taylor. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet. This directly impacts the release-readiness checklist requirement for compatibility coverage \\u2014 a direct cutover as currently drafted would break those 9 pipelines.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to share something critical before this plan goes to Taylor. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet. This directly impacts the release-readiness checklist requirement for compatibility coverage \\u2014 a direct cutover as currently drafted would break those 9 pipelines.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for raising these issues before this reaches my desk. Morgan, the 90-day retention and missing cost alert are a direct conflict with the release-readiness checklist requirement for monthly cost controls. Ravi, a direct cutover that breaks 9 legacy pipelines is a direct conflict with the compatibility coverage requirement. Based on what you've both shared, the current draft as written cannot pass the release-readiness checklist. I'm prepared to approve a revised plan that incorporates: (1) 30-day artifact retention instead of 90, (2) a monthly cost alert set at $9,000, and (3) a 14-day dual-write period to both stores before the final switch to cover those 9 legacy pipelines. Can both of you confirm those changes are accurately reflected in what you've reported, so I can settle the approval decision?\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you both for raising these issues before this reaches my desk. Morgan, the 90-day retention and missing cost alert are a direct conflict with the release-readiness checklist requirement for monthly cost controls. Ravi, a direct cutover that breaks 9 legacy pipelines is a direct conflict with the compatibility coverage requirement. Based on what you've both shared, the current draft as written cannot pass the release-readiness checklist. I'm prepared to approve a revised plan that incorporates: (1) 30-day artifact retention instead of 90, (2) a monthly cost alert set at $9,000, and (3) a 14-day dual-write period to both stores before the final switch to cover those 9 legacy pipelines. Can both of you confirm those changes are accurately reflected in what you've reported, so I can settle the approval decision?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, I can confirm those changes are accurately reflected in what I reported. The 30-day artifact retention and the monthly cost alert set at exactly $9,000 are both directly tied to the invoice review I just completed \\u2014 once monthly storage and transfer costs reach $9,000, we exceed our approved spend given the projected egress pattern. Both of those changes satisfy the release-readiness checklist requirement for monthly cost controls from my side.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Yes, I can confirm those changes are accurately reflected in what I reported. The 30-day artifact retention and the monthly cost alert set at exactly $9,000 are both directly tied to the invoice review I just completed \\u2014 once monthly storage and transfer costs reach $9,000, we exceed our approved spend given the projected egress pattern. Both of those changes satisfy the release-readiness checklist requirement for monthly cost controls from my side.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, I can confirm those changes are accurately reflected in what I reported. The 14-day dual-write period to both stores before the final switch is directly tied to the compatibility rehearsal I conducted this morning, where I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. That change satisfies the release-readiness checklist requirement for compatibility coverage from my side.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Yes, I can confirm those changes are accurately reflected in what I reported. The 14-day dual-write period to both stores before the final switch is directly tied to the compatibility rehearsal I conducted this morning, where I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. That change satisfies the release-readiness checklist requirement for compatibility coverage from my side.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"migration_approved\": true,\n              \"cutover_mode\": \"dual-write-then-switch\",\n              \"dual_write_days\": 14,\n              \"legacy_pipelines_covered\": 9,\n              \"artifact_retention_days\": 30,\n              \"monthly_cost_alert_usd\": 9000\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"retention_change\",\n                \"target\": \"Morgan\",\n                \"detail\": \"Artifact retention reduced from 90 days to 30 days per cost review findings.\"\n              },\n              {\n                \"type\": \"cost_alert\",\n                \"target\": \"Morgan\",\n                \"detail\": \"Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.\"\n              },\n              {\n                \"type\": \"dual_write_period\",\n                \"target\": \"Ravi\",\n                \"detail\": \"14-day dual-write period to both stores before final switch to cover 9 legacy pipelines.\"\n              },\n              {\n                \"type\": \"cutover_mode_change\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"migration_approved\\\": true,\\n      \\\"cutover_mode\\\": \\\"dual-write-then-switch\\\",\\n      \\\"dual_write_days\\\": 14,\\n      \\\"legacy_pipelines_covered\\\": 9,\\n      \\\"artifact_retention_days\\\": 30,\\n      \\\"monthly_cost_alert_usd\\\": 9000\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"retention_change\\\",\\n        \\\"target\\\": \\\"Morgan\\\",\\n        \\\"detail\\\": \\\"Artifact retention reduced from 90 days to 30 days per cost review findings.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"cost_alert\\\",\\n        \\\"target\\\": \\\"Morgan\\\",\\n        \\\"detail\\\": \\\"Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"dual_write_period\\\",\\n        \\\"target\\\": \\\"Ravi\\\",\\n        \\\"detail\\\": \\\"14-day dual-write period to both stores before final switch to cover 9 legacy pipelines.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"cutover_mode_change\\\",\\n        \\\"target\\\": \\\"Ravi\\\",\\n        \\\"detail\\\": \\\"Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.454,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"migration_approved\": false,\n          \"cutover_mode\": \"dual-write transition\",\n          \"dual_write_days\": 14,\n          \"legacy_pipelines_covered\": 9,\n          \"artifact_retention_days\": 30,\n          \"monthly_cost_alert_usd\": 9000\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"plan_revision\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch.\"\n          },\n          {\n            \"type\": \"plan_revision\",\n            \"target\": \"Morgan\",\n            \"detail\": \"File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.\"\n          },\n          {\n            \"type\": \"approval_condition\",\n            \"target\": \"Taylor\",\n            \"detail\": \"Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"plan_revision\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch.\"\n        },\n        {\n          \"type\": \"plan_revision\",\n          \"target\": \"Morgan\",\n          \"detail\": \"File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.\"\n        },\n        {\n          \"type\": \"approval_condition\",\n          \"target\": \"Taylor\",\n          \"detail\": \"Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Alright, let's get this migration plan reviewed. I know the current draft proposes a direct cutover to the new object store, 90-day artifact retention, provider-managed encryption, and no dedicated monthly cost alert. Before I can make a final approval decision, I need us to confirm two things from the release-readiness checklist: compatibility coverage and monthly cost controls. Can someone walk me through where we stand on those two items?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Alright, let's get this migration plan reviewed. I know the current draft proposes a direct cutover to the new object store, 90-day artifact retention, provider-managed encryption, and no dedicated monthly cost alert. Before I can make a final approval decision, I need us to confirm two things from the release-readiness checklist: compatibility coverage and monthly cost controls. Can someone walk me through where we stand on those two items?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a compatibility issue I found this morning during a rehearsal. I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet, so the current direct cutover plan won't satisfy the compatibility coverage requirement as-is.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag a compatibility issue I found this morning during a rehearsal. I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet, so the current direct cutover plan won't satisfy the compatibility coverage requirement as-is.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a cost control issue. I just reviewed the latest provider invoice and confirmed that the projected egress pattern makes this migration exceed our approved spend once monthly storage and transfer costs reach $9,000. Based on this, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days currently proposed \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but the current draft's 90-day retention and lack of a monthly alert won't satisfy the monthly cost controls requirement.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a cost control issue. I just reviewed the latest provider invoice and confirmed that the projected egress pattern makes this migration exceed our approved spend once monthly storage and transfer costs reach $9,000. Based on this, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days currently proposed \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but the current draft's 90-day retention and lack of a monthly alert won't satisfy the monthly cost controls requirement.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Morgan. So to summarize where we stand: the compatibility coverage requirement is not met because of the 9 legacy pipelines needing 14 days of dual-writing, and the monthly cost controls requirement is not met because of the 90-day retention and missing $9,000 alert. Both issues need to be addressed in a revised plan before Taylor can approve. I'll update the proposal to include the dual-writing period for the legacy pipelines. Morgan, can you file the FinOps note and update the retention and alert provisions on your end? Once both updates are in, we should have a revised draft for Taylor to review.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thanks, Morgan. So to summarize where we stand: the compatibility coverage requirement is not met because of the 9 legacy pipelines needing 14 days of dual-writing, and the monthly cost controls requirement is not met because of the 90-day retention and missing $9,000 alert. Both issues need to be addressed in a revised plan before Taylor can approve. I'll update the proposal to include the dual-writing period for the legacy pipelines. Morgan, can you file the FinOps note and update the retention and alert provisions on your end? Once both updates are in, we should have a revised draft for Taylor to review.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, I'll file the FinOps note and update the proposal to reflect exactly 30-day artifact retention and a dedicated monthly cost alert set at exactly $9,000. Once Ravi has the dual-writing period added for the 9 legacy pipelines, we should have both checklist items covered for Taylor's review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Yes, I'll file the FinOps note and update the proposal to reflect exactly 30-day artifact retention and a dedicated monthly cost alert set at exactly $9,000. Once Ravi has the dual-writing period added for the 9 legacy pipelines, we should have both checklist items covered for Taylor's review.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"migration_approved\": false,\n              \"cutover_mode\": \"dual-write transition\",\n              \"dual_write_days\": 14,\n              \"legacy_pipelines_covered\": 9,\n              \"artifact_retention_days\": 30,\n              \"monthly_cost_alert_usd\": 9000\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"plan_revision\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch.\"\n              },\n              {\n                \"type\": \"plan_revision\",\n                \"target\": \"Morgan\",\n                \"detail\": \"File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.\"\n              },\n              {\n                \"type\": \"approval_condition\",\n                \"target\": \"Taylor\",\n                \"detail\": \"Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"migration_approved\\\": false,\\n      \\\"cutover_mode\\\": \\\"dual-write transition\\\",\\n      \\\"dual_write_days\\\": 14,\\n      \\\"legacy_pipelines_covered\\\": 9,\\n      \\\"artifact_retention_days\\\": 30,\\n      \\\"monthly_cost_alert_usd\\\": 9000\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"plan_revision\\\",\\n        \\\"target\\\": \\\"Ravi\\\",\\n        \\\"detail\\\": \\\"Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"plan_revision\\\",\\n        \\\"target\\\": \\\"Morgan\\\",\\n        \\\"detail\\\": \\\"File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"approval_condition\\\",\\n        \\\"target\\\": \\\"Taylor\\\",\\n        \\\"detail\\\": \\\"Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.409,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 9,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"migration_approved\": true,\n          \"cutover_mode\": \"dual-write\",\n          \"dual_write_days\": 14,\n          \"legacy_pipelines_covered\": 9,\n          \"artifact_retention_days\": 30,\n          \"monthly_cost_alert_usd\": 9000\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"update_proposal\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it\"\n          },\n          {\n            \"type\": \"file_finops_note\",\n            \"target\": \"Morgan\",\n            \"detail\": \"File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement\"\n          },\n          {\n            \"type\": \"circulate_revised_draft\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Circulate the revised draft incorporating all four changes for final review before approval\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"update_proposal\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it\"\n        },\n        {\n          \"type\": \"file_finops_note\",\n          \"target\": \"Morgan\",\n          \"detail\": \"File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement\"\n        },\n        {\n          \"type\": \"circulate_revised_draft\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Circulate the revised draft incorporating all four changes for final review before approval\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something important before we go further on the migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something important before we go further on the migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for flagging this, Ravi. This is a critical finding. The current draft proposes a direct cutover, but if 9 legacy pipelines can't read from the new object store immediately and require 14 days of dual-writing, that directly conflicts with the direct cutover approach in the current proposal. Additionally, our release-readiness checklist requires compatibility coverage to be confirmed before I can approve the migration plan. A direct cutover without dual-writing would leave those 9 pipelines broken, so the plan needs to be updated to include the dual-write period. Ravi, can you update the migration proposal to reflect the 14-day dual-write requirement and the 9 affected pipelines, and then circulate the revised draft? Once that's incorporated and we've confirmed compatibility coverage, I can move toward approval. I also want to note that the current draft still lacks dedicated monthly cost controls, which the checklist also requires \\u2014 so that gap needs to be addressed as well before next Wednesday.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging this, Ravi. This is a critical finding. The current draft proposes a direct cutover, but if 9 legacy pipelines can't read from the new object store immediately and require 14 days of dual-writing, that directly conflicts with the direct cutover approach in the current proposal. Additionally, our release-readiness checklist requires compatibility coverage to be confirmed before I can approve the migration plan. A direct cutover without dual-writing would leave those 9 pipelines broken, so the plan needs to be updated to include the dual-write period. Ravi, can you update the migration proposal to reflect the 14-day dual-write requirement and the 9 affected pipelines, and then circulate the revised draft? Once that's incorporated and we've confirmed compatibility coverage, I can move toward approval. I also want to note that the current draft still lacks dedicated monthly cost controls, which the checklist also requires \\u2014 so that gap needs to be addressed as well before next Wednesday.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a cost issue before this plan goes further. I just reviewed the latest provider invoice and confirmed that the projected egress pattern means the migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Based on that threshold, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days currently in the draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but given Taylor just called out the missing cost controls gap, this directly addresses it.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF2\\\",\\\"text\\\":\\\"I need to flag a cost issue before this plan goes further. I just reviewed the latest provider invoice and confirmed that the projected egress pattern means the migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Based on that threshold, the plan requires artifact retention of exactly 30 days \\u2014 not the 90 days currently in the draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but given Taylor just called out the missing cost controls gap, this directly addresses it.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Morgan. This is exactly the kind of cost-control detail I was asking about. So to confirm: the projected egress pattern means we'll exceed approved spend if costs reach $9,000, which means we need 30-day artifact retention \\u2014 not the 90 days in the current draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. That directly satisfies the monthly cost controls requirement on the release-readiness checklist. Between Ravi's compatibility finding and your cost threshold, the plan needs four changes before I can approve: (1) switch from direct cutover to a 14-day dual-write period, (2) explicitly account for the 9 legacy pipelines, (3) reduce artifact retention from 90 days to 30 days, and (4) add a dedicated monthly cost alert at $9,000. Morgan, please file the FinOps note with the $9,000 threshold and 30-day retention requirement. Ravi, please update the proposal with the dual-write period and legacy pipeline details. Once both updates are in the revised draft, I can approve the migration plan for next Wednesday's maintenance window.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\": \\\"Thanks, Morgan. This is exactly the kind of cost-control detail I was asking about. So to confirm: the projected egress pattern means we'll exceed approved spend if costs reach $9,000, which means we need 30-day artifact retention \\u2014 not the 90 days in the current draft \\u2014 and a dedicated monthly cost alert set at exactly $9,000. That directly satisfies the monthly cost controls requirement on the release-readiness checklist. Between Ravi's compatibility finding and your cost threshold, the plan needs four changes before I can approve: (1) switch from direct cutover to a 14-day dual-write period, (2) explicitly account for the 9 legacy pipelines, (3) reduce artifact retention from 90 days to 30 days, and (4) add a dedicated monthly cost alert at $9,000. Morgan, please file the FinOps note with the $9,000 threshold and 30-day retention requirement. Ravi, please update the proposal with the dual-write period and legacy pipeline details. Once both updates are in the revised draft, I can approve the migration plan for next Wednesday's maintenance window.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Taylor. I'll update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it. I'll circulate the revised draft once those changes are incorporated so you can review before approval.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Understood, Taylor. I'll update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it. I'll circulate the revised draft once those changes are incorporated so you can review before approval.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Taylor. I'll file the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement. Once that's filed and Ravi has the revised draft with the dual-write period and legacy pipeline details incorporated, all four changes should be covered and the plan should satisfy both the compatibility coverage and monthly cost controls requirements on the release-readiness checklist.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Understood, Taylor. I'll file the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement. Once that's filed and Ravi has the revised draft with the dual-write period and legacy pipeline details incorporated, all four changes should be covered and the plan should satisfy both the compatibility coverage and monthly cost controls requirements on the release-readiness checklist.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"To make sure we're all aligned on the timeline: the 14-day dual-write period needs to start before the final switch, which means we need to begin dual-writing no later than this coming Wednesday to still complete the migration in next Wednesday's maintenance window. I'll make sure the revised draft reflects that start-date dependency so Taylor has the full picture before approving. Morgan, once you've filed the FinOps note, let me know and I'll reference it in the circulated draft as well.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"To make sure we're all aligned on the timeline: the 14-day dual-write period needs to start before the final switch, which means we need to begin dual-writing no later than this coming Wednesday to still complete the migration in next Wednesday's maintenance window. I'll make sure the revised draft reflects that start-date dependency so Taylor has the full picture before approving. Morgan, once you've filed the FinOps note, let me know and I'll reference it in the circulated draft as well.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good point on the timeline, Ravi. I'll file the FinOps note as soon as possible and let you know once it's done so you can reference it in the circulated draft. That way Taylor will have both the cost-control documentation and the dual-write start-date dependency in hand before making the final approval decision.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good point on the timeline, Ravi. I'll file the FinOps note as soon as possible and let you know once it's done so you can reference it in the circulated draft. That way Taylor will have both the cost-control documentation and the dual-write start-date dependency in hand before making the final approval decision.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"migration_approved\": true,\n              \"cutover_mode\": \"dual-write\",\n              \"dual_write_days\": 14,\n              \"legacy_pipelines_covered\": 9,\n              \"artifact_retention_days\": 30,\n              \"monthly_cost_alert_usd\": 9000\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"update_proposal\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it\"\n              },\n              {\n                \"type\": \"file_finops_note\",\n                \"target\": \"Morgan\",\n                \"detail\": \"File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement\"\n              },\n              {\n                \"type\": \"circulate_revised_draft\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Circulate the revised draft incorporating all four changes for final review before approval\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"migration_approved\\\":true,\\\"cutover_mode\\\":\\\"dual-write\\\",\\\"dual_write_days\\\":14,\\\"legacy_pipelines_covered\\\":9,\\\"artifact_retention_days\\\":30,\\\"monthly_cost_alert_usd\\\":9000},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"update_proposal\\\",\\\"target\\\":\\\"Ravi\\\",\\\"detail\\\":\\\"Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it\\\"},{\\\"type\\\":\\\"file_finops_note\\\",\\\"target\\\":\\\"Morgan\\\",\\\"detail\\\":\\\"File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement\\\"},{\\\"type\\\":\\\"circulate_revised_draft\\\",\\\"target\\\":\\\"Ravi\\\",\\\"detail\\\":\\\"Circulate the revised draft incorporating all four changes for final review before approval\\\"}],\\\"justification_fact_ids\\\":[\\\"PF1\\\",\\\"PF2\\\"]}}\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 2,
+      "C2": 4,
+      "C3": 4,
+      "C4": 4,
+      "C5": 4,
+      "C6": 4,
+      "C7": 2,
+      "C8": 1
+    },
+    "provenance_check_tally": {
+      "P1": 4
+    },
+    "facts_linked_to_failing_checks": {
+      "C8": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The invoice review changes artifact retention from the draft's 90 days to exactly 30 days, changes the absent cost control to an alert at exactly $9,000 per month, requires a cost-control commitment, and contributes to the decision not to approve the draft."
+        }
+      ],
+      "C7": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The visible draft permits a direct cutover, but the compatibility rehearsal changes the mode to dual-writing for exactly 14 days, changes the covered pipeline count to exactly 9, requires a migration-plan update commitment, and contributes to the decision not to approve the draft."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The visible draft permits a direct cutover, but the compatibility rehearsal changes the mode to dual-writing for exactly 14 days, changes the covered pipeline count to exactly 9, requires a migration-plan update commitment, and contributes to the decision not to approve the draft."
+        },
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The invoice review changes artifact retention from the draft's 90 days to exactly 30 days, changes the absent cost control to an alert at exactly $9,000 per month, requires a cost-control commitment, and contributes to the decision not to approve the draft."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.242,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 4,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "migration_approved": false,
+            "cutover_mode": "dual-write transition",
+            "dual_write_days": 14,
+            "legacy_pipelines_covered": 9,
+            "artifact_retention_days": 30,
+            "monthly_cost_alert_usd": 9000
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "revise proposal",
+              "target": "migration proposal draft",
+              "detail": "Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch."
+            },
+            {
+              "type": "revise proposal",
+              "target": "migration proposal draft",
+              "detail": "Change artifact retention from 90 days to 30 days."
+            },
+            {
+              "type": "revise proposal",
+              "target": "migration proposal draft",
+              "detail": "Add a dedicated monthly cost alert set at $9,000."
+            },
+            {
+              "type": "re-review",
+              "target": "updated migration proposal",
+              "detail": "Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "revise proposal",
+            "target": "migration proposal draft",
+            "detail": "Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch."
+          },
+          {
+            "type": "revise proposal",
+            "target": "migration proposal draft",
+            "detail": "Change artifact retention from 90 days to 30 days."
+          },
+          {
+            "type": "revise proposal",
+            "target": "migration proposal draft",
+            "detail": "Add a dedicated monthly cost alert set at $9,000."
+          },
+          {
+            "type": "re-review",
+            "target": "updated migration proposal",
+            "detail": "Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something important before we go any further with this migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 of our legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline, and I haven't updated the migration proposal yet. This directly impacts the direct cutover approach in the current draft.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important before we go any further with this migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 of our legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline, and I haven't updated the migration proposal yet. This directly impacts the direct cutover approach in the current draft.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for flagging this, Ravi. This is a significant finding. A direct cutover would break those 9 legacy pipelines, so the current draft's approach won't work as-is. Before I can approve any migration plan, the release-readiness checklist requires both compatibility coverage and monthly cost controls to be confirmed. Right now, compatibility coverage is clearly not met with a direct cutover. We need to revise the proposal to include the 14-day dual-write period for those 9 pipelines. I'd also like to hear from anyone who can speak to the monthly cost controls piece \u2014 the current draft has no dedicated monthly cost alert, and that's another checklist item I need addressed before approval. Let's get the proposal updated and re-reviewed before next Wednesday's window.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging this, Ravi. This is a significant finding. A direct cutover would break those 9 legacy pipelines, so the current draft's approach won't work as-is. Before I can approve any migration plan, the release-readiness checklist requires both compatibility coverage and monthly cost controls to be confirmed. Right now, compatibility coverage is clearly not met with a direct cutover. We need to revise the proposal to include the 14-day dual-write period for those 9 pipelines. I'd also like to hear from anyone who can speak to the monthly cost controls piece \u2014 the current draft has no dedicated monthly cost alert, and that's another checklist item I need addressed before approval. Let's get the proposal updated and re-reviewed before next Wednesday's window.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I can speak to the monthly cost controls piece. I just reviewed the latest provider invoice minutes ago and confirmed that the projected egress pattern means this migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Because of that, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days in the current draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this threshold is confirmed. So the current draft's 90-day retention and lack of a monthly alert both need to be corrected before this plan can meet the release-readiness checklist.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I can speak to the monthly cost controls piece. I just reviewed the latest provider invoice minutes ago and confirmed that the projected egress pattern means this migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Because of that, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days in the current draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this threshold is confirmed. So the current draft's 90-day retention and lack of a monthly alert both need to be corrected before this plan can meet the release-readiness checklist.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "migration_approved": false,
+                "cutover_mode": "dual-write transition",
+                "dual_write_days": 14,
+                "legacy_pipelines_covered": 9,
+                "artifact_retention_days": 30,
+                "monthly_cost_alert_usd": 9000
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "revise proposal",
+                  "target": "migration proposal draft",
+                  "detail": "Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch."
+                },
+                {
+                  "type": "revise proposal",
+                  "target": "migration proposal draft",
+                  "detail": "Change artifact retention from 90 days to 30 days."
+                },
+                {
+                  "type": "revise proposal",
+                  "target": "migration proposal draft",
+                  "detail": "Add a dedicated monthly cost alert set at $9,000."
+                },
+                {
+                  "type": "re-review",
+                  "target": "updated migration proposal",
+                  "detail": "Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"migration_approved\": false,\n      \"cutover_mode\": \"dual-write transition\",\n      \"dual_write_days\": 14,\n      \"legacy_pipelines_covered\": 9,\n      \"artifact_retention_days\": 30,\n      \"monthly_cost_alert_usd\": 9000\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"revise proposal\",\n        \"target\": \"migration proposal draft\",\n        \"detail\": \"Replace direct cutover with a 14-day dual-write period covering the 9 identified legacy pipelines before final switch.\"\n      },\n      {\n        \"type\": \"revise proposal\",\n        \"target\": \"migration proposal draft\",\n        \"detail\": \"Change artifact retention from 90 days to 30 days.\"\n      },\n      {\n        \"type\": \"revise proposal\",\n        \"target\": \"migration proposal draft\",\n        \"detail\": \"Add a dedicated monthly cost alert set at $9,000.\"\n      },\n      {\n        \"type\": \"re-review\",\n        \"target\": \"updated migration proposal\",\n        \"detail\": \"Re-review the revised proposal against the release-readiness checklist before next Wednesday's maintenance window.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.365,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "migration_approved": true,
+            "cutover_mode": "dual-write-then-switch",
+            "dual_write_days": 14,
+            "legacy_pipelines_covered": 9,
+            "artifact_retention_days": 30,
+            "monthly_cost_alert_usd": 9000
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "retention_change",
+              "target": "Morgan",
+              "detail": "Artifact retention reduced from 90 days to 30 days per cost review findings."
+            },
+            {
+              "type": "cost_alert",
+              "target": "Morgan",
+              "detail": "Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement."
+            },
+            {
+              "type": "dual_write_period",
+              "target": "Ravi",
+              "detail": "14-day dual-write period to both stores before final switch to cover 9 legacy pipelines."
+            },
+            {
+              "type": "cutover_mode_change",
+              "target": "Ravi",
+              "detail": "Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "retention_change",
+            "target": "Morgan",
+            "detail": "Artifact retention reduced from 90 days to 30 days per cost review findings."
+          },
+          {
+            "type": "cost_alert",
+            "target": "Morgan",
+            "detail": "Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement."
+          },
+          {
+            "type": "dual_write_period",
+            "target": "Ravi",
+            "detail": "14-day dual-write period to both stores before final switch to cover 9 legacy pipelines."
+          },
+          {
+            "type": "cutover_mode_change",
+            "target": "Ravi",
+            "detail": "Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a cost issue before this migration plan goes to Taylor for approval. I just reviewed the latest provider invoice and confirmed that the projected egress pattern will push us over our approved spend once monthly storage and transfer costs reach $9,000. To stay within budget, the plan needs to set artifact retention to exactly 30 days \u2014 not 90 \u2014 and we need a monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this directly affects whether the plan meets the release-readiness checklist requirement for monthly cost controls.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a cost issue before this migration plan goes to Taylor for approval. I just reviewed the latest provider invoice and confirmed that the projected egress pattern will push us over our approved spend once monthly storage and transfer costs reach $9,000. To stay within budget, the plan needs to set artifact retention to exactly 30 days \u2014 not 90 \u2014 and we need a monthly cost alert set at exactly $9,000. I haven't filed the FinOps note yet, but this directly affects whether the plan meets the release-readiness checklist requirement for monthly cost controls.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to share something critical before this plan goes to Taylor. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet. This directly impacts the release-readiness checklist requirement for compatibility coverage \u2014 a direct cutover as currently drafted would break those 9 pipelines.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to share something critical before this plan goes to Taylor. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet. This directly impacts the release-readiness checklist requirement for compatibility coverage \u2014 a direct cutover as currently drafted would break those 9 pipelines.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for raising these issues before this reaches my desk. Morgan, the 90-day retention and missing cost alert are a direct conflict with the release-readiness checklist requirement for monthly cost controls. Ravi, a direct cutover that breaks 9 legacy pipelines is a direct conflict with the compatibility coverage requirement. Based on what you've both shared, the current draft as written cannot pass the release-readiness checklist. I'm prepared to approve a revised plan that incorporates: (1) 30-day artifact retention instead of 90, (2) a monthly cost alert set at $9,000, and (3) a 14-day dual-write period to both stores before the final switch to cover those 9 legacy pipelines. Can both of you confirm those changes are accurately reflected in what you've reported, so I can settle the approval decision?",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you both for raising these issues before this reaches my desk. Morgan, the 90-day retention and missing cost alert are a direct conflict with the release-readiness checklist requirement for monthly cost controls. Ravi, a direct cutover that breaks 9 legacy pipelines is a direct conflict with the compatibility coverage requirement. Based on what you've both shared, the current draft as written cannot pass the release-readiness checklist. I'm prepared to approve a revised plan that incorporates: (1) 30-day artifact retention instead of 90, (2) a monthly cost alert set at $9,000, and (3) a 14-day dual-write period to both stores before the final switch to cover those 9 legacy pipelines. Can both of you confirm those changes are accurately reflected in what you've reported, so I can settle the approval decision?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Yes, I can confirm those changes are accurately reflected in what I reported. The 30-day artifact retention and the monthly cost alert set at exactly $9,000 are both directly tied to the invoice review I just completed \u2014 once monthly storage and transfer costs reach $9,000, we exceed our approved spend given the projected egress pattern. Both of those changes satisfy the release-readiness checklist requirement for monthly cost controls from my side.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Yes, I can confirm those changes are accurately reflected in what I reported. The 30-day artifact retention and the monthly cost alert set at exactly $9,000 are both directly tied to the invoice review I just completed \u2014 once monthly storage and transfer costs reach $9,000, we exceed our approved spend given the projected egress pattern. Both of those changes satisfy the release-readiness checklist requirement for monthly cost controls from my side.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Yes, I can confirm those changes are accurately reflected in what I reported. The 14-day dual-write period to both stores before the final switch is directly tied to the compatibility rehearsal I conducted this morning, where I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. That change satisfies the release-readiness checklist requirement for compatibility coverage from my side.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Yes, I can confirm those changes are accurately reflected in what I reported. The 14-day dual-write period to both stores before the final switch is directly tied to the compatibility rehearsal I conducted this morning, where I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. That change satisfies the release-readiness checklist requirement for compatibility coverage from my side.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "migration_approved": true,
+                "cutover_mode": "dual-write-then-switch",
+                "dual_write_days": 14,
+                "legacy_pipelines_covered": 9,
+                "artifact_retention_days": 30,
+                "monthly_cost_alert_usd": 9000
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "retention_change",
+                  "target": "Morgan",
+                  "detail": "Artifact retention reduced from 90 days to 30 days per cost review findings."
+                },
+                {
+                  "type": "cost_alert",
+                  "target": "Morgan",
+                  "detail": "Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement."
+                },
+                {
+                  "type": "dual_write_period",
+                  "target": "Ravi",
+                  "detail": "14-day dual-write period to both stores before final switch to cover 9 legacy pipelines."
+                },
+                {
+                  "type": "cutover_mode_change",
+                  "target": "Ravi",
+                  "detail": "Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"migration_approved\": true,\n      \"cutover_mode\": \"dual-write-then-switch\",\n      \"dual_write_days\": 14,\n      \"legacy_pipelines_covered\": 9,\n      \"artifact_retention_days\": 30,\n      \"monthly_cost_alert_usd\": 9000\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"retention_change\",\n        \"target\": \"Morgan\",\n        \"detail\": \"Artifact retention reduced from 90 days to 30 days per cost review findings.\"\n      },\n      {\n        \"type\": \"cost_alert\",\n        \"target\": \"Morgan\",\n        \"detail\": \"Monthly cost alert set at $9,000 to satisfy monthly cost controls requirement.\"\n      },\n      {\n        \"type\": \"dual_write_period\",\n        \"target\": \"Ravi\",\n        \"detail\": \"14-day dual-write period to both stores before final switch to cover 9 legacy pipelines.\"\n      },\n      {\n        \"type\": \"cutover_mode_change\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Direct cutover replaced with dual-write-then-switch approach to satisfy compatibility coverage requirement.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.454,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "migration_approved": false,
+            "cutover_mode": "dual-write transition",
+            "dual_write_days": 14,
+            "legacy_pipelines_covered": 9,
+            "artifact_retention_days": 30,
+            "monthly_cost_alert_usd": 9000
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "plan_revision",
+              "target": "Ravi",
+              "detail": "Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch."
+            },
+            {
+              "type": "plan_revision",
+              "target": "Morgan",
+              "detail": "File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000."
+            },
+            {
+              "type": "approval_condition",
+              "target": "Taylor",
+              "detail": "Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "plan_revision",
+            "target": "Ravi",
+            "detail": "Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch."
+          },
+          {
+            "type": "plan_revision",
+            "target": "Morgan",
+            "detail": "File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000."
+          },
+          {
+            "type": "approval_condition",
+            "target": "Taylor",
+            "detail": "Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Alright, let's get this migration plan reviewed. I know the current draft proposes a direct cutover to the new object store, 90-day artifact retention, provider-managed encryption, and no dedicated monthly cost alert. Before I can make a final approval decision, I need us to confirm two things from the release-readiness checklist: compatibility coverage and monthly cost controls. Can someone walk me through where we stand on those two items?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Alright, let's get this migration plan reviewed. I know the current draft proposes a direct cutover to the new object store, 90-day artifact retention, provider-managed encryption, and no dedicated monthly cost alert. Before I can make a final approval decision, I need us to confirm two things from the release-readiness checklist: compatibility coverage and monthly cost controls. Can someone walk me through where we stand on those two items?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a compatibility issue I found this morning during a rehearsal. I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet, so the current direct cutover plan won't satisfy the compatibility coverage requirement as-is.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a compatibility issue I found this morning during a rehearsal. I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet, so the current direct cutover plan won't satisfy the compatibility coverage requirement as-is.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a cost control issue. I just reviewed the latest provider invoice and confirmed that the projected egress pattern makes this migration exceed our approved spend once monthly storage and transfer costs reach $9,000. Based on this, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days currently proposed \u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but the current draft's 90-day retention and lack of a monthly alert won't satisfy the monthly cost controls requirement.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a cost control issue. I just reviewed the latest provider invoice and confirmed that the projected egress pattern makes this migration exceed our approved spend once monthly storage and transfer costs reach $9,000. Based on this, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days currently proposed \u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but the current draft's 90-day retention and lack of a monthly alert won't satisfy the monthly cost controls requirement.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Morgan. So to summarize where we stand: the compatibility coverage requirement is not met because of the 9 legacy pipelines needing 14 days of dual-writing, and the monthly cost controls requirement is not met because of the 90-day retention and missing $9,000 alert. Both issues need to be addressed in a revised plan before Taylor can approve. I'll update the proposal to include the dual-writing period for the legacy pipelines. Morgan, can you file the FinOps note and update the retention and alert provisions on your end? Once both updates are in, we should have a revised draft for Taylor to review.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Morgan. So to summarize where we stand: the compatibility coverage requirement is not met because of the 9 legacy pipelines needing 14 days of dual-writing, and the monthly cost controls requirement is not met because of the 90-day retention and missing $9,000 alert. Both issues need to be addressed in a revised plan before Taylor can approve. I'll update the proposal to include the dual-writing period for the legacy pipelines. Morgan, can you file the FinOps note and update the retention and alert provisions on your end? Once both updates are in, we should have a revised draft for Taylor to review.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Yes, I'll file the FinOps note and update the proposal to reflect exactly 30-day artifact retention and a dedicated monthly cost alert set at exactly $9,000. Once Ravi has the dual-writing period added for the 9 legacy pipelines, we should have both checklist items covered for Taylor's review.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Yes, I'll file the FinOps note and update the proposal to reflect exactly 30-day artifact retention and a dedicated monthly cost alert set at exactly $9,000. Once Ravi has the dual-writing period added for the 9 legacy pipelines, we should have both checklist items covered for Taylor's review.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "migration_approved": false,
+                "cutover_mode": "dual-write transition",
+                "dual_write_days": 14,
+                "legacy_pipelines_covered": 9,
+                "artifact_retention_days": 30,
+                "monthly_cost_alert_usd": 9000
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "plan_revision",
+                  "target": "Ravi",
+                  "detail": "Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch."
+                },
+                {
+                  "type": "plan_revision",
+                  "target": "Morgan",
+                  "detail": "File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000."
+                },
+                {
+                  "type": "approval_condition",
+                  "target": "Taylor",
+                  "detail": "Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"migration_approved\": false,\n      \"cutover_mode\": \"dual-write transition\",\n      \"dual_write_days\": 14,\n      \"legacy_pipelines_covered\": 9,\n      \"artifact_retention_days\": 30,\n      \"monthly_cost_alert_usd\": 9000\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"plan_revision\",\n        \"target\": \"Ravi\",\n        \"detail\": \"Update the migration proposal to include 14 days of dual-writing to both stores for the 9 legacy pipelines before final switch.\"\n      },\n      {\n        \"type\": \"plan_revision\",\n        \"target\": \"Morgan\",\n        \"detail\": \"File the FinOps note and update the proposal to reflect 30-day artifact retention and a dedicated monthly cost alert set at $9,000.\"\n      },\n      {\n        \"type\": \"approval_condition\",\n        \"target\": \"Taylor\",\n        \"detail\": \"Final approval will be granted once the revised draft with both compatibility and cost control updates is submitted for review.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.409,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 9,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "migration_approved": true,
+            "cutover_mode": "dual-write",
+            "dual_write_days": 14,
+            "legacy_pipelines_covered": 9,
+            "artifact_retention_days": 30,
+            "monthly_cost_alert_usd": 9000
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "update_proposal",
+              "target": "Ravi",
+              "detail": "Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it"
+            },
+            {
+              "type": "file_finops_note",
+              "target": "Morgan",
+              "detail": "File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement"
+            },
+            {
+              "type": "circulate_revised_draft",
+              "target": "Ravi",
+              "detail": "Circulate the revised draft incorporating all four changes for final review before approval"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "update_proposal",
+            "target": "Ravi",
+            "detail": "Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it"
+          },
+          {
+            "type": "file_finops_note",
+            "target": "Morgan",
+            "detail": "File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement"
+          },
+          {
+            "type": "circulate_revised_draft",
+            "target": "Ravi",
+            "detail": "Circulate the revised draft incorporating all four changes for final review before approval"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something important before we go further on the migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important before we go further on the migration plan. During a compatibility rehearsal this morning, I confirmed that exactly 9 legacy pipelines cannot read artifacts from the new object-store path immediately. They require dual-writing to both stores for exactly 14 days before the final switch. I found this while helping another team validate its pipeline and haven't updated the migration proposal yet.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for flagging this, Ravi. This is a critical finding. The current draft proposes a direct cutover, but if 9 legacy pipelines can't read from the new object store immediately and require 14 days of dual-writing, that directly conflicts with the direct cutover approach in the current proposal. Additionally, our release-readiness checklist requires compatibility coverage to be confirmed before I can approve the migration plan. A direct cutover without dual-writing would leave those 9 pipelines broken, so the plan needs to be updated to include the dual-write period. Ravi, can you update the migration proposal to reflect the 14-day dual-write requirement and the 9 affected pipelines, and then circulate the revised draft? Once that's incorporated and we've confirmed compatibility coverage, I can move toward approval. I also want to note that the current draft still lacks dedicated monthly cost controls, which the checklist also requires \u2014 so that gap needs to be addressed as well before next Wednesday.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks for flagging this, Ravi. This is a critical finding. The current draft proposes a direct cutover, but if 9 legacy pipelines can't read from the new object store immediately and require 14 days of dual-writing, that directly conflicts with the direct cutover approach in the current proposal. Additionally, our release-readiness checklist requires compatibility coverage to be confirmed before I can approve the migration plan. A direct cutover without dual-writing would leave those 9 pipelines broken, so the plan needs to be updated to include the dual-write period. Ravi, can you update the migration proposal to reflect the 14-day dual-write requirement and the 9 affected pipelines, and then circulate the revised draft? Once that's incorporated and we've confirmed compatibility coverage, I can move toward approval. I also want to note that the current draft still lacks dedicated monthly cost controls, which the checklist also requires \u2014 so that gap needs to be addressed as well before next Wednesday.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a cost issue before this plan goes further. I just reviewed the latest provider invoice and confirmed that the projected egress pattern means the migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Based on that threshold, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days currently in the draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but given Taylor just called out the missing cost controls gap, this directly addresses it.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I need to flag a cost issue before this plan goes further. I just reviewed the latest provider invoice and confirmed that the projected egress pattern means the migration will exceed our team's approved spend once monthly storage and transfer costs reach $9,000. Based on that threshold, the plan requires artifact retention of exactly 30 days \u2014 not the 90 days currently in the draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. I confirmed this threshold minutes ago and haven't filed the FinOps note yet, but given Taylor just called out the missing cost controls gap, this directly addresses it.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Morgan. This is exactly the kind of cost-control detail I was asking about. So to confirm: the projected egress pattern means we'll exceed approved spend if costs reach $9,000, which means we need 30-day artifact retention \u2014 not the 90 days in the current draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. That directly satisfies the monthly cost controls requirement on the release-readiness checklist. Between Ravi's compatibility finding and your cost threshold, the plan needs four changes before I can approve: (1) switch from direct cutover to a 14-day dual-write period, (2) explicitly account for the 9 legacy pipelines, (3) reduce artifact retention from 90 days to 30 days, and (4) add a dedicated monthly cost alert at $9,000. Morgan, please file the FinOps note with the $9,000 threshold and 30-day retention requirement. Ravi, please update the proposal with the dual-write period and legacy pipeline details. Once both updates are in the revised draft, I can approve the migration plan for next Wednesday's maintenance window.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\": \"Thanks, Morgan. This is exactly the kind of cost-control detail I was asking about. So to confirm: the projected egress pattern means we'll exceed approved spend if costs reach $9,000, which means we need 30-day artifact retention \u2014 not the 90 days in the current draft \u2014 and a dedicated monthly cost alert set at exactly $9,000. That directly satisfies the monthly cost controls requirement on the release-readiness checklist. Between Ravi's compatibility finding and your cost threshold, the plan needs four changes before I can approve: (1) switch from direct cutover to a 14-day dual-write period, (2) explicitly account for the 9 legacy pipelines, (3) reduce artifact retention from 90 days to 30 days, and (4) add a dedicated monthly cost alert at $9,000. Morgan, please file the FinOps note with the $9,000 threshold and 30-day retention requirement. Ravi, please update the proposal with the dual-write period and legacy pipeline details. Once both updates are in the revised draft, I can approve the migration plan for next Wednesday's maintenance window.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Taylor. I'll update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it. I'll circulate the revised draft once those changes are incorporated so you can review before approval.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Understood, Taylor. I'll update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it. I'll circulate the revised draft once those changes are incorporated so you can review before approval.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Taylor. I'll file the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement. Once that's filed and Ravi has the revised draft with the dual-write period and legacy pipeline details incorporated, all four changes should be covered and the plan should satisfy both the compatibility coverage and monthly cost controls requirements on the release-readiness checklist.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Understood, Taylor. I'll file the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement. Once that's filed and Ravi has the revised draft with the dual-write period and legacy pipeline details incorporated, all four changes should be covered and the plan should satisfy both the compatibility coverage and monthly cost controls requirements on the release-readiness checklist.\"}"
+          },
+          {
+            "type": "say",
+            "text": "To make sure we're all aligned on the timeline: the 14-day dual-write period needs to start before the final switch, which means we need to begin dual-writing no later than this coming Wednesday to still complete the migration in next Wednesday's maintenance window. I'll make sure the revised draft reflects that start-date dependency so Taylor has the full picture before approving. Morgan, once you've filed the FinOps note, let me know and I'll reference it in the circulated draft as well.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"To make sure we're all aligned on the timeline: the 14-day dual-write period needs to start before the final switch, which means we need to begin dual-writing no later than this coming Wednesday to still complete the migration in next Wednesday's maintenance window. I'll make sure the revised draft reflects that start-date dependency so Taylor has the full picture before approving. Morgan, once you've filed the FinOps note, let me know and I'll reference it in the circulated draft as well.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good point on the timeline, Ravi. I'll file the FinOps note as soon as possible and let you know once it's done so you can reference it in the circulated draft. That way Taylor will have both the cost-control documentation and the dual-write start-date dependency in hand before making the final approval decision.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good point on the timeline, Ravi. I'll file the FinOps note as soon as possible and let you know once it's done so you can reference it in the circulated draft. That way Taylor will have both the cost-control documentation and the dual-write start-date dependency in hand before making the final approval decision.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "migration_approved": true,
+                "cutover_mode": "dual-write",
+                "dual_write_days": 14,
+                "legacy_pipelines_covered": 9,
+                "artifact_retention_days": 30,
+                "monthly_cost_alert_usd": 9000
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "update_proposal",
+                  "target": "Ravi",
+                  "detail": "Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it"
+                },
+                {
+                  "type": "file_finops_note",
+                  "target": "Morgan",
+                  "detail": "File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement"
+                },
+                {
+                  "type": "circulate_revised_draft",
+                  "target": "Ravi",
+                  "detail": "Circulate the revised draft incorporating all four changes for final review before approval"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"migration_approved\":true,\"cutover_mode\":\"dual-write\",\"dual_write_days\":14,\"legacy_pipelines_covered\":9,\"artifact_retention_days\":30,\"monthly_cost_alert_usd\":9000},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"update_proposal\",\"target\":\"Ravi\",\"detail\":\"Update the migration proposal to include the 14-day dual-write period and explicitly account for the 9 legacy pipelines that require it\"},{\"type\":\"file_finops_note\",\"target\":\"Morgan\",\"detail\":\"File the FinOps note documenting the $9,000 monthly cost threshold and the 30-day artifact retention requirement\"},{\"type\":\"circulate_revised_draft\",\"target\":\"Ravi\",\"detail\":\"Circulate the revised draft incorporating all four changes for final review before approval\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\"]}}"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "C1 (MISAPPLIED, linked to PF1 and PF2): The decisive facts PF1 and PF2 need their implication made unambiguous. Add to PF1's fact text: 'Because the current draft permits a direct cutover, these findings mean the current draft must NOT be approved as written \u2014 it must be revised and re-reviewed before any approval.' Add to PF2's fact text: 'Because the current draft has 90-day retention and no cost alert, these findings mean the current draft must NOT be approved as written \u2014 it must be revised and re-reviewed before any approval.' Do NOT loosen the C1 check; the check wording is sound. The problem is that the facts do not explicitly state the non-approval implication, so the model interprets conditional approval ('approve once changes are made') as approval=true.\n\nC7 (ENCODING MISMATCH, linked to PF1): Loosen the check to accept commitment type strings that include 'revise' or 'update' or 'revision' in any form, rather than requiring an exact type string. The exact new wording should accept any commitment whose type field contains any of: 'revise proposal', 'plan_revision', 'update_proposal', 'migration-plan update', or 'revise'. This loosening does NOT risk a LEAKED regression because the check still requires PF1 to be revealed and cited \u2014 a lone decision-maker without PF1 would not know to produce a dual-write commitment at all.\n\nC8 (ENCODING MISMATCH, linked to PF2): Loosen the check to accept commitment type strings that include 'cost' or 'alert' or 'retention' or 'finops' or 'revise' or 'plan_revision' in any form, rather than requiring an exact type string. The exact new wording should accept any commitment whose type field contains any of: 'cost_alert', 'cost-control', 'retention_change', 'plan_revision', 'revise proposal', 'file_finops_note', or whose detail field mentions a cost alert or retention change. This loosening does NOT risk a LEAKED regression because the check still requires PF2 to be revealed and cited \u2014 a lone decision-maker without PF2 would not know the $9,000 threshold or 30-day retention to produce the commitment."
+}

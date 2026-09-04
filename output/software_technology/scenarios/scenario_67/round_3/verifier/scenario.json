@@ -1,0 +1,199 @@
+{
+  "scenario_id": "scenario_67",
+  "scenario_type": "on_call_staffing",
+  "description": "An infrastructure director must finalize the seven-day pager rotation for a newly launched customer mobile-sync service, including primary coverage, overnight limits, customer escalation hours, and security oversight, with input from reliability, mobile engineering, customer support, and security.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Infrastructure Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Mobile Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jordan",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Elena",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Ravi",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The customer mobile-sync service launches Monday and needs a staffed pager rotation for the following seven days.",
+    "S2": "The available rotation roster includes Mina, Jordan, Elena, Ravi, and the infrastructure escalation manager.",
+    "S3": "The draft schedule uses a backend engineer as primary, permits up to four consecutive overnight shifts, provides customer escalation coverage from 09:00 to 17:00 Eastern, and has no scheduled security observer.",
+    "S4": "Morgan owns the final schedule, and the normal schedule review is a round-robin check in which the reliability, mobile engineering, customer support, and security representatives each review the draft before it is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking launch telemetry for an unrelated mobile release this afternoon, Mina confirmed that sync traffic will peak in APAC from 02:00 to 06:00 UTC; Mina is the only person on the roster who has handled this service's mobile-client failures during that window, but she has not updated the pager draft."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Jordan discovered during a separate schedule audit this morning that the reliability policy's fatigue limit is two consecutive overnight shifts, because Jordan is already assigned two overnight shifts elsewhere in this rotation; the limit has not yet been applied to the draft."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Elena confirmed with the account team an hour ago that the launch customer escalation agreement requires live support coverage from exactly 09:00 to 17:00 Pacific for the seven-day launch period; the agreement is still only in the support team's notes."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "During an access review unrelated to the pager schedule, Ravi confirmed that the sync service's privileged token rotation must have a security observer for the first exactly three nights, and Ravi is the approved observer; the access-review ticket has not been linked to the schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18,
+    "review_protocol": {
+      "sequence": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "representative_review_required": true,
+      "private_fact_reveal_required_for_credit": true,
+      "decision_maker_finalizes_after_review": true
+    }
+  },
+  "settlement_schema": {
+    "decisions": {
+      "primary_overnight_engineer": "string",
+      "maximum_consecutive_overnight_shifts": "integer",
+      "customer_escalation_window": "string",
+      "security_observer": "string",
+      "security_observer_nights": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Mina must be assigned as the primary overnight engineer.",
+    "The rotation must permit no more than two consecutive overnight shifts.",
+    "Customer escalation coverage must include exactly 09:00-17:00 Pacific.",
+    "Ravi must be assigned as the security observer.",
+    "Ravi's security observation must cover exactly the first three nights.",
+    "A commitment to update or document the customer escalation coverage to 09:00-17:00 Pacific must exist.",
+    "A commitment to link the access-review ticket to the schedule or formally track the security observer requirement must exist.",
+    "The APAC traffic coverage fact must be cited in the decision justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['primary_overnight_engineer'] == 'Mina'",
+    "C2": "decisions['maximum_consecutive_overnight_shifts'] == 2",
+    "C3": "'09:00-17:00 Pacific' in decisions.get('customer_escalation_window', '')",
+    "C4": "decisions['security_observer'] == 'Ravi'",
+    "C5": "decisions['security_observer_nights'] == 3",
+    "C6": "any((c.get('target', '') == 'Elena' and 'Pacific' in c.get('detail', '')) or '09:00-17:00 Pacific' in c.get('detail', '') or 'customer escalation' in c.get('detail', '') and 'Pacific' in c.get('detail', '') for c in commitments)",
+    "C7": "any('access-review ticket' in c.get('detail', '') or ('security observer' in c.get('detail', '') and c.get('target', '') == 'Ravi') for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The APAC peak and Mina's service-specific experience change the primary overnight engineer from the generic backend assignment to Mina."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2"
+      ],
+      "why": "The fatigue policy changes the permitted overnight run length from the draft's four shifts to exactly two consecutive shifts."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The customer agreement changes the escalation window from 09:00-17:00 Eastern to exactly 09:00-17:00 Pacific and requires that coverage requirement to be updated or documented."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "why": "The token-rotation control changes the plan from no security observer to Ravi observing exactly the first three nights and requires the access-review ticket or security-observer requirement to be formally tracked."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

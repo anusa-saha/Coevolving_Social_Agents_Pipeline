@@ -1,0 +1,689 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "Two distinct failure modes across the three failing rollouts (0, 2, 3):\n\n1. **C5 ENCODING MISMATCH (rollouts 0 and 3, the sole failing check in each):** In rollout 0, the settlement sets alternate_follow_up_format to \"video visit\" and cites PF2 in justification_fact_ids. In rollout 3, the settlement sets alternate_follow_up_format to \"video visit\" and also cites PF2. Both rollouts correctly captured the Thursday 14:00 video-visit information from A3's reveal. The only passing rollout (1) used the exact string \"video visit\" in the same field and C5 passed. Since rollout 0 also used \"video visit\" and C5 failed, the check must require a longer or more specific string (e.g., \"in-network video visit\" or \"in-network video visit with the heart-failure clinic\"). Rollout 2 used \"in-network video visit\" and C5 still failed \u2014 but rollout 2 failed all checks due to a separate provenance issue (see below), so it cannot be used to disambiguate C5's threshold. The most likely C5 target is the fuller phrase \"in-network video visit\" or \"in-network video visit with the heart-failure clinic,\" which rollouts 0 and 3 abbreviated to \"video visit.\" This is an encoding mismatch: the model naturally shortened the format label, and the check expects the fuller in-network qualifier.\n\n2. **Provenance / Settlement-structure failure (rollout 2, all checks C1\u2013C5 and P1 failed):** In rollout 2, both PF1 and PF2 were properly revealed in the transcript (turns 1 and 2), the settlement's decision values are all correct (Patient A, in-person evaluation, Thursday, 14:00, in-network video visit), and the settlement's justification_fact_ids list includes PF1 and PF2. However, the settlement object in the transcript is structured differently from the other rollouts: it uses top-level keys (next_day_slot_assigned_to, visit_format, etc.) directly on the settlement object rather than nesting them under a \"decisions\" key, and credited_facts is present but empty in the top-level summary view ([] shown) while the raw settlement JSON includes [PF1, PF2, S3, S4]. The provenance check P1 failed alongside all content checks, indicating the settlement parser or the check could not properly map the settlement fields to the expected schema \u2014 the decisions were not under a \"decisions\" key. This is a settlement-formatting/encoding problem where A1 produced a valid but differently-structured settlement JSON that the checks could not read, causing every check to fail even though the information was present and correct.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 1,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 3,\n    \"C2\": 3,\n    \"C3\": 3,\n    \"C4\": 3,\n    \"C5\": 1\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C5\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.454,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"next_day_slot_assigned_to\": \"Patient A\",\n          \"visit_format\": \"in-person evaluation\",\n          \"alternate_follow_up_day\": \"Thursday\",\n          \"alternate_follow_up_time\": \"14:00\",\n          \"alternate_follow_up_format\": \"video visit\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"follow-up_plan\",\n            \"target\": \"Patient B\",\n            \"detail\": \"I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"follow-up_plan\",\n          \"target\": \"Patient B\",\n          \"detail\": \"I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone, I'm Rina, the insurance authorization specialist. I have an important update regarding Patient B's authorization status that I'd like to share during our huddle before Leah makes the appointment assignment.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone, I'm Rina, the insurance authorization specialist. I have an important update regarding Patient B's authorization status that I'd like to share during our huddle before Leah makes the appointment assignment.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi Rina, thanks for letting us know. I'm ready to hold our huddle whenever everyone is available. As we know, we have one evaluation slot tomorrow at 10:00, and I'll be making the final assignment after we hear from both you and the triage nurse. Who else is here to join the huddle?\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi Rina, thanks for letting us know. I'm ready to hold our huddle whenever everyone is available. As we know, we have one evaluation slot tomorrow at 10:00, and I'll be making the final assignment after we hear from both you and the triage nurse. Who else is here to join the huddle?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone, I'm Mateo, the cardiology triage nurse. I'm here and ready for the huddle. I have an important clinical update regarding Patient A that I need to share before Leah makes the appointment assignment.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone, I'm Mateo, the cardiology triage nurse. I'm here and ready for the huddle. I have an important clinical update regarding Patient A that I need to share before Leah makes the appointment assignment.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to share an urgent clinical update regarding Patient A. Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to share an urgent clinical update regarding Patient A. Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I have an important authorization update regarding Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This means Patient B already has an approved authorization for a specific upcoming appointment, which is relevant for Leah's decision about who receives tomorrow's 10:00 slot.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF2\\\",\\\"text\\\":\\\"I have an important authorization update regarding Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This means Patient B already has an approved authorization for a specific upcoming appointment, which is relevant for Leah's decision about who receives tomorrow's 10:00 slot.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"next_day_slot_assigned_to\": \"Patient A\",\n              \"visit_format\": \"in-person evaluation\",\n              \"alternate_follow_up_day\": \"Thursday\",\n              \"alternate_follow_up_time\": \"14:00\",\n              \"alternate_follow_up_format\": \"video visit\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"follow-up_plan\",\n                \"target\": \"Patient B\",\n                \"detail\": \"I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"next_day_slot_assigned_to\\\":\\\"Patient A\\\",\\\"visit_format\\\":\\\"in-person evaluation\\\",\\\"alternate_follow_up_day\\\":\\\"Thursday\\\",\\\"alternate_follow_up_time\\\":\\\"14:00\\\",\\\"alternate_follow_up_format\\\":\\\"video visit\\\"},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"follow-up_plan\\\",\\\"target\\\":\\\"Patient B\\\",\\\"detail\\\":\\\"I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan.\\\"}],\\\"justification_fact_ids\\\":[\\\"PF1\\\",\\\"PF2\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.541,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 8,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"next_day_slot_assigned_to\": \"Patient A\",\n          \"visit_format\": \"in-person evaluation\",\n          \"alternate_follow_up_day\": \"Thursday\",\n          \"alternate_follow_up_time\": \"14:00\",\n          \"alternate_follow_up_format\": \"video visit\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_follow_up_plan\",\n            \"target\": \"Patient B\",\n            \"detail\": \"Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan.\"\n          },\n          {\n            \"type\": \"attach_authorization\",\n            \"target\": \"Patient B\",\n            \"detail\": \"Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record.\"\n          },\n          {\n            \"type\": \"document_triage\",\n            \"target\": \"Patient A\",\n            \"detail\": \"Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_follow_up_plan\",\n          \"target\": \"Patient B\",\n          \"detail\": \"Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan.\"\n        },\n        {\n          \"type\": \"attach_authorization\",\n          \"target\": \"Patient B\",\n          \"detail\": \"Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record.\"\n        },\n        {\n          \"type\": \"document_triage\",\n          \"target\": \"Patient A\",\n          \"detail\": \"Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. I have an authorization update to share during our huddle before Leah releases that evaluation slot.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. I have an authorization update to share during our huddle before Leah releases that evaluation slot.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Rina. I have an important triage update for the huddle as well. There's clinically urgent information about one of the referrals that I need to share before Leah decides on the slot assignment.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Rina. I have an important triage update for the huddle as well. There's clinically urgent information about one of the referrals that I need to share before Leah decides on the slot assignment.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Rina and Mateo. I'm ready for our huddle. Please go ahead and share your updates \\u2014 I'll wait to hear both the authorization update and the triage information before I make any decision on assigning tomorrow's 10:00 evaluation slot.\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Rina and Mateo. I'm ready for our huddle. Please go ahead and share your updates \\u2014 I'll wait to hear both the authorization update and the triage information before I make any decision on assigning tomorrow's 10:00 evaluation slot.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to share this authorization update for our huddle: Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to share this authorization update for our huddle: Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Rina, for that authorization update regarding Patient B's approved video visit for Thursday at 14:00. Mateo, I still need to hear your triage update before I make any decision on assigning tomorrow's 10:00 evaluation slot. Please go ahead and share the clinically urgent information you mentioned.\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Rina, for that authorization update regarding Patient B's approved video visit for Thursday at 14:00. Mateo, I still need to hear your triage update before I make any decision on assigning tomorrow's 10:00 evaluation slot. Please go ahead and share the clinically urgent information you mentioned.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Here's my triage update for the huddle: Patient A reported two episodes of exertional near-fainting yesterday. The referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Here's my triage update for the huddle: Patient A reported two episodes of exertional near-fainting yesterday. The referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"That covers my triage update. I'd also note that Patient B's referral was received two days before Patient A's, so under routine sequencing Patient B would normally come first. However, given the clinical urgency I've described for Patient A \\u2014 near-fainting episodes with a 24-hour evaluation directive from the referring cardiologist \\u2014 I'd recommend Leah prioritize Patient A for tomorrow's 10:00 slot. Rina's update shows Patient B already has an approved video visit for Thursday at 14:00, which could serve as a follow-up plan if Patient A gets the earlier slot.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"That covers my triage update. I'd also note that Patient B's referral was received two days before Patient A's, so under routine sequencing Patient B would normally come first. However, given the clinical urgency I've described for Patient A \\u2014 near-fainting episodes with a 24-hour evaluation directive from the referring cardiologist \\u2014 I'd recommend Leah prioritize Patient A for tomorrow's 10:00 slot. Rina's update shows Patient B already has an approved video visit for Thursday at 14:00, which could serve as a follow-up plan if Patient A gets the earlier slot.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"next_day_slot_assigned_to\": \"Patient A\",\n              \"visit_format\": \"in-person evaluation\",\n              \"alternate_follow_up_day\": \"Thursday\",\n              \"alternate_follow_up_time\": \"14:00\",\n              \"alternate_follow_up_format\": \"video visit\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_follow_up_plan\",\n                \"target\": \"Patient B\",\n                \"detail\": \"Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan.\"\n              },\n              {\n                \"type\": \"attach_authorization\",\n                \"target\": \"Patient B\",\n                \"detail\": \"Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record.\"\n              },\n              {\n                \"type\": \"document_triage\",\n                \"target\": \"Patient A\",\n                \"detail\": \"Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"next_day_slot_assigned_to\\\": \\\"Patient A\\\",\\n      \\\"visit_format\\\": \\\"in-person evaluation\\\",\\n      \\\"alternate_follow_up_day\\\": \\\"Thursday\\\",\\n      \\\"alternate_follow_up_time\\\": \\\"14:00\\\",\\n      \\\"alternate_follow_up_format\\\": \\\"video visit\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"record_follow_up_plan\\\",\\n        \\\"target\\\": \\\"Patient B\\\",\\n        \\\"detail\\\": \\\"Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"attach_authorization\\\",\\n        \\\"target\\\": \\\"Patient B\\\",\\n        \\\"detail\\\": \\\"Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"document_triage\\\",\\n        \\\"target\\\": \\\"Patient A\\\",\\n        \\\"detail\\\": \\\"Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.377,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 8,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": false,\n        \"C5\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false\n      },\n      \"settlement\": {\n        \"next_day_slot_assigned_to\": \"Patient A\",\n        \"visit_format\": \"in-person evaluation\",\n        \"alternate_follow_up_day\": \"Thursday\",\n        \"alternate_follow_up_time\": \"14:00\",\n        \"alternate_follow_up_format\": \"in-network video visit\"\n      },\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. We have one newly opened evaluation slot tomorrow at 10:00, and I've received referrals for both Patient A and Patient B that we need to consider. Before I release this slot, let's go through our routine huddle. Could the triage nurse and authorization specialist each provide their relevant updates so we can decide how to best assign this appointment?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. We have one newly opened evaluation slot tomorrow at 10:00, and I've received referrals for both Patient A and Patient B that we need to consider. Before I release this slot, let's go through our routine huddle. Could the triage nurse and authorization specialist each provide their relevant updates so we can decide how to best assign this appointment?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I have an authorization update for Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I have an authorization update for Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"That's the extent of my authorization update. I don't have any authorization information on Patient A at this time. I'll defer to the team on how to weigh these factors in assigning the slot.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"That's the extent of my authorization update. I don't have any authorization information on Patient A at this time. I'll defer to the team on how to weigh these factors in assigning the slot.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for those updates. Let me summarize what I'm hearing: Patient A has an urgent clinical need \\u2014 two episodes of exertional near-fainting yesterday with a 24-hour evaluation directive from the referring cardiologist. On the other hand, Patient B's referral was received two days earlier than Patient A's, and Rina has confirmed that Patient B already has an authorized in-network video visit approved for Thursday at 14:00. So we have a strong urgency argument for Patient A and a concrete, already-authorized follow-up option for Patient B. I'm leaning toward assigning tomorrow's 10:00 slot to Patient A given the 24-hour clinical urgency, and recording Patient B's follow-up as the authorized Thursday 14:00 video visit. Does anyone have concerns or additional information I should consider before I finalize this?\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you both for those updates. Let me summarize what I'm hearing: Patient A has an urgent clinical need \\u2014 two episodes of exertional near-fainting yesterday with a 24-hour evaluation directive from the referring cardiologist. On the other hand, Patient B's referral was received two days earlier than Patient A's, and Rina has confirmed that Patient B already has an authorized in-network video visit approved for Thursday at 14:00. So we have a strong urgency argument for Patient A and a concrete, already-authorized follow-up option for Patient B. I'm leaning toward assigning tomorrow's 10:00 slot to Patient A given the 24-hour clinical urgency, and recording Patient B's follow-up as the authorized Thursday 14:00 video visit. Does anyone have concerns or additional information I should consider before I finalize this?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"I'm comfortable with that plan, Leah. Patient A's 24-hour evaluation directive makes tomorrow's 10:00 slot clinically appropriate, and since Rina has confirmed Patient B already has an authorized video visit for Thursday at 14:00, Patient B has a concrete follow-up option in place. I don't have any additional concerns or information to add.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"I'm comfortable with that plan, Leah. Patient A's 24-hour evaluation directive makes tomorrow's 10:00 slot clinically appropriate, and since Rina has confirmed Patient B already has an authorized video visit for Thursday at 14:00, Patient B has a concrete follow-up option in place. I don't have any additional concerns or information to add.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Just to confirm, I've already shared my full update on Patient A's clinical urgency. I don't have any additional private information or concerns beyond what I've already disclosed. I'm ready for you to finalize the assignment whenever you're set, Leah.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Just to confirm, I've already shared my full update on Patient A's clinical urgency. I don't have any additional private information or concerns beyond what I've already disclosed. I'm ready for you to finalize the assignment whenever you're set, Leah.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"next_day_slot_assigned_to\": \"Patient A\",\n            \"visit_format\": \"in-person evaluation\",\n            \"alternate_follow_up_day\": \"Thursday\",\n            \"alternate_follow_up_time\": \"14:00\",\n            \"alternate_follow_up_format\": \"in-network video visit\"\n          },\n          \"credited_facts\": [\n            \"PF1\",\n            \"PF2\",\n            \"S3\",\n            \"S4\"\n          ],\n          \"commitments\": [\n            {\n              \"type\": \"record_follow_up_plan\",\n              \"target\": \"Patient B\",\n              \"detail\": \"Record Patient B's follow-up as the authorized Thursday 14:00 in-network video visit with the valid authorization number from the payer portal.\"\n            },\n            {\n              \"type\": \"attach_authorization\",\n              \"target\": \"Patient B\",\n              \"detail\": \"Rina to attach the payer portal authorization approval to Patient B's referral record.\"\n            },\n            {\n              \"type\": \"document_triage_details\",\n              \"target\": \"Patient A\",\n              \"detail\": \"Mateo to update Patient A's referral summary with the telephone triage details and 24-hour evaluation directive from the nursing work queue.\"\n            }\n          ],\n          \"justification_fact_ids\": [\n            \"PF1\",\n            \"PF2\",\n            \"S3\",\n            \"S4\"\n          ],\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"next_day_slot_assigned_to\\\": \\\"Patient A\\\",\\n    \\\"visit_format\\\": \\\"in-person evaluation\\\",\\n    \\\"alternate_follow_up_day\\\": \\\"Thursday\\\",\\n    \\\"alternate_follow_up_time\\\": \\\"14:00\\\",\\n    \\\"alternate_follow_up_format\\\": \\\"in-network video visit\\\"\\n  },\\n  \\\"credited_facts\\\": [\\n    \\\"PF1\\\",\\n    \\\"PF2\\\",\\n    \\\"S3\\\",\\n    \\\"S4\\\"\\n  ],\\n  \\\"commitments\\\": [\\n    {\\n      \\\"type\\\": \\\"record_follow_up_plan\\\",\\n      \\\"target\\\": \\\"Patient B\\\",\\n      \\\"detail\\\": \\\"Record Patient B's follow-up as the authorized Thursday 14:00 in-network video visit with the valid authorization number from the payer portal.\\\"\\n    },\\n    {\\n      \\\"type\\\": \\\"attach_authorization\\\",\\n      \\\"target\\\": \\\"Patient B\\\",\\n      \\\"detail\\\": \\\"Rina to attach the payer portal authorization approval to Patient B's referral record.\\\"\\n    },\\n    {\\n      \\\"type\\\": \\\"document_triage_details\\\",\\n      \\\"target\\\": \\\"Patient A\\\",\\n      \\\"detail\\\": \\\"Mateo to update Patient A's referral summary with the telephone triage details and 24-hour evaluation directive from the nursing work queue.\\\"\\n    }\\n  ],\\n  \\\"justification_fact_ids\\\": [\\n    \\\"PF1\\\",\\n    \\\"PF2\\\",\\n    \\\"S3\\\",\\n    \\\"S4\\\"\\n  ]\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.347,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"next_day_slot_assigned_to\": \"Patient A\",\n          \"visit_format\": \"in-person\",\n          \"alternate_follow_up_day\": \"Thursday\",\n          \"alternate_follow_up_time\": \"14:00\",\n          \"alternate_follow_up_format\": \"video visit\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"documentation\",\n            \"target\": \"Patient A\",\n            \"detail\": \"Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse.\"\n          },\n          {\n            \"type\": \"documentation\",\n            \"target\": \"Patient B\",\n            \"detail\": \"Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral.\"\n          },\n          {\n            \"type\": \"documentation\",\n            \"target\": \"Patient A\",\n            \"detail\": \"Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"documentation\",\n          \"target\": \"Patient A\",\n          \"detail\": \"Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse.\"\n        },\n        {\n          \"type\": \"documentation\",\n          \"target\": \"Patient B\",\n          \"detail\": \"Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral.\"\n        },\n        {\n          \"type\": \"documentation\",\n          \"target\": \"Patient A\",\n          \"detail\": \"Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. I have an important triage update regarding one of the referrals we're considering for tomorrow's 10:00 slot. Before we proceed with the huddle, I'd like to share some critical clinical information that may affect how we prioritize these two patients.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. I have an important triage update regarding one of the referrals we're considering for tomorrow's 10:00 slot. Before we proceed with the huddle, I'd like to share some critical clinical information that may affect how we prioritize these two patients.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Mateo. Thank you for flagging this. As we begin our huddle, I'd like to hear from both you and our authorization specialist before I make any final decision on assigning tomorrow's 10:00 slot. Please go ahead with your triage update.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Mateo. Thank you for flagging this. As we begin our huddle, I'd like to hear from both you and our authorization specialist before I make any final decision on assigning tomorrow's 10:00 slot. Please go ahead with your triage update.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Good morning. I have an authorization update to share during this huddle. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Good morning. I have an authorization update to share during this huddle. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"next_day_slot_assigned_to\": \"Patient A\",\n              \"visit_format\": \"in-person\",\n              \"alternate_follow_up_day\": \"Thursday\",\n              \"alternate_follow_up_time\": \"14:00\",\n              \"alternate_follow_up_format\": \"video visit\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"documentation\",\n                \"target\": \"Patient A\",\n                \"detail\": \"Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse.\"\n              },\n              {\n                \"type\": \"documentation\",\n                \"target\": \"Patient B\",\n                \"detail\": \"Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral.\"\n              },\n              {\n                \"type\": \"documentation\",\n                \"target\": \"Patient A\",\n                \"detail\": \"Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"next_day_slot_assigned_to\\\": \\\"Patient A\\\",\\n      \\\"visit_format\\\": \\\"in-person\\\",\\n      \\\"alternate_follow_up_day\\\": \\\"Thursday\\\",\\n      \\\"alternate_follow_up_time\\\": \\\"14:00\\\",\\n      \\\"alternate_follow_up_format\\\": \\\"video visit\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"Patient A\\\",\\n        \\\"detail\\\": \\\"Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"Patient B\\\",\\n        \\\"detail\\\": \\\"Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"Patient A\\\",\\n        \\\"detail\\\": \\\"Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 1,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 3,
+      "C2": 3,
+      "C3": 3,
+      "C4": 3,
+      "C5": 1
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "C5": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.454,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "next_day_slot_assigned_to": "Patient A",
+            "visit_format": "in-person evaluation",
+            "alternate_follow_up_day": "Thursday",
+            "alternate_follow_up_time": "14:00",
+            "alternate_follow_up_format": "video visit"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "follow-up_plan",
+              "target": "Patient B",
+              "detail": "I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "follow-up_plan",
+            "target": "Patient B",
+            "detail": "I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone, I'm Rina, the insurance authorization specialist. I have an important update regarding Patient B's authorization status that I'd like to share during our huddle before Leah makes the appointment assignment.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hi everyone, I'm Rina, the insurance authorization specialist. I have an important update regarding Patient B's authorization status that I'd like to share during our huddle before Leah makes the appointment assignment.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Hi Rina, thanks for letting us know. I'm ready to hold our huddle whenever everyone is available. As we know, we have one evaluation slot tomorrow at 10:00, and I'll be making the final assignment after we hear from both you and the triage nurse. Who else is here to join the huddle?",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hi Rina, thanks for letting us know. I'm ready to hold our huddle whenever everyone is available. As we know, we have one evaluation slot tomorrow at 10:00, and I'll be making the final assignment after we hear from both you and the triage nurse. Who else is here to join the huddle?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Hi everyone, I'm Mateo, the cardiology triage nurse. I'm here and ready for the huddle. I have an important clinical update regarding Patient A that I need to share before Leah makes the appointment assignment.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hi everyone, I'm Mateo, the cardiology triage nurse. I'm here and ready for the huddle. I have an important clinical update regarding Patient A that I need to share before Leah makes the appointment assignment.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to share an urgent clinical update regarding Patient A. Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to share an urgent clinical update regarding Patient A. Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I have an important authorization update regarding Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This means Patient B already has an approved authorization for a specific upcoming appointment, which is relevant for Leah's decision about who receives tomorrow's 10:00 slot.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I have an important authorization update regarding Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This means Patient B already has an approved authorization for a specific upcoming appointment, which is relevant for Leah's decision about who receives tomorrow's 10:00 slot.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "next_day_slot_assigned_to": "Patient A",
+                "visit_format": "in-person evaluation",
+                "alternate_follow_up_day": "Thursday",
+                "alternate_follow_up_time": "14:00",
+                "alternate_follow_up_format": "video visit"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "follow-up_plan",
+                  "target": "Patient B",
+                  "detail": "I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"next_day_slot_assigned_to\":\"Patient A\",\"visit_format\":\"in-person evaluation\",\"alternate_follow_up_day\":\"Thursday\",\"alternate_follow_up_time\":\"14:00\",\"alternate_follow_up_format\":\"video visit\"},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"follow-up_plan\",\"target\":\"Patient B\",\"detail\":\"I will schedule Patient B for the already-approved in-network video visit on Thursday at 14:00 using the existing authorization, and record this as the follow-up plan.\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.541,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 8,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "next_day_slot_assigned_to": "Patient A",
+            "visit_format": "in-person evaluation",
+            "alternate_follow_up_day": "Thursday",
+            "alternate_follow_up_time": "14:00",
+            "alternate_follow_up_format": "video visit"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "record_follow_up_plan",
+              "target": "Patient B",
+              "detail": "Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan."
+            },
+            {
+              "type": "attach_authorization",
+              "target": "Patient B",
+              "detail": "Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record."
+            },
+            {
+              "type": "document_triage",
+              "target": "Patient A",
+              "detail": "Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "record_follow_up_plan",
+            "target": "Patient B",
+            "detail": "Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan."
+          },
+          {
+            "type": "attach_authorization",
+            "target": "Patient B",
+            "detail": "Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record."
+          },
+          {
+            "type": "document_triage",
+            "target": "Patient A",
+            "detail": "Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. I have an authorization update to share during our huddle before Leah releases that evaluation slot.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning everyone. I have an authorization update to share during our huddle before Leah releases that evaluation slot.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Rina. I have an important triage update for the huddle as well. There's clinically urgent information about one of the referrals that I need to share before Leah decides on the slot assignment.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, Rina. I have an important triage update for the huddle as well. There's clinically urgent information about one of the referrals that I need to share before Leah decides on the slot assignment.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Rina and Mateo. I'm ready for our huddle. Please go ahead and share your updates \u2014 I'll wait to hear both the authorization update and the triage information before I make any decision on assigning tomorrow's 10:00 evaluation slot.",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Rina and Mateo. I'm ready for our huddle. Please go ahead and share your updates \u2014 I'll wait to hear both the authorization update and the triage information before I make any decision on assigning tomorrow's 10:00 evaluation slot.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to share this authorization update for our huddle: Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share this authorization update for our huddle: Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Rina, for that authorization update regarding Patient B's approved video visit for Thursday at 14:00. Mateo, I still need to hear your triage update before I make any decision on assigning tomorrow's 10:00 evaluation slot. Please go ahead and share the clinically urgent information you mentioned.",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Rina, for that authorization update regarding Patient B's approved video visit for Thursday at 14:00. Mateo, I still need to hear your triage update before I make any decision on assigning tomorrow's 10:00 evaluation slot. Please go ahead and share the clinically urgent information you mentioned.\"\n}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Here's my triage update for the huddle: Patient A reported two episodes of exertional near-fainting yesterday. The referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Here's my triage update for the huddle: Patient A reported two episodes of exertional near-fainting yesterday. The referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "That covers my triage update. I'd also note that Patient B's referral was received two days before Patient A's, so under routine sequencing Patient B would normally come first. However, given the clinical urgency I've described for Patient A \u2014 near-fainting episodes with a 24-hour evaluation directive from the referring cardiologist \u2014 I'd recommend Leah prioritize Patient A for tomorrow's 10:00 slot. Rina's update shows Patient B already has an approved video visit for Thursday at 14:00, which could serve as a follow-up plan if Patient A gets the earlier slot.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"That covers my triage update. I'd also note that Patient B's referral was received two days before Patient A's, so under routine sequencing Patient B would normally come first. However, given the clinical urgency I've described for Patient A \u2014 near-fainting episodes with a 24-hour evaluation directive from the referring cardiologist \u2014 I'd recommend Leah prioritize Patient A for tomorrow's 10:00 slot. Rina's update shows Patient B already has an approved video visit for Thursday at 14:00, which could serve as a follow-up plan if Patient A gets the earlier slot.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "next_day_slot_assigned_to": "Patient A",
+                "visit_format": "in-person evaluation",
+                "alternate_follow_up_day": "Thursday",
+                "alternate_follow_up_time": "14:00",
+                "alternate_follow_up_format": "video visit"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "record_follow_up_plan",
+                  "target": "Patient B",
+                  "detail": "Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan."
+                },
+                {
+                  "type": "attach_authorization",
+                  "target": "Patient B",
+                  "detail": "Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record."
+                },
+                {
+                  "type": "document_triage",
+                  "target": "Patient A",
+                  "detail": "Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"next_day_slot_assigned_to\": \"Patient A\",\n      \"visit_format\": \"in-person evaluation\",\n      \"alternate_follow_up_day\": \"Thursday\",\n      \"alternate_follow_up_time\": \"14:00\",\n      \"alternate_follow_up_format\": \"video visit\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"record_follow_up_plan\",\n        \"target\": \"Patient B\",\n        \"detail\": \"Record that Patient B is scheduled for the approved in-network video visit on Thursday at 14:00 using the existing authorization number, as the alternate follow-up plan.\"\n      },\n      {\n        \"type\": \"attach_authorization\",\n        \"target\": \"Patient B\",\n        \"detail\": \"Ensure Rina's approved authorization for Patient B's Thursday 14:00 video visit is attached to the referral record.\"\n      },\n      {\n        \"type\": \"document_triage\",\n        \"target\": \"Patient A\",\n        \"detail\": \"Ensure Mateo's triage documentation regarding near-fainting episodes and the 24-hour evaluation directive is incorporated into Patient A's referral summary.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.377,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 8,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": false,
+          "C5": false
+        },
+        "provenance_results": {
+          "P1": false
+        },
+        "settlement": {
+          "next_day_slot_assigned_to": "Patient A",
+          "visit_format": "in-person evaluation",
+          "alternate_follow_up_day": "Thursday",
+          "alternate_follow_up_time": "14:00",
+          "alternate_follow_up_format": "in-network video visit"
+        },
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. We have one newly opened evaluation slot tomorrow at 10:00, and I've received referrals for both Patient A and Patient B that we need to consider. Before I release this slot, let's go through our routine huddle. Could the triage nurse and authorization specialist each provide their relevant updates so we can decide how to best assign this appointment?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. We have one newly opened evaluation slot tomorrow at 10:00, and I've received referrals for both Patient A and Patient B that we need to consider. Before I release this slot, let's go through our routine huddle. Could the triage nurse and authorization specialist each provide their relevant updates so we can decide how to best assign this appointment?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I have an authorization update for Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I have an authorization update for Patient B. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received the approval through the payer portal, but it has not yet been attached to the referral.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "That's the extent of my authorization update. I don't have any authorization information on Patient A at this time. I'll defer to the team on how to weigh these factors in assigning the slot.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"That's the extent of my authorization update. I don't have any authorization information on Patient A at this time. I'll defer to the team on how to weigh these factors in assigning the slot.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for those updates. Let me summarize what I'm hearing: Patient A has an urgent clinical need \u2014 two episodes of exertional near-fainting yesterday with a 24-hour evaluation directive from the referring cardiologist. On the other hand, Patient B's referral was received two days earlier than Patient A's, and Rina has confirmed that Patient B already has an authorized in-network video visit approved for Thursday at 14:00. So we have a strong urgency argument for Patient A and a concrete, already-authorized follow-up option for Patient B. I'm leaning toward assigning tomorrow's 10:00 slot to Patient A given the 24-hour clinical urgency, and recording Patient B's follow-up as the authorized Thursday 14:00 video visit. Does anyone have concerns or additional information I should consider before I finalize this?",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you both for those updates. Let me summarize what I'm hearing: Patient A has an urgent clinical need \u2014 two episodes of exertional near-fainting yesterday with a 24-hour evaluation directive from the referring cardiologist. On the other hand, Patient B's referral was received two days earlier than Patient A's, and Rina has confirmed that Patient B already has an authorized in-network video visit approved for Thursday at 14:00. So we have a strong urgency argument for Patient A and a concrete, already-authorized follow-up option for Patient B. I'm leaning toward assigning tomorrow's 10:00 slot to Patient A given the 24-hour clinical urgency, and recording Patient B's follow-up as the authorized Thursday 14:00 video visit. Does anyone have concerns or additional information I should consider before I finalize this?\"}"
+          },
+          {
+            "type": "say",
+            "text": "I'm comfortable with that plan, Leah. Patient A's 24-hour evaluation directive makes tomorrow's 10:00 slot clinically appropriate, and since Rina has confirmed Patient B already has an authorized video visit for Thursday at 14:00, Patient B has a concrete follow-up option in place. I don't have any additional concerns or information to add.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"I'm comfortable with that plan, Leah. Patient A's 24-hour evaluation directive makes tomorrow's 10:00 slot clinically appropriate, and since Rina has confirmed Patient B already has an authorized video visit for Thursday at 14:00, Patient B has a concrete follow-up option in place. I don't have any additional concerns or information to add.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Just to confirm, I've already shared my full update on Patient A's clinical urgency. I don't have any additional private information or concerns beyond what I've already disclosed. I'm ready for you to finalize the assignment whenever you're set, Leah.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Just to confirm, I've already shared my full update on Patient A's clinical urgency. I don't have any additional private information or concerns beyond what I've already disclosed. I'm ready for you to finalize the assignment whenever you're set, Leah.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "next_day_slot_assigned_to": "Patient A",
+              "visit_format": "in-person evaluation",
+              "alternate_follow_up_day": "Thursday",
+              "alternate_follow_up_time": "14:00",
+              "alternate_follow_up_format": "in-network video visit"
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "S3",
+              "S4"
+            ],
+            "commitments": [
+              {
+                "type": "record_follow_up_plan",
+                "target": "Patient B",
+                "detail": "Record Patient B's follow-up as the authorized Thursday 14:00 in-network video visit with the valid authorization number from the payer portal."
+              },
+              {
+                "type": "attach_authorization",
+                "target": "Patient B",
+                "detail": "Rina to attach the payer portal authorization approval to Patient B's referral record."
+              },
+              {
+                "type": "document_triage_details",
+                "target": "Patient A",
+                "detail": "Mateo to update Patient A's referral summary with the telephone triage details and 24-hour evaluation directive from the nursing work queue."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S3",
+              "S4"
+            ],
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"next_day_slot_assigned_to\": \"Patient A\",\n    \"visit_format\": \"in-person evaluation\",\n    \"alternate_follow_up_day\": \"Thursday\",\n    \"alternate_follow_up_time\": \"14:00\",\n    \"alternate_follow_up_format\": \"in-network video visit\"\n  },\n  \"credited_facts\": [\n    \"PF1\",\n    \"PF2\",\n    \"S3\",\n    \"S4\"\n  ],\n  \"commitments\": [\n    {\n      \"type\": \"record_follow_up_plan\",\n      \"target\": \"Patient B\",\n      \"detail\": \"Record Patient B's follow-up as the authorized Thursday 14:00 in-network video visit with the valid authorization number from the payer portal.\"\n    },\n    {\n      \"type\": \"attach_authorization\",\n      \"target\": \"Patient B\",\n      \"detail\": \"Rina to attach the payer portal authorization approval to Patient B's referral record.\"\n    },\n    {\n      \"type\": \"document_triage_details\",\n      \"target\": \"Patient A\",\n      \"detail\": \"Mateo to update Patient A's referral summary with the telephone triage details and 24-hour evaluation directive from the nursing work queue.\"\n    }\n  ],\n  \"justification_fact_ids\": [\n    \"PF1\",\n    \"PF2\",\n    \"S3\",\n    \"S4\"\n  ]\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.347,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF2",
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "next_day_slot_assigned_to": "Patient A",
+            "visit_format": "in-person",
+            "alternate_follow_up_day": "Thursday",
+            "alternate_follow_up_time": "14:00",
+            "alternate_follow_up_format": "video visit"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "documentation",
+              "target": "Patient A",
+              "detail": "Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse."
+            },
+            {
+              "type": "documentation",
+              "target": "Patient B",
+              "detail": "Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral."
+            },
+            {
+              "type": "documentation",
+              "target": "Patient A",
+              "detail": "Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "documentation",
+            "target": "Patient A",
+            "detail": "Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse."
+          },
+          {
+            "type": "documentation",
+            "target": "Patient B",
+            "detail": "Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral."
+          },
+          {
+            "type": "documentation",
+            "target": "Patient A",
+            "detail": "Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. I have an important triage update regarding one of the referrals we're considering for tomorrow's 10:00 slot. Before we proceed with the huddle, I'd like to share some critical clinical information that may affect how we prioritize these two patients.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning everyone. I have an important triage update regarding one of the referrals we're considering for tomorrow's 10:00 slot. Before we proceed with the huddle, I'd like to share some critical clinical information that may affect how we prioritize these two patients.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Mateo. Thank you for flagging this. As we begin our huddle, I'd like to hear from both you and our authorization specialist before I make any final decision on assigning tomorrow's 10:00 slot. Please go ahead with your triage update.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Mateo. Thank you for flagging this. As we begin our huddle, I'd like to hear from both you and our authorization specialist before I make any final decision on assigning tomorrow's 10:00 slot. Please go ahead with your triage update.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Good morning. I have an authorization update to share during this huddle. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Good morning. I have an authorization update to share during this huddle. Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment. I received this approval through the payer portal, but it has not yet been attached to the referral. This may be relevant to our decision, since Patient B already has an approved alternative appointment available even if they do not receive tomorrow's 10:00 slot.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake. I documented the telephone triage details in my nursing work queue, but they are not yet in the referral summary.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "next_day_slot_assigned_to": "Patient A",
+                "visit_format": "in-person",
+                "alternate_follow_up_day": "Thursday",
+                "alternate_follow_up_time": "14:00",
+                "alternate_follow_up_format": "video visit"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "documentation",
+                  "target": "Patient A",
+                  "detail": "Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse."
+                },
+                {
+                  "type": "documentation",
+                  "target": "Patient B",
+                  "detail": "Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral."
+                },
+                {
+                  "type": "documentation",
+                  "target": "Patient A",
+                  "detail": "Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"next_day_slot_assigned_to\": \"Patient A\",\n      \"visit_format\": \"in-person\",\n      \"alternate_follow_up_day\": \"Thursday\",\n      \"alternate_follow_up_time\": \"14:00\",\n      \"alternate_follow_up_format\": \"video visit\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation\",\n        \"target\": \"Patient A\",\n        \"detail\": \"Assign Patient A to tomorrow's 10:00 evaluation slot based on urgent clinical need documented by triage nurse.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"Patient B\",\n        \"detail\": \"Record follow-up plan for Patient B as Thursday 14:00 video visit using the already-approved authorization number, and attach the authorization to the referral.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"Patient A\",\n        \"detail\": \"Ensure Mateo's triage notes regarding exertional near-fainting episodes and the 24-hour evaluation instruction are added to the referral summary.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. **C5 (ENCODING MISMATCH, fact PF2):** Loosen the check's expected value for alternate_follow_up_format to accept \"video visit\" in addition to the fuller phrase. The exact new wording should be: accept alternate_follow_up_format values matching \"video visit\" OR \"in-network video visit\" OR \"in-network video visit with the heart-failure clinic\" (case-insensitive substring match on \"video visit\"). This loosening carries low LEAK risk because a lone decision-maker without PF2 would not know the appointment format is a video visit (the public referral context only establishes Patient B's earlier referral, not the video format), so accepting the shorter string does not make C5 newly guessable without the fact.\n\n2. **Rollout 2 settlement-structure issue (affects P1, C1, C2, C3, C4, C5 \u2014 all tied to settlement schema):** No check wording fix will resolve this; the problem is that A1 sometimes emits the settlement with top-level decision keys instead of nesting them under \"decisions.\" Add an explicit instruction to shared_context (or to the settle action schema description) stating: \"The settlement must nest all decision fields under a 'decisions' object (e.g., {\"decisions\": {\"next_day_slot_assigned_to\": ...}}) and must list all relied-upon private facts in 'justification_fact_ids' and 'credited_facts' at the top level of the settlement object.\" Do NOT loosen any content or provenance check for this \u2014 the checks are correctly worded; the settlement format must conform. If the settlement schema is already specified in shared_context, reinforce the nesting requirement explicitly."
+}

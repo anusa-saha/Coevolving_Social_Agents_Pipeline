@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_80",
+  "status": "accepted",
+  "rounds_taken": 3,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 0,
+    "weak_arm": 0,
+    "strong_arm": 2
+  },
+  "scenario": {
+    "scenario_id": "scenario_80",
+    "scenario_type": "discharge_transport_coordination",
+    "description": "A discharge transition coordinator must finalize the next-day transport and home-support plan for a medically cleared patient, with input from physical therapy and social work.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Maya",
+        "role": "Discharge Transition Coordinator"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Luis",
+        "role": "Physical Therapist"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Nora",
+        "role": "Social Worker"
+      }
+    ],
+    "shared_context": {
+      "S1": "The patient is medically cleared for discharge tomorrow from the medical ward.",
+      "S2": "The patient has expressed a preference to return to their apartment rather than remain in a facility.",
+      "S3": "Maya makes the final discharge transport and home-support decision.",
+      "S4": "The unit's discharge huddle routinely has physical therapy and social work verbally confirm their current mobility, transportation, and home-support arrangements, and Maya records each confirmation before finalizing the plan."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "In this morning's mobility assessment, the patient could transfer with one-person assistance but could walk only 20 feet; Luis recommends a wheelchair-accessible van rather than a standard car for the discharge trip."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "The apartment building's elevator was repaired today and is available for the patient's return, and the patient's daughter confirmed that she will be at the apartment from 12:00 to 20:00 tomorrow to provide the needed home support."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF2"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3"
+      ],
+      "turn_cap": 10
+    },
+    "settlement_schema": {
+      "decisions": {
+        "discharge_destination": "string",
+        "transport_type": "string",
+        "pickup_time": "string"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "The patient must be discharged to the apartment.",
+      "Transport must be arranged as a wheelchair-accessible van.",
+      "The pickup time must be set to 12:00 tomorrow.",
+      "A commitment must document the daughter's home-support coverage from 12:00 to 20:00 tomorrow.",
+      "The physical therapy mobility finding must be cited as justification for the transport choice."
+    ],
+    "content_checks": {
+      "C1": "decisions.get('discharge_destination') in ['apartment', \"patient's apartment\"]",
+      "C2": "decisions.get('transport_type') in ['wheelchair_accessible_van', 'wheelchair-accessible van']",
+      "C3": "any(c.get('type') in ['home-support', 'home_support', 'home_support_verification', 'home_support_coordination'] and c.get('target') in ['daughter', \"patient's daughter\", 'Nora'] and ('12:00 to 20:00' in c.get('detail', '') or '12:00-20:00' in c.get('detail', '')) for c in commitments)",
+      "C4": "decisions.get('pickup_time') == '12:00' or '12:00' in decisions.get('pickup_time', '')"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C2",
+          "P1"
+        ],
+        "why": "The 20-foot walking limit and one-person transfer assessment change the transport choice from an unspecified or standard vehicle to a wheelchair-accessible van, and the mobility finding must support that choice."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C1",
+          "C3",
+          "C4"
+        ],
+        "why": "The repaired elevator makes the apartment a feasible destination, while the daughter's confirmed 12:00-20:00 availability changes the plan to include that exact home-support commitment and supports a pickup time containing 12:00."
+      }
+    ],
+    "domain": "healthcare",
+    "requested_num_agents": 3
+  },
+  "timestamp": "2026-08-28T17:15:39.835234+00:00"
+}

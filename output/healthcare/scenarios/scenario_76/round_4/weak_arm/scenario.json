@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_76",
+  "scenario_type": "blood_product_allocation",
+  "description": "A blood bank medical director must decide which of two inpatients receives the hospital's only immediately available antigen-matched red-cell unit and finalize the transfusion timing and alternate blood-product plan for the other patient, with input from hematology and the blood bank technologist.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Dr. Morgan",
+      "role": "Blood Bank Medical Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Shah",
+      "role": "Hematology Attending"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Blood Bank Technologist"
+    }
+  ],
+  "shared_context": {
+    "S1": "One leukoreduced red-cell unit that is antigen-matched and currently crossmatched for both Patient A and Patient B is available for release now.",
+    "S2": "Patient A and Patient B are both admitted on medical units and have transfusion orders awaiting final blood bank allocation.",
+    "S3": "Dr. Morgan makes the binding decision about release of the unit and the documented plan for the patient who does not receive it.",
+    "S4": "The blood bank's routine allocation huddle occurs before a unit is released, and Dr. Morgan asks the hematology attending and the blood bank technologist to report any clinical or supply information relevant to the decision.",
+    "S5": "Patient B's current transfusion order calls for transfusion later today if a matched unit is available."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient A's hemoglobin is 5.8 g/dL with ongoing symptoms, and the hematology team has instructed that the transfusion must start at exactly 14:00 today; Dr. Shah reviewed the bedside assessment and the updated order, but the urgency instruction has not yet been entered in the blood bank allocation note."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "A second antigen-matched unit for Patient B is reserved at the regional blood center and is confirmed to arrive at exactly 17:30 today; the regional center's reservation confirmation is in the technologist queue but has not been attached to Patient B's hospital record."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "unit_assigned_to": "string",
+      "patient_a_transfusion_start": "string",
+      "patient_b_alternate_unit_start": "string",
+      "patient_b_plan_status": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The immediately available unit must be assigned to Patient A.",
+    "Patient A's transfusion must be documented to start at exactly 14:00 today.",
+    "Patient B's alternate matched unit must be documented to start at exactly 17:30 today.",
+    "Patient B's plan must be documented as awaiting the regional matched unit.",
+    "The settlement must include at least one commitment or plan-status element that references attaching the reservation confirmation to Patient B's hospital record, confirming receipt of the regional blood center unit at 17:30, or proceeding with crossmatch for Patient B.",
+    "The clinical urgency for Patient A must be cited by the decision-maker."
+  ],
+  "content_checks": {
+    "C1": "decisions['unit_assigned_to'] == 'Patient A'",
+    "C2": "'14:00' in decisions['patient_a_transfusion_start']",
+    "C3": "'17:30' in decisions['patient_b_alternate_unit_start']",
+    "C4": "'17:30' in decisions['patient_b_plan_status'] and ('deferred' in decisions['patient_b_plan_status'] or 'awaiting' in decisions['patient_b_plan_status'] or 'plan' in decisions['patient_b_plan_status'] or 'upon arrival' in decisions['patient_b_plan_status'] or 'crossmatched' in decisions['patient_b_plan_status'])",
+    "C5": "(('reservation confirmation' in decisions['patient_b_plan_status'] and 'Patient B' in decisions['patient_b_plan_status'] and 'hospital record' in decisions['patient_b_plan_status']) or ('regional blood center' in decisions['patient_b_plan_status'] and '17:30' in decisions['patient_b_plan_status']) or 'crossmatch' in decisions['patient_b_plan_status'])"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "Patient A's hemoglobin of 5.8 g/dL and exact 14:00 start instruction change the assignment from an unresolved choice to Patient A and change the transfusion start field to include the specific time 14:00."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "P2"
+      ],
+      "why": "The confirmed regional unit changes Patient B's alternate start to include exactly 17:30, changes the status to a deferred or awaiting plan for that unit, and creates a reservation, record-attachment, receipt, or crossmatch-related commitment."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

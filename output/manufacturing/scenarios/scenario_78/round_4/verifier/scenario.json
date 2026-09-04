@@ -1,0 +1,135 @@
+{
+  "scenario_id": "scenario_78",
+  "scenario_type": "batch_disposition",
+  "description": "A quality director must decide how to disposition Batch B-417 after a packaging-label printer outage and finalize the relabeling, verification, and customer-approval controls before the batch record is closed, with input from a packaging engineer and a customer quality liaison.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Quality Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jon",
+      "role": "Packaging Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Customer Quality Liaison"
+    }
+  ],
+  "shared_context": {
+    "S1": "Batch B-417 contains 1,200 molded housings and is currently on quality hold after a packaging-label printer outage.",
+    "S2": "Dimensional inspection results for the batch are within the internal specification.",
+    "S3": "Mara has authority to approve the final batch disposition and close the batch record.",
+    "S4": "The routine disposition review includes a check with packaging engineering and the customer quality liaison before the hold is cleared."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jon's packaging shift log shows that exactly 240 housings were packed while the printer was malfunctioning; their labels lack the required machine-readable lot code. Procedure requires those 240 units to be relabeled after a 2-hour line-clearance and printer-setup job, followed by barcode verification. Jon completed the log this shift, but it has not yet been uploaded to the batch record."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena received a signed customer amendment this morning stating that the 240 relabeled housings may be released only after exactly 20 of them pass customer reapproval inspection; the amendment permits the other 960 correctly labeled housings to be released separately. She has not attached the emailed amendment to the batch record yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "released_units": "integer",
+      "held_units": "integer",
+      "relabeling_duration_hours": "integer",
+      "barcode_verification_required": "boolean",
+      "customer_reapproval_sample_count": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Exactly 960 correctly labeled housings must be released separately.",
+    "Exactly 240 housings must remain held for relabeling.",
+    "Relabeling must include a 2-hour line-clearance and printer-setup job.",
+    "Barcode verification must occur after relabeling.",
+    "Exactly 20 relabeled housings must undergo customer reapproval inspection.",
+    "Elena must attach the signed customer amendment to the batch record."
+  ],
+  "content_checks": {
+    "C1": "decisions['released_units'] == 960",
+    "C2": "decisions['held_units'] == 240",
+    "C3": "decisions['relabeling_duration_hours'] == 2",
+    "C4": "decisions['barcode_verification_required'] == True",
+    "C5": "decisions['customer_reapproval_sample_count'] == 20",
+    "C6": "any(c['target'] == 'Elena' and c['type'] in ['record_attachment', 'document_attachment', 'document_upload', 'record_update', 'documentation'] and 'amendment' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C4"
+      ],
+      "why": "The packaging log changes the disposition to exactly 960 released and 240 held, and changes the work plan to a 2-hour setup followed by mandatory barcode verification."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5",
+        "C6",
+        "P1"
+      ],
+      "why": "The signed customer amendment changes the relabeled-unit release condition to exactly 20 customer-reapproved samples and requires Elena's amendment-related batch-record commitment plus citation of PF2."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

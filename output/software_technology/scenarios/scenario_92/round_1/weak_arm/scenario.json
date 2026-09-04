@@ -1,0 +1,184 @@
+{
+  "scenario_id": "scenario_92",
+  "scenario_type": "incident_postmortem",
+  "description": "A Director of Engineering must approve the final remediation register for a production webhook incident that caused duplicate customer events, with input from backend engineering, SRE, security, and customer support.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Director of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Tessa",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jon",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Lena",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "Tuesday's production webhook incident delivered duplicate events to some customers for 26 minutes.",
+    "S2": "The initial investigation points to a queue-worker deployment as the immediate trigger, and no permanent loss of webhook payloads has been confirmed.",
+    "S3": "Maya signs the final postmortem remediation register and assigns its follow-up work.",
+    "S4": "Company postmortem policy requires the backend, SRE, security, and support owners to give a final status before the register is signed."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing the worker deployment during a separate code review, Ravi found an undocumented retry shortcut that bypasses the webhook idempotency key on the second attempt; he has not filed the remediation ticket because he confirmed the behavior only shortly before this review."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While checking an unrelated alert migration, Tessa discovered that the duplicate-delivery alert has been disabled for ten days and that the correct alert threshold for this service is 15 minutes; she has not updated the monitoring ticket yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a security review of the incident logs, Jon confirmed that the webhook signing key was not rotated after the deployment and must be rotated before the incident can be closed; he has not opened the security finding because the review finished minutes ago."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "While checking the affected account list against customer agreements, Lena confirmed that Redwood Bank's contract requires direct notice within 48 hours for duplicate billing-related webhook events; she has not sent or logged the notice because legal confirmation arrived this morning."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "idempotency_remediation_required": "boolean",
+      "duplicate_delivery_alert_threshold_minutes": "integer",
+      "signing_key_rotation_required": "boolean",
+      "redwood_bank_notice_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The remediation register must require removal of the retry shortcut's idempotency bypass.",
+    "The duplicate-delivery alert threshold must be set to exactly 15 minutes.",
+    "The webhook signing key must be rotated before the incident is closed.",
+    "Redwood Bank must receive direct notice within the contractual period.",
+    "The register must include a monitoring-restoration commitment.",
+    "The register must include a security-key-rotation commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['idempotency_remediation_required'] == True",
+    "C2": "decisions['duplicate_delivery_alert_threshold_minutes'] == 15",
+    "C3": "decisions['signing_key_rotation_required'] == True",
+    "C4": "decisions['redwood_bank_notice_required'] == True",
+    "C5": "any(c['type'] == 'monitoring_restoration' for c in commitments)",
+    "C6": "any(c['type'] == 'security_key_rotation' for c in commitments)",
+    "C7": "any(c['type'] == 'customer_notice' and c['target'] == 'Redwood Bank' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The immediate queue-worker trigger does not reveal the separate retry shortcut; PF1 changes idempotency_remediation_required from false to true and supplies the fact that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5"
+      ],
+      "why": "The shared incident record gives no alert setting; PF2 changes the threshold to exactly 15 minutes and requires the monitoring_restoration commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The shared facts confirm no permanent payload loss but say nothing about signing credentials; PF3 changes signing_key_rotation_required from false to true and adds the security_key_rotation commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C4",
+        "C7"
+      ],
+      "why": "The shared incident description names no contractual response; PF4 changes redwood_bank_notice_required from false to true and requires a customer_notice commitment targeting Redwood Bank."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

@@ -1,0 +1,148 @@
+{
+  "scenario_id": "scenario_64",
+  "scenario_type": "feature_flag_rollout",
+  "description": "An engineering manager must approve the production rollout configuration for a repository security-scanning policy, deciding enforcement modes, path exclusions, rollout timing, and follow-up work with input from QA and security engineering.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Casey",
+      "role": "QA Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Morgan",
+      "role": "Security Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company is preparing to enable a new repository security-scanning policy across production repositories.",
+    "S2": "The current proposal enables blocking enforcement for every repository, scans nightly, and begins rollout on Friday.",
+    "S3": "Riley owns the final production configuration decision.",
+    "S4": "The normal release-readiness process requires Riley to check with QA and security engineering before approving a policy rollout.",
+    "S5": "Before Riley settles the configuration, each specialist records any newly confirmed release-blocking finding in the release-readiness decision log."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While validating the scanner against recent builds, Casey confirmed that exactly three legacy repositories\u0014legacy-reports, sandbox-exports, and billing-replay\u0014contain generated test fixtures that create blocking false positives; those repositories must initially use warn-only enforcement, and generated-fixture paths must be excluded. Casey found this during a separate QA validation task and has not yet updated the rollout ticket."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Morgan confirmed during this morning's security review that exactly two repositories\u0014payments-ledger and identity-audit\u0014contain regulated data and must use blocking enforcement, with their first production scan completed by 17:00 UTC on Friday; security must also perform a review of those scan results. Morgan confirmed this minutes ago while checking audit scope and has not yet posted it in the release channel."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "enforcement_mode": "string",
+      "warn_only_repositories": "list",
+      "excluded_paths": "list",
+      "blocking_repositories": "list",
+      "first_scan_due": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must use mixed enforcement rather than blocking every repository.",
+    "Exactly legacy-reports, sandbox-exports, and billing-replay must initially use warn-only enforcement.",
+    "Generated-fixture paths must be excluded from scanning.",
+    "Exactly payments-ledger and identity-audit must use blocking enforcement.",
+    "The first production scan for the regulated repositories must be due by 17:00 UTC on Friday.",
+    "A QA scanner-exception commitment must be recorded.",
+    "A security scan-review commitment must be recorded.",
+    "Both the QA finding and the security finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['enforcement_mode'] == 'mixed' or (('warn-only' in decisions['enforcement_mode']) and ('blocking' in decisions['enforcement_mode']))",
+    "C2": "decisions['warn_only_repositories'] == ['legacy-reports', 'sandbox-exports', 'billing-replay']",
+    "C3": "len(decisions['excluded_paths']) > 0 and any('generated-fixture' in c or 'generated fixture' in c for c in decisions['excluded_paths'])",
+    "C4": "'17:00 UTC' in decisions['first_scan_due'] and 'Friday' in decisions['first_scan_due']",
+    "C5": "decisions['blocking_repositories'] == ['payments-ledger', 'identity-audit']",
+    "C6": "all(any(c in p for p in decisions['excluded_paths']) for c in ['legacy-reports', 'sandbox-exports', 'billing-replay']) and any(('generated-fixture' in p or 'generated fixture' in p) for p in decisions['excluded_paths'])",
+    "C7": "any(('review' in c['detail']) and (('scan' in c['detail']) or ('payments-ledger' in c['detail']) or ('identity-audit' in c['detail'])) and (('Morgan' in c['detail']) or ('security' in c['detail']) or ('Security' in c['detail'])) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids and 'PF2' in revealed and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The three named repositories require mixed rather than universal blocking enforcement, and the generated-fixture finding changes the exact repository list, path exclusion, and QA exception commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5",
+        "C7",
+        "P1"
+      ],
+      "why": "The regulated-data finding changes the blocking repository list, sets the first-scan deadline to exactly 17:00 UTC on Friday, and requires a security review commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

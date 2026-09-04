@@ -1,0 +1,202 @@
+{
+  "scenario_id": "scenario_97",
+  "scenario_type": "disaster_recovery_exercise",
+  "description": "A CTO must approve the final runbook for a live regional failover exercise for the payments API, deciding the exercise window, failback safeguards, customer communication, and data-protection controls after the routine operational readiness review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "CTO"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Payments Platform Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Tessa",
+      "role": "Cloud Infrastructure Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Luis",
+      "role": "Customer Support Operations Lead"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Nadia",
+      "role": "Security Engineering Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "A live regional failover exercise for the payments API is reserved for Saturday night.",
+    "S2": "The current draft runbook schedules the exercise from 22:00 UTC to 02:00 UTC, allows failback after a 15-minute observation period, sends no targeted customer notice, and uses the cloud provider's default-managed encryption key.",
+    "S3": "The exercise passed the planned staging rehearsal, including traffic switching, health checks, and basic payment processing.",
+    "S4": "Morgan finalizes the runbook after the regular readiness review, during which payments, infrastructure, support operations, and security each report operational constraints and required controls."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During a separate game-day rehearsal this afternoon, Ravi confirmed that replaying the payments retry queue can create duplicate authorization attempts if failback begins before the queue is drained; the runbook must require a 45-minute failback hold and a retry-queue drain check, but he has not filed the runbook issue yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While checking the provider reservation a few minutes ago, Tessa confirmed that a provider maintenance collision leaves the secondary region's guaranteed capacity available only from 23:00 UTC through 01:30 UTC on Saturday, so the exercise window must be exactly 23:00-01:30 UTC; the maintenance ticket still shows the old window."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Luis confirmed with the account team this morning that Orion Bank's contract requires at least 72 hours' notice for any live payment-routing exercise affecting its traffic, and Orion Bank has not been notified; he found the clause while handling a separate account request and has not updated the support checklist."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Nadia's audit of the recovery snapshots today found that the payments replica contains regulated account data, so the exercise must use a tenant-managed KMS key in eu-west-1 and have a security observer assigned; she confirmed this during a separate encryption review and has not yet opened a security ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "exercise_proceeds": "boolean",
+      "window_start": "string",
+      "window_end": "string",
+      "failback_hold_minutes": "integer",
+      "targeted_notice_required": "boolean",
+      "targeted_notice_customer": "string",
+      "encryption_key_mode": "string",
+      "security_observer_assigned": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The failover exercise must proceed.",
+    "The exercise must start at exactly 23:00 UTC.",
+    "The exercise must end at exactly 01:30 UTC.",
+    "Failback must be held for exactly 45 minutes.",
+    "Targeted notice must be required for Orion Bank.",
+    "The exercise must use a tenant-managed KMS key in eu-west-1.",
+    "A security observer must be assigned.",
+    "A retry-queue drain commitment must be recorded.",
+    "A provider-capacity-window commitment must be recorded.",
+    "An Orion Bank customer-notice commitment must be recorded.",
+    "A security-observer commitment must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['exercise_proceeds'] == True",
+    "C2": "decisions['window_start'] == '23:00 UTC'",
+    "C3": "decisions['window_end'] == '01:30 UTC'",
+    "C4": "decisions['failback_hold_minutes'] == 45",
+    "C5": "decisions['targeted_notice_required'] == True",
+    "C6": "decisions['targeted_notice_customer'] == 'Orion Bank'",
+    "C7": "decisions['encryption_key_mode'] == 'tenant-managed KMS key in eu-west-1'",
+    "C8": "decisions['security_observer_assigned'] == True",
+    "C9": "any(c['type'] == 'retry_queue_drain_check' for c in commitments)",
+    "C10": "any(c['type'] == 'provider_capacity_window' for c in commitments)",
+    "C11": "any(c['type'] == 'customer_notice' for c in commitments)",
+    "C12": "any(c['type'] == 'security_observer' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C4",
+        "C9",
+        "P1"
+      ],
+      "why": "The retry-queue finding changes the failback hold from the draft's 15 minutes to exactly 45 minutes and adds the required queue-drain commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C10"
+      ],
+      "why": "The provider collision changes the exercise window from 22:00-02:00 UTC to exactly 23:00-01:30 UTC and requires a capacity-window commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C11"
+      ],
+      "why": "Orion Bank's contract changes the plan from no targeted notice to required notice naming Orion Bank and adds the customer-notice commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C7",
+        "C8",
+        "C12"
+      ],
+      "why": "The regulated-data finding changes encryption from the provider default to a tenant-managed KMS key in eu-west-1, requires a security observer, and adds the observer commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

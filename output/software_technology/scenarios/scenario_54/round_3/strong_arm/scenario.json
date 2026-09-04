@@ -1,0 +1,174 @@
+{
+  "scenario_id": "scenario_54",
+  "scenario_type": "technical_debt_cleanup",
+  "description": "A platform lead must approve the cleanup plan for abandoned build artifacts, setting the deletion scope, protected repositories, rollback-artifact handling, and required operational commitments after the routine platform review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Maya",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Theo",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nina",
+      "role": "Developer Productivity Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The build-artifact repository contains several terabytes of artifacts from inactive branches and retired pipelines.",
+    "S2": "Riley makes the final call on the artifact-cleanup plan.",
+    "S3": "The platform team has completed the standard inventory and dry-run checks for the cleanup tooling.",
+    "S4": "Company artifact-retirement policy requires a deletion manifest to be recorded for every production cleanup.",
+    "S5": "Before approving the change, Riley conducts the normal review with security, FinOps, and developer productivity.",
+    "S6": "At the review, Riley records the agreed scope, safeguards, and operational follow-up in the cleanup plan before approving it."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing repository access for a separate audit this morning, Maya confirmed that exactly these three repositories are under active legal hold and must be excluded from deletion: payments-ledger, identity-audit, and workforce-records. She has not added the finding to the cleanup ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Theo reconciled the current storage invoice during the monthly billing review and confirmed that deleting exactly 18 TB of eligible artifacts crosses the contracted storage tier; deleting less will not produce the planned tier change, while deleting more is not approved in this billing cycle. He has not updated the cleanup estimate."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nina found while investigating a failed rollback in an unrelated service that 12 active pipelines depend on old build artifacts for rollback, so those artifacts must be copied to archive storage and retained for exactly 30 days instead of being deleted. She has not filed the dependency list yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "cleanup_approved": "boolean",
+      "deletion_target_tb": "integer",
+      "legal_hold_repo_ids": "list",
+      "rollback_artifacts_archived": "boolean",
+      "rollback_retention_days": "integer",
+      "deletion_manifest_recorded": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The cleanup must be approved.",
+    "Exactly 18 TB of eligible artifacts must be targeted for deletion.",
+    "The three legally protected repositories must be excluded: payments-ledger, identity-audit, and workforce-records.",
+    "Rollback-dependent artifacts must be archived rather than deleted.",
+    "Archived rollback artifacts must be retained for exactly 30 days.",
+    "A legal-hold exclusion commitment must be recorded.",
+    "An artifact-archive commitment must be recorded.",
+    "A deletion manifest must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['cleanup_approved'] == True",
+    "C2": "decisions['deletion_target_tb'] == 18",
+    "C3": "decisions['legal_hold_repo_ids'] == ['payments-ledger', 'identity-audit', 'workforce-records']",
+    "C4": "decisions['rollback_artifacts_archived'] == True",
+    "C5": "decisions['rollback_retention_days'] == 30",
+    "C6": "any(c['type'] == 'legal_hold_exclusion' for c in commitments)",
+    "C7": "any(c['type'] == 'artifact_archive' for c in commitments)",
+    "C8": "decisions['deletion_manifest_recorded'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C6",
+        "P1"
+      ],
+      "why": "The exact legal-hold repository list changes the exclusion field to payments-ledger, identity-audit, and workforce-records and adds the legal-hold exclusion commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2"
+      ],
+      "why": "The billing-tier confirmation changes the deletion target to exactly 18 TB rather than an unspecified or smaller cleanup amount."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "why": "The 12 rollback-dependent pipelines change the plan to archive those artifacts and retain them for exactly 30 days, requiring an artifact-archive commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

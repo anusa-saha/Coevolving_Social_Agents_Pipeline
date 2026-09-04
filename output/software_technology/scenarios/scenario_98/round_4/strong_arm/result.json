@@ -1,0 +1,763 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.392,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hey everyone, before we go any further \u2014 I want to flag that the readiness review checklist requires us to settle tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits before Monday's production launch. The current draft policy has some gaps we need to close: there's no tenant-specific rate tier at all, and I'd like to revisit the query depth 12 and introspection allowances. Can we walk through each checklist item and make sure we have a defensible position on each?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Hey everyone, before we go any further \u2014 I want to flag that the readiness review checklist requires us to settle tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits before Monday's production launch. The current draft policy has some gaps we need to close: there's no tenant-specific rate tier at all, and I'd like to revisit the query depth 12 and introspection allowances. Can we walk through each checklist item and make sure we have a defensible position on each?\"}"
+        },
+        {
+          "type": "say",
+          "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\":\" \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Riley, on the tenant rate tier item \u2014 while profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet, but this is what the data shows we need.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During a resilience rehearsal this morning, I confirmed that the limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During a resilience rehearsal this morning, I confirmed that the limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that depth 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, but given the Monday production launch, we need to address this now.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that depth 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, but given the Monday production launch, we need to address this now.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This contract detail has not yet been added to the API readiness ticket. We'll need a tenant-specific rate tier to cover this before Monday's production launch.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This contract detail has not yet been added to the API readiness ticket. We'll need a tenant-specific rate tier to cover this before Monday's production launch.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "enterprise_requests_per_minute": 300,
+              "enterprise_burst_requests": 30,
+              "atlas_requests_per_minute": 1000,
+              "atlas_burst_requests": 60,
+              "limiter_failure_mode": "fail_closed",
+              "rollback_denied_percentage": 2,
+              "rollback_duration_minutes": 10,
+              "graphql_introspection_enabled": false,
+              "maximum_query_depth": 8,
+              "waf_query_depth_rule_required": true,
+              "atlas_rate_tier_commitment_required": true
+            },
+            "credited_facts": [
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "implementation",
+                "target": "Owen",
+                "detail": "Update the limiter to fail closed when Redis is unavailable, and add rollback automation that triggers when denied requests exceed 2% for 10 consecutive minutes. File the rehearsal result."
+              },
+              {
+                "type": "implementation",
+                "target": "Fatima",
+                "detail": "Disable GraphQL introspection in production, set maximum query depth to 8, and add a WAF query-depth rule matching depth 8. Open a security finding to track this."
+              },
+              {
+                "type": "implementation",
+                "target": "Lucas",
+                "detail": "Add a tenant-specific rate tier for Atlas Health at 1000 rpm / 60 burst and record the contract detail in the API readiness ticket."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF2",
+              "PF3",
+              "PF4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"enterprise_requests_per_minute\": 300,\n      \"enterprise_burst_requests\": 30,\n      \"atlas_requests_per_minute\": 1000,\n      \"atlas_burst_requests\": 60,\n      \"limiter_failure_mode\": \"fail_closed\",\n      \"rollback_denied_percentage\": 2,\n      \"rollback_duration_minutes\": 10,\n      \"graphql_introspection_enabled\": false,\n      \"maximum_query_depth\": 8,\n      \"waf_query_depth_rule_required\": true,\n      \"atlas_rate_tier_commitment_required\": true\n    },\n    \"credited_facts\": [\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"implementation\",\n        \"target\": \"Owen\",\n        \"detail\": \"Update the limiter to fail closed when Redis is unavailable, and add rollback automation that triggers when denied requests exceed 2% for 10 consecutive minutes. File the rehearsal result.\"\n      },\n      {\n        \"type\": \"implementation\",\n        \"target\": \"Fatima\",\n        \"detail\": \"Disable GraphQL introspection in production, set maximum query depth to 8, and add a WAF query-depth rule matching depth 8. Open a security finding to track this.\"\n      },\n      {\n        \"type\": \"implementation\",\n        \"target\": \"Lucas\",\n        \"detail\": \"Add a tenant-specific rate tier for Atlas Health at 1000 rpm / 60 burst and record the contract detail in the API readiness ticket.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "enterprise_requests_per_minute": 300,
+          "enterprise_burst_requests": 30,
+          "atlas_requests_per_minute": 1000,
+          "atlas_burst_requests": 60,
+          "limiter_failure_mode": "fail_closed",
+          "rollback_denied_percentage": 2,
+          "rollback_duration_minutes": 10,
+          "graphql_introspection_enabled": false,
+          "maximum_query_depth": 8,
+          "waf_query_depth_rule_required": true,
+          "atlas_rate_tier_commitment_required": true
+        },
+        "credited_facts": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "implementation",
+            "target": "Owen",
+            "detail": "Update the limiter to fail closed when Redis is unavailable, and add rollback automation that triggers when denied requests exceed 2% for 10 consecutive minutes. File the rehearsal result."
+          },
+          {
+            "type": "implementation",
+            "target": "Fatima",
+            "detail": "Disable GraphQL introspection in production, set maximum query depth to 8, and add a WAF query-depth rule matching depth 8. Open a security finding to track this."
+          },
+          {
+            "type": "implementation",
+            "target": "Lucas",
+            "detail": "Add a tenant-specific rate tier for Atlas Health at 1000 rpm / 60 burst and record the contract detail in the API readiness ticket."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": false,
+        "C2": false,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": true,
+        "C9": true,
+        "C10": true,
+        "C11": true
+      },
+      "provenance_results": {
+        "P1": false,
+        "P2": true,
+        "P3": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.459,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, we're moving the public GraphQL API from pilot to general production traffic on Monday. I want to use this time to walk through the readiness review checklist and make sure we're solid before we ship. Let's start with the current draft policy -- we've got 300 requests per minute with a burst of 30, schema introspection is permitted, query depth is capped at 12, and there's no tenant-specific rate tier in place yet. The checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as things we need to address before Monday. I'd like to go item by item and hear where each of you stands.",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "I have no private facts to reveal and no information beyond what's already shared. Let me start the conversation naturally as the Tech Lead preparing for Monday's production launch.\n\n{\"type\": \"say\", \"text\": \"Alright everyone, we're moving the public GraphQL API from pilot to general production traffic on Monday. I want to use this time to walk through the readiness review checklist and make sure we're solid before we ship. Let's start with the current draft policy -- we've got 300 requests per minute with a burst of 30, schema introspection is permitted, query depth is capped at 12, and there's no tenant-specific rate tier in place yet. The checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as things we need to address before Monday. I'd like to go item by item and hear where each of you stands.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During a resilience rehearsal this morning, I confirmed that the limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During a resilience rehearsal this morning, I confirmed that the limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that depth 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I have not opened a security finding yet.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that depth 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I have not opened a security finding yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to flag a customer-specific limit issue. I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This detail hasn't been added to the API readiness ticket yet, so we need to make sure that's captured before Monday and that the policy supports a tenant-specific tier for them.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a customer-specific limit issue. I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This detail hasn't been added to the API readiness ticket yet, so we need to make sure that's captured before Monday and that the policy supports a tenant-specific tier for them.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Great, thank all four of you for surfacing these findings. Let me make sure I've captured everything correctly before I settle the policy. Mei, you found that enterprise needs 600 RPM with a burst of 120 -- I'll want that reflected in the draft. Owen, the limiter failing open on Redis loss is a real risk; we need it to fail closed and trigger rollback if denied requests exceed 2 percent for 10 consecutive minutes. Fatima, introspection exposing the full schema and depth 12 allowing expensive nested patterns is concerning -- we'll need to disable introspection, cap depth at 8, and add a WAF query-depth rule. Lucas, Atlas Health needs a dedicated 1000 RPM with a burst of 60, and we need a tenant-specific tier to support that. I've got everything I need to make the binding decision now.",
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Great, thank all four of you for surfacing these findings. Let me make sure I've captured everything correctly before I settle the policy. Mei, you found that enterprise needs 600 RPM with a burst of 120 -- I'll want that reflected in the draft. Owen, the limiter failing open on Redis loss is a real risk; we need it to fail closed and trigger rollback if denied requests exceed 2 percent for 10 consecutive minutes. Fatima, introspection exposing the full schema and depth 12 allowing expensive nested patterns is concerning -- we'll need to disable introspection, cap depth at 8, and add a WAF query-depth rule. Lucas, Atlas Health needs a dedicated 1000 RPM with a burst of 60, and we need a tenant-specific tier to support that. I've got everything I need to make the binding decision now.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds good, Riley. To confirm on my end: I'll update the policy draft to include the enterprise tier at 600 RPM with a burst of 120 as soon as you give the go-ahead. I'm ready to implement that alongside whatever else you decide on the other items.",
+          "speaker": "A2",
+          "turn": 6,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds good, Riley. To confirm on my end: I'll update the policy draft to include the enterprise tier at 600 RPM with a burst of 120 as soon as you give the go-ahead. I'm ready to implement that alongside whatever else you decide on the other items.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds good, Riley. To confirm on my end: I'll file the rehearsal result documenting the fail-open behavior and implement the fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.",
+          "speaker": "A3",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds good, Riley. To confirm on my end: I'll file the rehearsal result documenting the fail-open behavior and implement the fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds good, Riley. To confirm on my end: I'll open the security finding documenting the introspection and depth-12 issues and implement the changes to disable introspection, set maximum query depth to exactly 8, and add the WAF query-depth rule, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.",
+          "speaker": "A4",
+          "turn": 8,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds good, Riley. To confirm on my end: I'll open the security finding documenting the introspection and depth-12 issues and implement the changes to disable introspection, set maximum query depth to exactly 8, and add the WAF query-depth rule, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds good, Riley. To confirm on my end: I'll add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and make sure the tenant-specific tier is captured, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.",
+          "speaker": "A5",
+          "turn": 9,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds good, Riley. To confirm on my end: I'll add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and make sure the tenant-specific tier is captured, as soon as you give the go-ahead. I'm ready to move on that alongside whatever else you decide on the other items.\"}"
+        },
+        {
+          "type": " ",
+          "speaker": "A1",
+          "turn": 10,
+          "raw_output": "{\"type\":\" \"}"
+        },
+        {
+          "type": "say",
+          "text": "Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll update the policy draft with the enterprise tier at 600 RPM with a burst of 120 right away.",
+          "speaker": "A2",
+          "turn": 11,
+          "raw_output": "{\"type\":\"say\", \"text\": \"Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll update the policy draft with the enterprise tier at 600 RPM with a burst of 120 right away.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll file the rehearsal result documenting the fail-open behavior and implement the fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes right away.",
+          "speaker": "A3",
+          "turn": 12,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll file the rehearsal result documenting the fail-open behavior and implement the fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes right away.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll open the security finding documenting the introspection and depth-12 issues and implement the changes to disable introspection, set maximum query depth to exactly 8, and add the WAF query-depth rule right away.",
+          "speaker": "A4",
+          "turn": 13,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll open the security finding documenting the introspection and depth-12 issues and implement the changes to disable introspection, set maximum query depth to exactly 8, and add the WAF query-depth rule right away.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and make sure the tenant-specific tier is captured right away.",
+          "speaker": "A5",
+          "turn": 14,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Riley, I'm ready whenever you are. Once you give the formal go-ahead, I'll add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and make sure the tenant-specific tier is captured right away.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "enterprise_requests_per_minute": 600,
+              "enterprise_burst_requests": 120,
+              "atlas_requests_per_minute": 1000,
+              "atlas_burst_requests": 60,
+              "limiter_failure_mode": "fail-closed",
+              "rollback_denied_percentage": 2,
+              "rollback_duration_minutes": 10,
+              "graphql_introspection_enabled": false,
+              "maximum_query_depth": 8,
+              "waf_query_depth_rule_required": true,
+              "atlas_rate_tier_commitment_required": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "policy-update",
+                "target": "Mei",
+                "detail": "Update the policy draft to include the enterprise tier at 600 RPM with a burst of 120"
+              },
+              {
+                "type": "config-update",
+                "target": "Owen",
+                "detail": "File the rehearsal result and implement fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes"
+              },
+              {
+                "type": "security-remediation",
+                "target": "Fatima",
+                "detail": "Open the security finding and implement changes to disable introspection, set maximum query depth to 8, and add a WAF query-depth rule"
+              },
+              {
+                "type": "ticket-update",
+                "target": "Lucas",
+                "detail": "Add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and capture the tenant-specific tier"
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 15,
+          "raw_output": "```json\n{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"enterprise_requests_per_minute\":600,\"enterprise_burst_requests\":120,\"atlas_requests_per_minute\":1000,\"atlas_burst_requests\":60,\"limiter_failure_mode\":\"fail-closed\",\"rollback_denied_percentage\":2,\"rollback_duration_minutes\":10,\"graphql_introspection_enabled\":false,\"maximum_query_depth\":8,\"waf_query_depth_rule_required\":true,\"atlas_rate_tier_commitment_required\":true},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"policy-update\",\"target\":\"Mei\",\"detail\":\"Update the policy draft to include the enterprise tier at 600 RPM with a burst of 120\"},{\"type\":\"config-update\",\"target\":\"Owen\",\"detail\":\"File the rehearsal result and implement fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes\"},{\"type\":\"security-remediation\",\"target\":\"Fatima\",\"detail\":\"Open the security finding and implement changes to disable introspection, set maximum query depth to 8, and add a WAF query-depth rule\"},{\"type\":\"ticket-update\",\"target\":\"Lucas\",\"detail\":\"Add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and capture the tenant-specific tier\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"]}}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "enterprise_requests_per_minute": 600,
+          "enterprise_burst_requests": 120,
+          "atlas_requests_per_minute": 1000,
+          "atlas_burst_requests": 60,
+          "limiter_failure_mode": "fail-closed",
+          "rollback_denied_percentage": 2,
+          "rollback_duration_minutes": 10,
+          "graphql_introspection_enabled": false,
+          "maximum_query_depth": 8,
+          "waf_query_depth_rule_required": true,
+          "atlas_rate_tier_commitment_required": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "policy-update",
+            "target": "Mei",
+            "detail": "Update the policy draft to include the enterprise tier at 600 RPM with a burst of 120"
+          },
+          {
+            "type": "config-update",
+            "target": "Owen",
+            "detail": "File the rehearsal result and implement fail-closed configuration with rollback triggering when denied requests exceed 2 percent for 10 consecutive minutes"
+          },
+          {
+            "type": "security-remediation",
+            "target": "Fatima",
+            "detail": "Open the security finding and implement changes to disable introspection, set maximum query depth to 8, and add a WAF query-depth rule"
+          },
+          {
+            "type": "ticket-update",
+            "target": "Lucas",
+            "detail": "Add the Atlas Health dedicated limit of 1000 RPM with a burst of 60 to the API readiness ticket and capture the tenant-specific tier"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": true,
+        "C9": true,
+        "C10": true,
+        "C11": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.246,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hey everyone, the Monday production launch for the public GraphQL API is coming up fast. I want to make sure we're all aligned on the production API policy before we go live. The current draft has 300 requests per minute with a burst of 30, permits schema introspection, allows query depth 12, and has no tenant-specific rate tier. But the readiness review checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as things we need to address before Monday. I'd like to walk through where we stand on each of those items and what still needs to be decided.",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Hey everyone, the Monday production launch for the public GraphQL API is coming up fast. I want to make sure we're all aligned on the production API policy before we go live. The current draft has 300 requests per minute with a burst of 30, permits schema introspection, allows query depth 12, and has no tenant-specific rate tier. But the readiness review checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as things we need to address before Monday. I'd like to walk through where we stand on each of those items and what still needs to be decided.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag something critical. During a resilience rehearsal this morning, I confirmed that the rate limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet, but this directly impacts the dependency-failure behavior item on the readiness checklist.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something critical. During a resilience rehearsal this morning, I confirmed that the rate limiter currently fails open when its Redis dependency is unavailable. The production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet, but this directly impacts the dependency-failure behavior item on the readiness checklist.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I need to flag a security concern on the query controls item. I confirmed that production GraphQL introspection exposes the full schema and that the current depth limit of 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, but this directly impacts the query controls checklist item before Monday's launch.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a security concern on the query controls item. I confirmed that production GraphQL introspection exposes the full schema and that the current depth limit of 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, but this directly impacts the query controls checklist item before Monday's launch.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to add a critical item to the tenant-specific rate tier discussion. I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This contract detail has not yet been added to the API readiness ticket, so we need to capture it before Monday's launch.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to add a critical item to the tenant-specific rate tier discussion. I confirmed with Atlas Health's account team this morning that their integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. This contract detail has not yet been added to the API readiness ticket, so we need to capture it before Monday's launch.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "enterprise_requests_per_minute": 600,
+              "enterprise_burst_requests": 120,
+              "atlas_requests_per_minute": 1000,
+              "atlas_burst_requests": 60,
+              "limiter_failure_mode": "fail_closed",
+              "rollback_denied_percentage": 2,
+              "rollback_duration_minutes": 10,
+              "graphql_introspection_enabled": false,
+              "maximum_query_depth": 8,
+              "waf_query_depth_rule_required": true,
+              "atlas_rate_tier_commitment_required": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "policy_update",
+                "target": "Mei",
+                "detail": "Update the policy draft to include the enterprise tier at 600 rpm with burst of 120."
+              },
+              {
+                "type": "policy_update",
+                "target": "Lucas",
+                "detail": "Add the Atlas Health dedicated tier at 1000 rpm with burst of 60 to the policy and readiness ticket."
+              },
+              {
+                "type": "engineering_fix",
+                "target": "Owen",
+                "detail": "Change the rate limiter to fail closed and implement rollback trigger when denied requests exceed 2% for 10 consecutive minutes."
+              },
+              {
+                "type": "security_fix",
+                "target": "Fatima",
+                "detail": "Disable GraphQL introspection, set maximum query depth to 8, and add a WAF query-depth rule."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"enterprise_requests_per_minute\": 600,\n      \"enterprise_burst_requests\": 120,\n      \"atlas_requests_per_minute\": 1000,\n      \"atlas_burst_requests\": 60,\n      \"limiter_failure_mode\": \"fail_closed\",\n      \"rollback_denied_percentage\": 2,\n      \"rollback_duration_minutes\": 10,\n      \"graphql_introspection_enabled\": false,\n      \"maximum_query_depth\": 8,\n      \"waf_query_depth_rule_required\": true,\n      \"atlas_rate_tier_commitment_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"Mei\",\n        \"detail\": \"Update the policy draft to include the enterprise tier at 600 rpm with burst of 120.\"\n      },\n      {\n        \"type\": \"policy_update\",\n        \"target\": \"Lucas\",\n        \"detail\": \"Add the Atlas Health dedicated tier at 1000 rpm with burst of 60 to the policy and readiness ticket.\"\n      },\n      {\n        \"type\": \"engineering_fix\",\n        \"target\": \"Owen\",\n        \"detail\": \"Change the rate limiter to fail closed and implement rollback trigger when denied requests exceed 2% for 10 consecutive minutes.\"\n      },\n      {\n        \"type\": \"security_fix\",\n        \"target\": \"Fatima\",\n        \"detail\": \"Disable GraphQL introspection, set maximum query depth to 8, and add a WAF query-depth rule.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "enterprise_requests_per_minute": 600,
+          "enterprise_burst_requests": 120,
+          "atlas_requests_per_minute": 1000,
+          "atlas_burst_requests": 60,
+          "limiter_failure_mode": "fail_closed",
+          "rollback_denied_percentage": 2,
+          "rollback_duration_minutes": 10,
+          "graphql_introspection_enabled": false,
+          "maximum_query_depth": 8,
+          "waf_query_depth_rule_required": true,
+          "atlas_rate_tier_commitment_required": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "policy_update",
+            "target": "Mei",
+            "detail": "Update the policy draft to include the enterprise tier at 600 rpm with burst of 120."
+          },
+          {
+            "type": "policy_update",
+            "target": "Lucas",
+            "detail": "Add the Atlas Health dedicated tier at 1000 rpm with burst of 60 to the policy and readiness ticket."
+          },
+          {
+            "type": "engineering_fix",
+            "target": "Owen",
+            "detail": "Change the rate limiter to fail closed and implement rollback trigger when denied requests exceed 2% for 10 consecutive minutes."
+          },
+          {
+            "type": "security_fix",
+            "target": "Fatima",
+            "detail": "Disable GraphQL introspection, set maximum query depth to 8, and add a WAF query-depth rule."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": true,
+        "C9": true,
+        "C10": true,
+        "C11": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.523,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hey everyone, since we're moving the public GraphQL API from pilot to general production traffic on Monday, I want to make sure we've addressed everything on the readiness review checklist before I finalize the production API policy. The current draft has 300 requests per minute with a burst of 30, allows schema introspection, query depth 12, and no tenant-specific rate tiers. The checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as items we need to cover. I'd like to go through each of these \u2014 does anyone have concerns or updates on where we stand?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Hey everyone, since we're moving the public GraphQL API from pilot to general production traffic on Monday, I want to make sure we've addressed everything on the readiness review checklist before I finalize the production API policy. The current draft has 300 requests per minute with a burst of 30, allows schema introspection, query depth 12, and no tenant-specific rate tiers. The checklist calls out tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits as items we need to cover. I'd like to go through each of these \u2014 does anyone have concerns or updates on where we stand?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While profiling traffic for an unrelated dashboard this afternoon, I found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests. I haven't updated the policy draft yet.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag a critical issue on the dependency-failure behavior checklist item. During a resilience rehearsal this morning, I confirmed that the rate limiter currently fails open when its Redis dependency is unavailable. The production policy requires it to fail closed instead, and it must trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet, so this hasn't been visible to anyone until now.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a critical issue on the dependency-failure behavior checklist item. During a resilience rehearsal this morning, I confirmed that the rate limiter currently fails open when its Redis dependency is unavailable. The production policy requires it to fail closed instead, and it must trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes. I haven't filed the rehearsal result yet, so this hasn't been visible to anyone until now.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF3",
+          "text": "I have a critical concern on the query controls checklist item. While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that the current depth limit of 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, so this hasn't been visible to anyone until now.",
+          "speaker": "A4",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I have a critical concern on the query controls checklist item. While reviewing a security scan for another service, I confirmed that production GraphQL introspection exposes the full schema and that the current depth limit of 12 permits an expensive nested-query pattern. The API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule. I haven't opened a security finding yet, so this hasn't been visible to anyone until now.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF4",
+          "text": "I need to flag a critical item on the customer-specific limits checklist. I confirmed with Atlas Health's account team this morning that its integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. I haven't added this contract detail to the API readiness ticket yet, so it hasn't been visible to anyone until now.",
+          "speaker": "A5",
+          "turn": 4,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a critical item on the customer-specific limits checklist. I confirmed with Atlas Health's account team this morning that its integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests. I haven't added this contract detail to the API readiness ticket yet, so it hasn't been visible to anyone until now.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "enterprise_requests_per_minute": 600,
+              "enterprise_burst_requests": 120,
+              "atlas_requests_per_minute": 1000,
+              "atlas_burst_requests": 60,
+              "limiter_failure_mode": "closed",
+              "rollback_denied_percentage": 2,
+              "rollback_duration_minutes": 10,
+              "graphql_introspection_enabled": false,
+              "maximum_query_depth": 8,
+              "waf_query_depth_rule_required": true,
+              "atlas_rate_tier_commitment_required": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ],
+            "commitments": [
+              {
+                "type": "update_policy_draft",
+                "target": "Mei",
+                "detail": "Update the policy draft to include a general enterprise tier of 600 requests per minute with a burst of 120 requests."
+              },
+              {
+                "type": "fix_rate_limiter",
+                "target": "Owen",
+                "detail": "Change the rate limiter to fail closed when Redis is unavailable, and implement rollback when denied requests exceed 2 percent for 10 consecutive minutes. File the rehearsal result to make this visible."
+              },
+              {
+                "type": "secure_query_controls",
+                "target": "Fatima",
+                "detail": "Disable schema introspection in production, set maximum query depth to 8, and add a WAF query-depth rule. Open a security finding to document this."
+              },
+              {
+                "type": "add_atlas_tier",
+                "target": "Lucas",
+                "detail": "Add a dedicated Atlas Health rate tier of 1000 requests per minute with a burst of 60 requests to the API readiness ticket and policy draft."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "PF3",
+              "PF4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"enterprise_requests_per_minute\": 600,\n      \"enterprise_burst_requests\": 120,\n      \"atlas_requests_per_minute\": 1000,\n      \"atlas_burst_requests\": 60,\n      \"limiter_failure_mode\": \"closed\",\n      \"rollback_denied_percentage\": 2,\n      \"rollback_duration_minutes\": 10,\n      \"graphql_introspection_enabled\": false,\n      \"maximum_query_depth\": 8,\n      \"waf_query_depth_rule_required\": true,\n      \"atlas_rate_tier_commitment_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"update_policy_draft\",\n        \"target\": \"Mei\",\n        \"detail\": \"Update the policy draft to include a general enterprise tier of 600 requests per minute with a burst of 120 requests.\"\n      },\n      {\n        \"type\": \"fix_rate_limiter\",\n        \"target\": \"Owen\",\n        \"detail\": \"Change the rate limiter to fail closed when Redis is unavailable, and implement rollback when denied requests exceed 2 percent for 10 consecutive minutes. File the rehearsal result to make this visible.\"\n      },\n      {\n        \"type\": \"secure_query_controls\",\n        \"target\": \"Fatima\",\n        \"detail\": \"Disable schema introspection in production, set maximum query depth to 8, and add a WAF query-depth rule. Open a security finding to document this.\"\n      },\n      {\n        \"type\": \"add_atlas_tier\",\n        \"target\": \"Lucas\",\n        \"detail\": \"Add a dedicated Atlas Health rate tier of 1000 requests per minute with a burst of 60 requests to the API readiness ticket and policy draft.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "enterprise_requests_per_minute": 600,
+          "enterprise_burst_requests": 120,
+          "atlas_requests_per_minute": 1000,
+          "atlas_burst_requests": 60,
+          "limiter_failure_mode": "closed",
+          "rollback_denied_percentage": 2,
+          "rollback_duration_minutes": 10,
+          "graphql_introspection_enabled": false,
+          "maximum_query_depth": 8,
+          "waf_query_depth_rule_required": true,
+          "atlas_rate_tier_commitment_required": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "update_policy_draft",
+            "target": "Mei",
+            "detail": "Update the policy draft to include a general enterprise tier of 600 requests per minute with a burst of 120 requests."
+          },
+          {
+            "type": "fix_rate_limiter",
+            "target": "Owen",
+            "detail": "Change the rate limiter to fail closed when Redis is unavailable, and implement rollback when denied requests exceed 2 percent for 10 consecutive minutes. File the rehearsal result to make this visible."
+          },
+          {
+            "type": "secure_query_controls",
+            "target": "Fatima",
+            "detail": "Disable schema introspection in production, set maximum query depth to 8, and add a WAF query-depth rule. Open a security finding to document this."
+          },
+          {
+            "type": "add_atlas_tier",
+            "target": "Lucas",
+            "detail": "Add a dedicated Atlas Health rate tier of 1000 requests per minute with a burst of 60 requests to the API readiness ticket and policy draft."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true,
+        "C7": true,
+        "C8": true,
+        "C9": true,
+        "C10": true,
+        "C11": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2",
+        "PF3",
+        "PF4"
+      ],
+      "passed": true
+    }
+  ],
+  "pass_count": 3,
+  "gate_passed": true
+}

@@ -1,0 +1,196 @@
+{
+  "scenario_id": "scenario_69",
+  "scenario_type": "referral_prioritization",
+  "description": "A genetics clinic administrator must assign the clinic's one newly opened next-day evaluation appointment between two referrals and finalize the testing, authorization, laboratory, and alternate-follow-up arrangements.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Genetics Clinic Administrator"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Singh",
+      "role": "Referring Pediatrician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Leah",
+      "role": "Genetic Counselor"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Insurance Authorization Specialist"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Rosa",
+      "role": "Molecular Laboratory Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "Patients A and B both have active referrals to the genetics clinic.",
+    "S2": "The clinic has one newly opened 60-minute evaluation appointment tomorrow at 09:00.",
+    "S3": "Mara makes the final appointment assignment and records the associated care-coordination plan.",
+    "S4": "The clinic's daily referral huddle is held before an opening is released, and Mara asks the referring clinician, genetic counselor, authorization specialist, and laboratory coordinator to report current scheduling or testing updates.",
+    "S5": "Each invited specialist must formally record any update that affects the referral plan before the huddle concludes. A relevant update must be recorded with its full substantive content in the same report; merely announcing that an update exists does not complete the report.",
+    "S6": "The final care-coordination plan records a disposition or follow-up commitment for each patient discussed in the huddle, including any confirmed outside appointment for Patient B."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient A's newborn screening follow-up result is positive for a time-sensitive metabolic condition; the genetics service protocol requires evaluation within 14 days of the result, and tomorrow is day 13. The result is visible in Dr. Singh's pediatric results inbox but has not yet been added to the referral summary."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient B's family has already accepted an appointment with Northside Genetics for Friday at 15:00, and Leah has the confirmation email. That appointment is not recorded in the hospital referral system."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Patient A's insurer approved the rapid metabolic genetics panel today, with coverage valid through tomorrow and authorization status recorded as approved_for_panel in the payer portal. The approval has not yet been attached to the hospital referral."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "For Patient A, the rapid metabolic genetics panel specimen must be collected by tomorrow at 11:00 for the scheduled courier pickup; Rosa has reserved the courier and can release the kit once the collection deadline is entered in the plan."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "evaluation_appointment_assigned_to": "string",
+      "testing_panel": "string",
+      "authorization_status": "string",
+      "specimen_collection_deadline": "string",
+      "patient_b_alternate_plan": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The next-day 09:00 evaluation must be assigned to Patient A because Patient A is at day 13 of the required 14-day follow-up window.",
+    "Patient A's testing panel must be recorded as the rapid metabolic genetics panel.",
+    "Patient A's authorization status must be recorded as approved_for_panel.",
+    "Patient A's specimen collection deadline must be recorded as tomorrow at 11:00.",
+    "A commitment must reserve the molecular laboratory kit and courier for Patient A's specimen by tomorrow at 11:00.",
+    "Patient B's alternate appointment must be recorded as Northside Genetics on Friday at 15:00.",
+    "The time-sensitive result for Patient A must be cited as justification for assigning the appointment."
+  ],
+  "content_checks": {
+    "C1": "decisions.get('evaluation_appointment_assigned_to') == 'Patient A'",
+    "C2": "decisions.get('testing_panel') in ['rapid metabolic genetics panel', 'Rapid metabolic genetics panel', 'RAPID METABOLIC GENETICS PANEL']",
+    "C3": "'approved_for_panel' in decisions.get('authorization_status', '')",
+    "C4": "any('tomorrow at 11:00' in c.get('detail', '') for c in commitments)",
+    "C5": "any('release' in c.get('detail', '') and ('kit' in c.get('detail', '') or 'collection kit' in c.get('detail', '')) and ('courier' in c.get('detail', '') or 'scheduled courier' in c.get('detail', '')) for c in commitments)",
+    "C6": "'Northside Genetics' in decisions.get('patient_b_alternate_plan', '') and 'Friday' in decisions.get('patient_b_alternate_plan', '') and '15:00' in decisions.get('patient_b_alternate_plan', '')"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The positive newborn-screen result and day-13 timing change the appointment assignment from an unresolved choice to Patient A and provide the required justification for that assignment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C6"
+      ],
+      "why": "The confirmed Northside Genetics appointment changes Patient B's alternate plan from unspecified follow-up to Friday at 15:00 at that clinic."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3"
+      ],
+      "why": "The payer-portal approval changes Patient A's authorization field from unresolved to the exact status approved_for_panel."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C2",
+        "C4",
+        "C5"
+      ],
+      "why": "The laboratory update supplies the exact rapid metabolic genetics panel, changes the specimen deadline to tomorrow at 11:00, and requires commitments stating that the collection kit can be released and the reserved courier used."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 5
+}

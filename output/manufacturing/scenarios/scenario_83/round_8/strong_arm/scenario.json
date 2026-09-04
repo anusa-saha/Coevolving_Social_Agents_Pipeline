@@ -1,0 +1,168 @@
+{
+  "scenario_id": "scenario_83",
+  "scenario_type": "capacity_recovery_decision",
+  "description": "A plant manager must decide how to restore palletizing capacity after a robotic palletizer stops, and must finalize the repair, shipment staging, and energy-isolation controls for an urgent outbound order.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Plant Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Logistics Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Caleb",
+      "role": "Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Robotic palletizer P-4 stopped during the morning shift, and the finished-goods warehouse has a manual palletizing station available as a temporary alternative.",
+    "S2": "The plant manager makes the binding decision on the recovery method and the controls attached to it.",
+    "S3": "An urgent outbound order is scheduled for the end of the week, and the plant's recovery huddle routinely reviews maintenance, shipment staging, and safety controls together before work begins.",
+    "S4": "The recovery plan must document the maintenance work, shipment staging requirements, and energy-isolation controls before execution.",
+    "S5": "The huddle agenda requires each functional owner to present their current finding as a named entry in the huddle log before Mara settles the plan; a spoken discussion alone does not complete that agenda, even when a formal report is still being processed."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas's inspection found a damaged gearbox bearing in P-4; the replacement seal is stocked on site, and the repair requires exactly 6 hours with exactly 6 lockout points. He completed the inspection this morning, but the maintenance report is still awaiting his supervisor's signoff."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya confirmed from the carrier booking and warehouse count that exactly 800 pallets must be staged by Friday at 15:00; the manual station can complete only 240 pallets per shift, so it cannot meet this shipment requirement within the remaining two shifts. She has not entered the confirmed count into the recovery board yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Caleb's safety review confirmed that P-4's repair requires an authorized electrician to verify zero energy at all six lockout points and record that verification before maintenance starts; the requirement is not yet attached to the work order because the incident review remains open."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 20
+  },
+  "settlement_schema": {
+    "decisions": {
+      "palletizing_method": "string",
+      "repair_duration_hours": "integer",
+      "lockout_points": "integer",
+      "shipment_pallets": "integer",
+      "staging_deadline": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "P-4 must be repaired while the manual palletizing station operates in parallel rather than relying on manual palletizing alone.",
+    "The repair plan must allocate exactly 6 hours.",
+    "The isolation plan must identify exactly 6 lockout points.",
+    "The shipment plan must stage exactly 800 pallets.",
+    "The shipment plan must use a Friday 15:00 staging deadline.",
+    "A commitment must record authorized-electrician zero-energy verification at all six lockout points before maintenance."
+  ],
+  "content_checks": {
+    "C1": "'P-4' in decisions['palletizing_method'] and 'manual' in decisions['palletizing_method']",
+    "C2": "decisions['repair_duration_hours'] == 6",
+    "C3": "decisions['lockout_points'] == 6",
+    "C4": "decisions['shipment_pallets'] == 800",
+    "C5": "decisions['staging_deadline'] == 'Friday 15:00' or decisions['staging_deadline'] == 'Friday at 15:00'",
+    "C6": "any(('zero energy' in c['detail'] and 'lockout points' in c['detail'] and ('before maintenance' in c['detail'] or 'before any maintenance' in c['detail']) and ('electrician' in c['detail'] or 'electrician' in c['target'])) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The damaged bearing and stocked seal change the recovery method to repairing P-4, set the repair duration to exactly 6 hours, and set the isolation count to exactly 6 lockout points."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "why": "The confirmed order changes the plan from manual-only recovery to a parallel P-4 repair, and sets the shipment requirement at exactly 800 pallets by Friday 15:00."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6"
+      ],
+      "why": "The safety review changes the repair plan by requiring a commitment for an authorized electrician to verify and record zero energy at all six lockout points before maintenance starts."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

@@ -1,0 +1,206 @@
+{
+  "scenario_id": "scenario_100",
+  "status": "accepted",
+  "rounds_taken": 7,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 2,
+    "weak_arm": 0,
+    "strong_arm": 4
+  },
+  "scenario": {
+    "scenario_id": "scenario_100",
+    "scenario_type": "maintenance_downtime_scheduling",
+    "description": "A maintenance manager must authorize the replacement of a cooling-loop pump and finalize the outage window, production allocation, temperature monitoring, and glycol-spill controls for Tuesday's factory work.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Marta",
+        "role": "Maintenance Manager"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Jonas",
+        "role": "Production Scheduler"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Priya",
+        "role": "Facilities Engineer"
+      },
+      {
+        "agent_id": "A4",
+        "name": "Elena",
+        "role": "Quality Engineer"
+      },
+      {
+        "agent_id": "A5",
+        "name": "Darius",
+        "role": "Environmental Health and Safety Coordinator"
+      }
+    ],
+    "shared_context": {
+      "S1": "The factory's shared cooling loop serves both Line 1 and Line 2, and Pump P-14 is scheduled for replacement on Tuesday.",
+      "S2": "Marta makes the binding decision on the pump-replacement outage plan.",
+      "S3": "The cooling loop cannot be used normally while P-14 is isolated, and temperature-sensitive production and stored materials must be controlled during the work.",
+      "S4": "The site's maintenance approval checklist requires Marta to obtain and record a response from production scheduling, facilities engineering, quality, and environmental health and safety before approving the work order."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "The Tuesday production schedule reviewed by Jonas places Line 1's only run of customer-critical resin from 06:00 to 10:00, while Line 2 has no committed production that morning; Jonas has not yet copied the revised schedule into the maintenance work-order system."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Priya's isolation walkdown found that P-14 replacement requires exactly 3 hours for drain-down, pump change, refill, and air removal; the contractor confirmed the duration during today's site call, but the estimate is still attached only to the facilities project file."
+      },
+      "PF3": {
+        "owner": "A4",
+        "text": "Elena's quality review found that the resin used on Line 1 must remain at or below 8 degrees Celsius during the outage, so the adjacent cold room requires a temperature reading every 15 minutes until cooling is restored; she has not issued the quality hold note yet."
+      },
+      "PF4": {
+        "owner": "A5",
+        "text": "Darius's pre-job environmental walkdown found that the pump housing contains glycol and requires exactly 2 absorbent kits, one drain cover, and a signed spill-prevention permit before isolation; he is waiting for the area supervisor's signature before entering the permit in the site register."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF2"
+      ],
+      "A4": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF3"
+      ],
+      "A5": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF4"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "turn_cap": 22
+    },
+    "settlement_schema": {
+      "decisions": {
+        "outage_start": "string",
+        "outage_start_day": "string",
+        "outage_start_hour": "integer",
+        "outage_duration_hours": "integer",
+        "production_line_kept_running": "string",
+        "cold_room_monitoring_interval_minutes": "integer",
+        "absorbent_kits_staged": "integer",
+        "drain_cover_staged": "boolean",
+        "spill_permit_required": "boolean"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "action": "string",
+          "target": "string",
+          "detail": "string",
+          "duration_hours": "integer",
+          "monitoring_interval_minutes": "integer",
+          "production_line": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "The outage must start on Tuesday at or before 06:00 or at or after 10:00.",
+      "The plan must identify Line 1 as the line whose customer-critical run must finish before isolation.",
+      "Exactly 2 absorbent kits and one drain cover must be staged.",
+      "A commitment must identify the P-14 pump replacement and the exact 3-hour duration.",
+      "A commitment must identify cold-room temperature monitoring at exactly 15-minute intervals.",
+      "A commitment must identify the spill-prevention permit requirement.",
+      "The cooling-temperature finding must be cited as justification and must have been stated aloud by its owner."
+    ],
+    "content_checks": {
+      "C1": "decisions['outage_start_day'] == 'Tuesday' and (decisions['outage_start_hour'] <= 6 or decisions['outage_start_hour'] >= 10)",
+      "C3": "decisions['production_line_kept_running'] == 'Line 1' or any(c.get('production_line') == 'Line 1' for c in commitments)",
+      "C5": "decisions['absorbent_kits_staged'] == 2",
+      "C6": "decisions['drain_cover_staged'] == True",
+      "C8": "'PF2' in justification_fact_ids and decisions['outage_duration_hours'] == 3 and any(c.get('duration_hours') == 3 for c in commitments)",
+      "C9": "decisions['cold_room_monitoring_interval_minutes'] == 15 and any(c.get('monitoring_interval_minutes') == 15 for c in commitments) and 'PF3' in justification_fact_ids",
+      "C10": "decisions['spill_permit_required'] == True and any('spill-prevention permit' in c.get('action', '') or 'spill-prevention permit' in c.get('detail', '') for c in commitments) and 'PF4' in justification_fact_ids"
+    },
+    "provenance_checks": {
+      "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C3"
+        ],
+        "why": "The exact 06:00-10:00 Line 1 run changes the outage timing to a window ending by 06:00 or starting at or after 10:00 and identifies Line 1 as the line whose customer-critical production must be protected."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C8"
+        ],
+        "why": "The facilities assessment changes the outage duration to exactly 3 hours and requires the settlement to cite PF2 while including a commitment with a 3-hour replacement duration."
+      },
+      {
+        "fact_id": "PF3",
+        "owner": "A4",
+        "flips": [
+          "C9",
+          "P1"
+        ],
+        "why": "The quality finding changes cold-room control to readings at exactly 15-minute intervals, requires a matching monitoring commitment, and supplies the fact that must be cited."
+      },
+      {
+        "fact_id": "PF4",
+        "owner": "A5",
+        "flips": [
+          "C5",
+          "C6",
+          "C10"
+        ],
+        "why": "The environmental walkdown changes spill preparation to exactly 2 absorbent kits plus one drain cover, requires a spill-prevention permit, and requires a commitment identifying that permit."
+      }
+    ],
+    "domain": "manufacturing",
+    "requested_num_agents": 5
+  },
+  "timestamp": "2026-09-03T18:07:05.616286+00:00"
+}

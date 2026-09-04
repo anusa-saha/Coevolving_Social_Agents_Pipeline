@@ -1,0 +1,943 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "C1 (gated by PF1, owner A2) failed in all 4 rollouts (tally 0/4). In rollout 0, A2's turn-1 output was unparsable (malformed JSON: `{\"type\":\" \"reveal\"...`), so PF1 was never registered as a reveal event \u2014 the settlement's machine_assigned_to was 'Patient requiring regional citrate anticoagulation with airborne precautions' with no room number, and PF1 was absent from both credited_facts and justification_fact_ids. This is a NEVER REVEALED failure caused by a JSON encoding error on A2's output, not by A2 refusing to disclose. In rollouts 1, 2, and 3, A2 successfully revealed PF1 (Room 8, potassium 6.7 mmol/L, ECG changes), PF1 was cited in justification_fact_ids, and the settlement correctly assigned the machine to 'ICU Room 8'. Yet C1 still returned false in all three. This is an ENCODING MISMATCH: the check's expected wording for the machine_assigned_to field does not match how the model naturally encodes the answer ('ICU Room 8' vs. whatever exact string C1 requires). The fact was revealed, cited, and correctly applied \u2014 the check wording is the problem.\n\nP1 (provenance check gated by PF1, owner A2) failed only in rollout 0 (tally 3/4). In rollout 0, PF1 was never successfully revealed due to the same unparsable JSON from A2 at turn 1, so the settlement could not and did not cite PF1. This is the same NEVER REVEALED root cause as C1 in rollout 0 \u2014 the JSON parse failure prevented the reveal from registering. In rollouts 1\u20133, PF1 was properly revealed and cited, and P1 passed.\n\nC2 (gated by PF2, owner A3) failed in rollouts 0 and 3 (tally 2/4). In both rollouts, A3 successfully revealed PF2 (HIT history, regional citrate required, machine fitted with regional-citrate circuit), and the settlement's anticoagulation_protocol was 'Regional citrate' (rollout 0) and 'Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)' (rollout 3). PF2 was cited in justification_fact_ids in both. The settlements clearly used PF2 to reach the correct conclusion. This is an ENCODING MISMATCH: C2's expected string for anticoagulation_protocol does not match the model's natural phrasing. In rollouts 1 and 2, where C2 passed, the values were 'Regional citrate anticoagulation' and 'regional citrate anticoagulation' respectively \u2014 suggesting C2 requires that exact phrase, and the rollouts 0 and 3 values ('Regional citrate' and 'Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)') failed because they are not an exact match.\n\nC3 (gated by PF3, owner A4) failed in rollouts 0 and 3 (tally 2/4). In both rollouts, A4 successfully revealed PF3 (airborne precautions, 20:30 staging, dedicated equipment-barrier setup), PF3 was cited in justification_fact_ids, and the machine_setup_deadline was '20:30 in-room staging with dedicated equipment-barrier setup' (rollout 0) and '20:30 staging in Room 8 with dedicated equipment-barrier setup' (rollout 3). In rollouts 1 and 2, where C3 passed, the value was simply '20:30'. This is an ENCODING MISMATCH: C3 appears to expect exactly '20:30' for machine_setup_deadline, but the model naturally elaborates the field with additional context about staging and barrier setup, causing the match to fail.\n\nNo turn-cap auto-fails occurred. All 4 rollouts settled within 6\u20137 turns, so there is no pacing or structural settle-eligibility problem.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 0,\n    \"C2\": 2,\n    \"C3\": 2,\n    \"C4\": 4,\n    \"C5\": 4\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C2\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The patient's heparin-induced thrombocytopenia history and the machine's fitted circuit change the anticoagulation choice to regional citrate.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The potassium of 6.7 mmol/L with new electrocardiographic changes identifies Room 8 as the patient who must receive the machine tonight instead of Room 12.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The potassium of 6.7 mmol/L with new electrocardiographic changes identifies Room 8 as the patient who must receive the machine tonight instead of Room 12.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The airborne-precaution requirement for the patient needing CRRT changes the setup deadline to exactly 20:30 and requires a dedicated equipment-barrier commitment for the room identified by PF1.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.234,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": true,\n        \"C5\": true\n      },\n      \"provenance_results\": {\n        \"P1\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"machine_assigned_to\": \"Patient requiring regional citrate anticoagulation with airborne precautions\",\n          \"anticoagulation_protocol\": \"Regional citrate\",\n          \"treatment_start_time\": \"21:00\",\n          \"machine_setup_deadline\": \"20:30 in-room staging with dedicated equipment-barrier setup\"\n        },\n        \"credited_facts\": [\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"equipment_staging\",\n            \"target\": \"Biomedical Engineering / Infection Prevention\",\n            \"detail\": \"Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start\"\n          },\n          {\n            \"type\": \"staffing\",\n            \"target\": \"Ethan / Dialysis Staffing\",\n            \"detail\": \"Credentialed dialysis RN available 21:00\\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window\"\n          },\n          {\n            \"type\": \"infection_control\",\n            \"target\": \"Infection Prevention\",\n            \"detail\": \"Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00\"\n          },\n          {\n            \"type\": \"anticoagulation\",\n            \"target\": \"Nephrology / Luis\",\n            \"detail\": \"Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history\"\n          },\n          {\n            \"type\": \"follow_up\",\n            \"target\": \"Nephrology / Dr. Chen\",\n            \"detail\": \"Dr. Chen's input was unparsable; nephrology operational requirements still needed \\u2014 plan finalized with available information but nephrology should confirm orders post-huddle\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF2\",\n          \"PF3\",\n          \"PF4\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S5\",\n          \"S6\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"equipment_staging\",\n          \"target\": \"Biomedical Engineering / Infection Prevention\",\n          \"detail\": \"Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start\"\n        },\n        {\n          \"type\": \"staffing\",\n          \"target\": \"Ethan / Dialysis Staffing\",\n          \"detail\": \"Credentialed dialysis RN available 21:00\\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window\"\n        },\n        {\n          \"type\": \"infection_control\",\n          \"target\": \"Infection Prevention\",\n          \"detail\": \"Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00\"\n        },\n        {\n          \"type\": \"anticoagulation\",\n          \"target\": \"Nephrology / Luis\",\n          \"detail\": \"Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history\"\n        },\n        {\n          \"type\": \"follow_up\",\n          \"target\": \"Nephrology / Dr. Chen\",\n          \"detail\": \"Dr. Chen's input was unparsable; nephrology operational requirements still needed \\u2014 plan finalized with available information but nephrology should confirm orders post-huddle\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S5\",\n        \"S6\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag something important before we finalize the overnight plan. The portable CRRT machine currently available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so whoever gets assigned needs to be compatible with this configuration.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag something important before we finalize the overnight plan. The portable CRRT machine currently available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so whoever gets assigned needs to be compatible with this configuration.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to share critical clinical information. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to add a critical infection-prevention requirement before we finalize anything. The patient who needs CRRT tonight requires airborne precautions. Infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30, and a dedicated equipment-barrier setup must be in place before treatment begins. This will affect how we coordinate the machine assignment and room preparation tonight.\",\n          \"speaker\": \"A4\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to add a critical infection-prevention requirement before we finalize anything. The patient who needs CRRT tonight requires airborne precautions. Infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30, and a dedicated equipment-barrier setup must be in place before treatment begins. This will affect how we coordinate the machine assignment and room preparation tonight.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a critical staffing constraint. The only dialysis RN credentialed for this portable CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. Any delay past 21:00 means we lose coverage at the end of the shift, and we don't have a backup credentialed RN for this machine.\",\n          \"speaker\": \"A5\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a critical staffing constraint. The only dialysis RN credentialed for this portable CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. Any delay past 21:00 means we lose coverage at the end of the shift, and we don't have a backup credentialed RN for this machine.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you all for these critical inputs. Let me summarize what I'm hearing before I finalize the overnight plan: Luis has flagged that the portable CRRT machine is already fitted with the regional-citrate circuit, which is required for the patient with HIT history \\u2014 so the anticoagulation protocol is regional citrate. Nora has flagged that the patient requires airborne precautions, with the machine staged in-room by 20:30 and a dedicated equipment-barrier setup before treatment begins. Ethan has flagged that the only credentialed dialysis RN is available 21:00\\u201305:00, so treatment must start at exactly 21:00. I also need to note that Dr. Chen's input was unparsable, so I don't have a readable report from nephrology yet. Before I finalize the plan, I want to confirm: are we all aligned that the machine goes to the patient requiring regional citrate anticoagulation with airborne precautions, starting at 21:00, with in-room staging by 20:30?\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you all for these critical inputs. Let me summarize what I'm hearing before I finalize the overnight plan: Luis has flagged that the portable CRRT machine is already fitted with the regional-citrate circuit, which is required for the patient with HIT history \\u2014 so the anticoagulation protocol is regional citrate. Nora has flagged that the patient requires airborne precautions, with the machine staged in-room by 20:30 and a dedicated equipment-barrier setup before treatment begins. Ethan has flagged that the only credentialed dialysis RN is available 21:00\\u201305:00, so treatment must start at exactly 21:00. I also need to note that Dr. Chen's input was unparsable, so I don't have a readable report from nephrology yet. Before I finalize the plan, I want to confirm: are we all aligned that the machine goes to the patient requiring regional citrate anticoagulation with airborne precautions, starting at 21:00, with in-room staging by 20:30?\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, Maya, from a staffing perspective I'm aligned. The machine staging by 20:30 actually works well with our RN's 21:00 arrival \\u2014 it gives biomedical engineering and infection prevention a 30-minute window to get the equipment-barrier setup in place before the credentialed RN starts treatment at exactly 21:00. I just want to stress that the 21:00 start time is non-negotiable from my end. If anything pushes treatment past 21:00, we risk running past 05:00, and I have no backup credentialed RN to hand off to. So we need everyone committed to that timeline.\",\n          \"speaker\": \"A5\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Yes, Maya, from a staffing perspective I'm aligned. The machine staging by 20:30 actually works well with our RN's 21:00 arrival \\u2014 it gives biomedical engineering and infection prevention a 30-minute window to get the equipment-barrier setup in place before the credentialed RN starts treatment at exactly 21:00. I just want to stress that the 21:00 start time is non-negotiable from my end. If anything pushes treatment past 21:00, we risk running past 05:00, and I have no backup credentialed RN to hand off to. So we need everyone committed to that timeline.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"machine_assigned_to\": \"Patient requiring regional citrate anticoagulation with airborne precautions\",\n              \"anticoagulation_protocol\": \"Regional citrate\",\n              \"treatment_start_time\": \"21:00\",\n              \"machine_setup_deadline\": \"20:30 in-room staging with dedicated equipment-barrier setup\"\n            },\n            \"credited_facts\": [\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"equipment_staging\",\n                \"target\": \"Biomedical Engineering / Infection Prevention\",\n                \"detail\": \"Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start\"\n              },\n              {\n                \"type\": \"staffing\",\n                \"target\": \"Ethan / Dialysis Staffing\",\n                \"detail\": \"Credentialed dialysis RN available 21:00\\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window\"\n              },\n              {\n                \"type\": \"infection_control\",\n                \"target\": \"Infection Prevention\",\n                \"detail\": \"Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00\"\n              },\n              {\n                \"type\": \"anticoagulation\",\n                \"target\": \"Nephrology / Luis\",\n                \"detail\": \"Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history\"\n              },\n              {\n                \"type\": \"follow_up\",\n                \"target\": \"Nephrology / Dr. Chen\",\n                \"detail\": \"Dr. Chen's input was unparsable; nephrology operational requirements still needed \\u2014 plan finalized with available information but nephrology should confirm orders post-huddle\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF2\",\n              \"PF3\",\n              \"PF4\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S5\",\n              \"S6\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"machine_assigned_to\\\":\\\"Patient requiring regional citrate anticoagulation with airborne precautions\\\",\\\"anticoagulation_protocol\\\":\\\"Regional citrate\\\",\\\"treatment_start_time\\\":\\\"21:00\\\",\\\"machine_setup_deadline\\\":\\\"20:30 in-room staging with dedicated equipment-barrier setup\\\"},\\\"credited_facts\\\":[\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"equipment_staging\\\",\\\"target\\\":\\\"Biomedical Engineering / Infection Prevention\\\",\\\"detail\\\":\\\"Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start\\\"},{\\\"type\\\":\\\"staffing\\\",\\\"target\\\":\\\"Ethan / Dialysis Staffing\\\",\\\"detail\\\":\\\"Credentialed dialysis RN available 21:00\\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window\\\"},{\\\"type\\\":\\\"infection_control\\\",\\\"target\\\":\\\"Infection Prevention\\\",\\\"detail\\\":\\\"Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00\\\"},{\\\"type\\\":\\\"anticoagulation\\\",\\\"target\\\":\\\"Nephrology / Luis\\\",\\\"detail\\\":\\\"Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history\\\"},{\\\"type\\\":\\\"follow_up\\\",\\\"target\\\":\\\"Nephrology / Dr. Chen\\\",\\\"detail\\\":\\\"Dr. Chen's input was unparsable; nephrology operational requirements still needed \\u2014 plan finalized with available information but nephrology should confirm orders post-huddle\\\"}],\\\"justification_fact_ids\\\":[\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\",\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S5\\\",\\\"S6\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.477,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF2\",\n        \"PF4\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"machine_assigned_to\": \"ICU Room 8\",\n          \"anticoagulation_protocol\": \"Regional citrate anticoagulation\",\n          \"treatment_start_time\": \"21:00\",\n          \"machine_setup_deadline\": \"20:30\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"equipment_staging\",\n            \"target\": \"Infection Prevention\",\n            \"detail\": \"Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins\"\n          },\n          {\n            \"type\": \"equipment_readiness\",\n            \"target\": \"Biomedical Engineering\",\n            \"detail\": \"Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start\"\n          },\n          {\n            \"type\": \"staffing_assignment\",\n            \"target\": \"Dialysis Staffing\",\n            \"detail\": \"CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy\"\n          },\n          {\n            \"type\": \"clinical_followup\",\n            \"target\": \"Nephrology\",\n            \"detail\": \"Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning\"\n          },\n          {\n            \"type\": \"documentation\",\n            \"target\": \"Maya\",\n            \"detail\": \"Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S5\",\n          \"S6\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"equipment_staging\",\n          \"target\": \"Infection Prevention\",\n          \"detail\": \"Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins\"\n        },\n        {\n          \"type\": \"equipment_readiness\",\n          \"target\": \"Biomedical Engineering\",\n          \"detail\": \"Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start\"\n        },\n        {\n          \"type\": \"staffing_assignment\",\n          \"target\": \"Dialysis Staffing\",\n          \"detail\": \"CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy\"\n        },\n        {\n          \"type\": \"clinical_followup\",\n          \"target\": \"Nephrology\",\n          \"detail\": \"Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning\"\n        },\n        {\n          \"type\": \"documentation\",\n          \"target\": \"Maya\",\n          \"detail\": \"Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S5\",\n        \"S6\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. Let's get our renal-services huddle started. We have one portable CRRT machine available for overnight use, and I understand both ICU Room 8 and ICU Room 12 have patients being evaluated for it. I'll need each service to report their operational requirements so we can determine the assignment and document the full overnight plan. Who'd like to begin?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. Let's get our renal-services huddle started. We have one portable CRRT machine available for overnight use, and I understand both ICU Room 8 and ICU Room 12 have patients being evaluated for it. I'll need each service to report their operational requirements so we can determine the assignment and document the full overnight plan. Who'd like to begin?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag an infection-control requirement: the patient who needs continuous renal replacement therapy tonight requires airborne precautions, so infection prevention requires the portable machine to be staged in that patient's room by 20:30 and requires a dedicated equipment-barrier setup before treatment begins.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to flag an infection-control requirement: the patient who needs continuous renal replacement therapy tonight requires airborne precautions, so infection prevention requires the portable machine to be staged in that patient's room by 20:30 and requires a dedicated equipment-barrier setup before treatment begins.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a biomedical engineering requirement: the available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the assignment decision.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a biomedical engineering requirement: the available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the assignment decision.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a dialysis staffing constraint: the only dialysis RN credentialed for this CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. This is critical for the assignment and timing decision.\",\n          \"speaker\": \"A5\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a dialysis staffing constraint: the only dialysis RN credentialed for this CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. This is critical for the assignment and timing decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag the nephrology clinical requirement: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. This is the clinical basis for the assignment decision.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag the nephrology clinical requirement: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. This is the clinical basis for the assignment decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"machine_assigned_to\": \"ICU Room 8\",\n              \"anticoagulation_protocol\": \"Regional citrate anticoagulation\",\n              \"treatment_start_time\": \"21:00\",\n              \"machine_setup_deadline\": \"20:30\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"equipment_staging\",\n                \"target\": \"Infection Prevention\",\n                \"detail\": \"Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins\"\n              },\n              {\n                \"type\": \"equipment_readiness\",\n                \"target\": \"Biomedical Engineering\",\n                \"detail\": \"Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start\"\n              },\n              {\n                \"type\": \"staffing_assignment\",\n                \"target\": \"Dialysis Staffing\",\n                \"detail\": \"CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy\"\n              },\n              {\n                \"type\": \"clinical_followup\",\n                \"target\": \"Nephrology\",\n                \"detail\": \"Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning\"\n              },\n              {\n                \"type\": \"documentation\",\n                \"target\": \"Maya\",\n                \"detail\": \"Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S5\",\n              \"S6\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"machine_assigned_to\\\":\\\"ICU Room 8\\\",\\\"anticoagulation_protocol\\\":\\\"Regional citrate anticoagulation\\\",\\\"treatment_start_time\\\":\\\"21:00\\\",\\\"machine_setup_deadline\\\":\\\"20:30\\\"},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"equipment_staging\\\",\\\"target\\\":\\\"Infection Prevention\\\",\\\"detail\\\":\\\"Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins\\\"},{\\\"type\\\":\\\"equipment_readiness\\\",\\\"target\\\":\\\"Biomedical Engineering\\\",\\\"detail\\\":\\\"Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start\\\"},{\\\"type\\\":\\\"staffing_assignment\\\",\\\"target\\\":\\\"Dialysis Staffing\\\",\\\"detail\\\":\\\"CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy\\\"},{\\\"type\\\":\\\"clinical_followup\\\",\\\"target\\\":\\\"Nephrology\\\",\\\"detail\\\":\\\"Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning\\\"},{\\\"type\\\":\\\"documentation\\\",\\\"target\\\":\\\"Maya\\\",\\\"detail\\\":\\\"Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record\\\"}],\\\"justification_fact_ids\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\",\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S5\\\",\\\"S6\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.478,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF1\",\n        \"PF4\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"machine_assigned_to\": \"ICU Room 8\",\n          \"anticoagulation_protocol\": \"regional citrate anticoagulation\",\n          \"treatment_start_time\": \"21:00\",\n          \"machine_setup_deadline\": \"20:30\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"equipment_assignment\",\n            \"target\": \"ICU Room 8\",\n            \"detail\": \"The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes.\"\n          },\n          {\n            \"type\": \"anticoagulation_protocol\",\n            \"target\": \"ICU Room 8\",\n            \"detail\": \"Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history.\"\n          },\n          {\n            \"type\": \"treatment_timing\",\n            \"target\": \"ICU Room 8\",\n            \"detail\": \"Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00.\"\n          },\n          {\n            \"type\": \"infection_control_setup\",\n            \"target\": \"ICU Room 8\",\n            \"detail\": \"The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements.\"\n          },\n          {\n            \"type\": \"deferred_treatment\",\n            \"target\": \"ICU Room 12\",\n            \"detail\": \"The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"S6\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"equipment_assignment\",\n          \"target\": \"ICU Room 8\",\n          \"detail\": \"The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes.\"\n        },\n        {\n          \"type\": \"anticoagulation_protocol\",\n          \"target\": \"ICU Room 8\",\n          \"detail\": \"Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history.\"\n        },\n        {\n          \"type\": \"treatment_timing\",\n          \"target\": \"ICU Room 8\",\n          \"detail\": \"Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00.\"\n        },\n        {\n          \"type\": \"infection_control_setup\",\n          \"target\": \"ICU Room 8\",\n          \"detail\": \"The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements.\"\n        },\n        {\n          \"type\": \"deferred_treatment\",\n          \"target\": \"ICU Room 12\",\n          \"detail\": \"The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"S6\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. We need to convene the routine renal-services huddle to finalize the overnight plan. As a reminder, we have one portable continuous-renal-replacement machine available for overnight use, and we have patients in ICU Rooms 8 and 12 both being evaluated for it. I'll need each service -- nephrology, biomedical engineering, infection prevention, and dialysis staffing -- to report their operational requirements before I can finalize the equipment assignment and treatment plan. Let's get started.\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. We need to convene the routine renal-services huddle to finalize the overnight plan. As a reminder, we have one portable continuous-renal-replacement machine available for overnight use, and we have patients in ICU Rooms 8 and 12 both being evaluated for it. I'll need each service -- nephrology, biomedical engineering, infection prevention, and dialysis staffing -- to report their operational requirements before I can finalize the equipment assignment and treatment plan. Let's get started.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"From infection prevention: The patient who needs continuous renal replacement therapy tonight requires airborne precautions, so we require the portable machine to be staged in that patient's room by 20:30 and a dedicated equipment-barrier setup before treatment begins.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"From infection prevention: The patient who needs continuous renal replacement therapy tonight requires airborne precautions, so we require the portable machine to be staged in that patient's room by 20:30 and a dedicated equipment-barrier setup before treatment begins.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"From nephrology: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"From nephrology: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"From dialysis staffing: The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window.\",\n          \"speaker\": \"A5\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"From dialysis staffing: The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"From biomedical engineering: The available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs continuous renal replacement therapy tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so it is specifically configured for the patient requiring citrate anticoagulation.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"From biomedical engineering: The available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs continuous renal replacement therapy tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so it is specifically configured for the patient requiring citrate anticoagulation.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"machine_assigned_to\": \"ICU Room 8\",\n              \"anticoagulation_protocol\": \"regional citrate anticoagulation\",\n              \"treatment_start_time\": \"21:00\",\n              \"machine_setup_deadline\": \"20:30\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"equipment_assignment\",\n                \"target\": \"ICU Room 8\",\n                \"detail\": \"The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes.\"\n              },\n              {\n                \"type\": \"anticoagulation_protocol\",\n                \"target\": \"ICU Room 8\",\n                \"detail\": \"Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history.\"\n              },\n              {\n                \"type\": \"treatment_timing\",\n                \"target\": \"ICU Room 8\",\n                \"detail\": \"Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00.\"\n              },\n              {\n                \"type\": \"infection_control_setup\",\n                \"target\": \"ICU Room 8\",\n                \"detail\": \"The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements.\"\n              },\n              {\n                \"type\": \"deferred_treatment\",\n                \"target\": \"ICU Room 12\",\n                \"detail\": \"The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"S6\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"machine_assigned_to\\\": \\\"ICU Room 8\\\",\\n      \\\"anticoagulation_protocol\\\": \\\"regional citrate anticoagulation\\\",\\n      \\\"treatment_start_time\\\": \\\"21:00\\\",\\n      \\\"machine_setup_deadline\\\": \\\"20:30\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"equipment_assignment\\\",\\n        \\\"target\\\": \\\"ICU Room 8\\\",\\n        \\\"detail\\\": \\\"The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"anticoagulation_protocol\\\",\\n        \\\"target\\\": \\\"ICU Room 8\\\",\\n        \\\"detail\\\": \\\"Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"treatment_timing\\\",\\n        \\\"target\\\": \\\"ICU Room 8\\\",\\n        \\\"detail\\\": \\\"Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"infection_control_setup\\\",\\n        \\\"target\\\": \\\"ICU Room 8\\\",\\n        \\\"detail\\\": \\\"The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"deferred_treatment\\\",\\n        \\\"target\\\": \\\"ICU Room 12\\\",\\n        \\\"detail\\\": \\\"The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"S6\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.229,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\",\n        \"PF4\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": true,\n        \"C5\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"machine_assigned_to\": \"ICU Room 8\",\n          \"anticoagulation_protocol\": \"Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)\",\n          \"treatment_start_time\": \"21:00\",\n          \"machine_setup_deadline\": \"20:30 staging in Room 8 with dedicated equipment-barrier setup\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S5\",\n          \"S6\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"equipment_delivery\",\n            \"target\": \"Luis / Biomedical Engineering\",\n            \"detail\": \"Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed.\"\n          },\n          {\n            \"type\": \"infection_control_setup\",\n            \"target\": \"Nora / Infection Prevention\",\n            \"detail\": \"Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements.\"\n          },\n          {\n            \"type\": \"staffing_assignment\",\n            \"target\": \"Ethan / Dialysis Staffing\",\n            \"detail\": \"Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window.\"\n          },\n          {\n            \"type\": \"documentation\",\n            \"target\": \"Renal-Services Handoff Record\",\n            \"detail\": \"Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\\u201305:00) in the renal-services handoff record.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S5\",\n          \"S6\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S5\",\n        \"S6\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"equipment_delivery\",\n          \"target\": \"Luis / Biomedical Engineering\",\n          \"detail\": \"Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed.\"\n        },\n        {\n          \"type\": \"infection_control_setup\",\n          \"target\": \"Nora / Infection Prevention\",\n          \"detail\": \"Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements.\"\n        },\n        {\n          \"type\": \"staffing_assignment\",\n          \"target\": \"Ethan / Dialysis Staffing\",\n          \"detail\": \"Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window.\"\n        },\n        {\n          \"type\": \"documentation\",\n          \"target\": \"Renal-Services Handoff Record\",\n          \"detail\": \"Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\\u201305:00) in the renal-services handoff record.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S5\",\n        \"S6\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag something important before the huddle finalizes the overnight plan. The portable CRRT machine that's available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the equipment assignment.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag something important before the huddle finalizes the overnight plan. The portable CRRT machine that's available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the equipment assignment.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you for flagging that, Luis. That's a critical constraint \\u2014 if the available portable CRRT machine is already set up with the regional-citrate circuit and the patient who needs CRRT tonight requires regional citrate anticoagulation due to HIT history, then the machine's current configuration actually aligns with the patient's needs. However, I need to clarify something: we have two patients being evaluated for this one machine \\u2014 patients in ICU Rooms 8 and 12. Before I finalize the equipment assignment, I need the team to confirm which patient has the documented HIT history and requires regional citrate anticoagulation tonight, so I can ensure the machine goes to the right patient. Can we get that clarified before we proceed with the huddle?\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you for flagging that, Luis. That's a critical constraint \\u2014 if the available portable CRRT machine is already set up with the regional-citrate circuit and the patient who needs CRRT tonight requires regional citrate anticoagulation due to HIT history, then the machine's current configuration actually aligns with the patient's needs. However, I need to clarify something: we have two patients being evaluated for this one machine \\u2014 patients in ICU Rooms 8 and 12. Before I finalize the equipment assignment, I need the team to confirm which patient has the documented HIT history and requires regional citrate anticoagulation tonight, so I can ensure the machine goes to the right patient. Can we get that clarified before we proceed with the huddle?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I can clarify this for the team. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. So the machine should go to Room 8.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I can clarify this for the team. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. So the machine should go to Room 8.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to add a critical staffing constraint before we finalize this. The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window. If we can't guarantee a 21:00 start time, we won't have the credentialed staffing to run the machine overnight.\",\n          \"speaker\": \"A5\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF4\\\",\\\"text\\\":\\\"I need to add a critical staffing constraint before we finalize this. The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window. If we can't guarantee a 21:00 start time, we won't have the credentialed staffing to run the machine overnight.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag an infection-control constraint before we finalize this. The patient in Room 8 who needs CRRT tonight requires airborne precautions, so infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30 \\u2014 that's 30 minutes before the 21:00 start time Ethan just specified \\u2014 and we also require a dedicated equipment-barrier setup before treatment begins. This staging deadline needs to be documented as a follow-up action in the renal-services handoff record.\",\n          \"speaker\": \"A4\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"I need to flag an infection-control constraint before we finalize this. The patient in Room 8 who needs CRRT tonight requires airborne precautions, so infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30 \\u2014 that's 30 minutes before the 21:00 start time Ethan just specified \\u2014 and we also require a dedicated equipment-barrier setup before treatment begins. This staging deadline needs to be documented as a follow-up action in the renal-services handoff record.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, everyone. Let me summarize what I'm hearing from a biomedical engineering perspective so Maya can finalize the plan. Dr. Chen confirmed the patient in Room 8 needs CRRT tonight, and that patient is the one with the documented HIT history requiring regional citrate anticoagulation \\u2014 which aligns with the machine's current regional-citrate circuit setup. From my side, the machine is ready in that configuration and does not need to be reconfigured. Nora's infection-control requirement to stage the machine in Room 8 by 20:30 works well with Ethan's 21:00 start time, giving us a 30-minute window for barrier setup. I can confirm the machine will be physically delivered and staged in Room 8 by 20:30 to meet that deadline. Maya, from the equipment standpoint, we're clear to assign the portable CRRT machine to Room 8 with the regional-citrate circuit as currently configured.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, everyone. Let me summarize what I'm hearing from a biomedical engineering perspective so Maya can finalize the plan. Dr. Chen confirmed the patient in Room 8 needs CRRT tonight, and that patient is the one with the documented HIT history requiring regional citrate anticoagulation \\u2014 which aligns with the machine's current regional-citrate circuit setup. From my side, the machine is ready in that configuration and does not need to be reconfigured. Nora's infection-control requirement to stage the machine in Room 8 by 20:30 works well with Ethan's 21:00 start time, giving us a 30-minute window for barrier setup. I can confirm the machine will be physically delivered and staged in Room 8 by 20:30 to meet that deadline. Maya, from the equipment standpoint, we're clear to assign the portable CRRT machine to Room 8 with the regional-citrate circuit as currently configured.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"machine_assigned_to\": \"ICU Room 8\",\n              \"anticoagulation_protocol\": \"Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)\",\n              \"treatment_start_time\": \"21:00\",\n              \"machine_setup_deadline\": \"20:30 staging in Room 8 with dedicated equipment-barrier setup\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S5\",\n              \"S6\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"equipment_delivery\",\n                \"target\": \"Luis / Biomedical Engineering\",\n                \"detail\": \"Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed.\"\n              },\n              {\n                \"type\": \"infection_control_setup\",\n                \"target\": \"Nora / Infection Prevention\",\n                \"detail\": \"Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements.\"\n              },\n              {\n                \"type\": \"staffing_assignment\",\n                \"target\": \"Ethan / Dialysis Staffing\",\n                \"detail\": \"Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window.\"\n              },\n              {\n                \"type\": \"documentation\",\n                \"target\": \"Renal-Services Handoff Record\",\n                \"detail\": \"Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\\u201305:00) in the renal-services handoff record.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S5\",\n              \"S6\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"machine_assigned_to\\\": \\\"ICU Room 8\\\",\\n      \\\"anticoagulation_protocol\\\": \\\"Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)\\\",\\n      \\\"treatment_start_time\\\": \\\"21:00\\\",\\n      \\\"machine_setup_deadline\\\": \\\"20:30 staging in Room 8 with dedicated equipment-barrier setup\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S5\\\",\\n      \\\"S6\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"equipment_delivery\\\",\\n        \\\"target\\\": \\\"Luis / Biomedical Engineering\\\",\\n        \\\"detail\\\": \\\"Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"infection_control_setup\\\",\\n        \\\"target\\\": \\\"Nora / Infection Prevention\\\",\\n        \\\"detail\\\": \\\"Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"staffing_assignment\\\",\\n        \\\"target\\\": \\\"Ethan / Dialysis Staffing\\\",\\n        \\\"detail\\\": \\\"Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"Renal-Services Handoff Record\\\",\\n        \\\"detail\\\": \\\"Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\\u201305:00) in the renal-services handoff record.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S5\\\",\\n      \\\"S6\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 0,
+      "C2": 2,
+      "C3": 2,
+      "C4": 4,
+      "C5": 4
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "C2": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The patient's heparin-induced thrombocytopenia history and the machine's fitted circuit change the anticoagulation choice to regional citrate."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The potassium of 6.7 mmol/L with new electrocardiographic changes identifies Room 8 as the patient who must receive the machine tonight instead of Room 12."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The potassium of 6.7 mmol/L with new electrocardiographic changes identifies Room 8 as the patient who must receive the machine tonight instead of Room 12."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The airborne-precaution requirement for the patient needing CRRT changes the setup deadline to exactly 20:30 and requires a dedicated equipment-barrier commitment for the room identified by PF1."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.234,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": true,
+          "C5": true
+        },
+        "provenance_results": {
+          "P1": false
+        },
+        "settlement": {
+          "decisions": {
+            "machine_assigned_to": "Patient requiring regional citrate anticoagulation with airborne precautions",
+            "anticoagulation_protocol": "Regional citrate",
+            "treatment_start_time": "21:00",
+            "machine_setup_deadline": "20:30 in-room staging with dedicated equipment-barrier setup"
+          },
+          "credited_facts": [
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "equipment_staging",
+              "target": "Biomedical Engineering / Infection Prevention",
+              "detail": "Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start"
+            },
+            {
+              "type": "staffing",
+              "target": "Ethan / Dialysis Staffing",
+              "detail": "Credentialed dialysis RN available 21:00\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window"
+            },
+            {
+              "type": "infection_control",
+              "target": "Infection Prevention",
+              "detail": "Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00"
+            },
+            {
+              "type": "anticoagulation",
+              "target": "Nephrology / Luis",
+              "detail": "Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history"
+            },
+            {
+              "type": "follow_up",
+              "target": "Nephrology / Dr. Chen",
+              "detail": "Dr. Chen's input was unparsable; nephrology operational requirements still needed \u2014 plan finalized with available information but nephrology should confirm orders post-huddle"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF2",
+            "PF3",
+            "PF4",
+            "S1",
+            "S2",
+            "S3",
+            "S5",
+            "S6"
+          ]
+        },
+        "credited_facts": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "equipment_staging",
+            "target": "Biomedical Engineering / Infection Prevention",
+            "detail": "Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start"
+          },
+          {
+            "type": "staffing",
+            "target": "Ethan / Dialysis Staffing",
+            "detail": "Credentialed dialysis RN available 21:00\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window"
+          },
+          {
+            "type": "infection_control",
+            "target": "Infection Prevention",
+            "detail": "Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00"
+          },
+          {
+            "type": "anticoagulation",
+            "target": "Nephrology / Luis",
+            "detail": "Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history"
+          },
+          {
+            "type": "follow_up",
+            "target": "Nephrology / Dr. Chen",
+            "detail": "Dr. Chen's input was unparsable; nephrology operational requirements still needed \u2014 plan finalized with available information but nephrology should confirm orders post-huddle"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF2",
+          "PF3",
+          "PF4",
+          "S1",
+          "S2",
+          "S3",
+          "S5",
+          "S6"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag something important before we finalize the overnight plan. The portable CRRT machine currently available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so whoever gets assigned needs to be compatible with this configuration.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something important before we finalize the overnight plan. The portable CRRT machine currently available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so whoever gets assigned needs to be compatible with this configuration.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\" \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to share critical clinical information. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to add a critical infection-prevention requirement before we finalize anything. The patient who needs CRRT tonight requires airborne precautions. Infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30, and a dedicated equipment-barrier setup must be in place before treatment begins. This will affect how we coordinate the machine assignment and room preparation tonight.",
+            "speaker": "A4",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to add a critical infection-prevention requirement before we finalize anything. The patient who needs CRRT tonight requires airborne precautions. Infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30, and a dedicated equipment-barrier setup must be in place before treatment begins. This will affect how we coordinate the machine assignment and room preparation tonight.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a critical staffing constraint. The only dialysis RN credentialed for this portable CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. Any delay past 21:00 means we lose coverage at the end of the shift, and we don't have a backup credentialed RN for this machine.",
+            "speaker": "A5",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a critical staffing constraint. The only dialysis RN credentialed for this portable CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. Any delay past 21:00 means we lose coverage at the end of the shift, and we don't have a backup credentialed RN for this machine.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you all for these critical inputs. Let me summarize what I'm hearing before I finalize the overnight plan: Luis has flagged that the portable CRRT machine is already fitted with the regional-citrate circuit, which is required for the patient with HIT history \u2014 so the anticoagulation protocol is regional citrate. Nora has flagged that the patient requires airborne precautions, with the machine staged in-room by 20:30 and a dedicated equipment-barrier setup before treatment begins. Ethan has flagged that the only credentialed dialysis RN is available 21:00\u201305:00, so treatment must start at exactly 21:00. I also need to note that Dr. Chen's input was unparsable, so I don't have a readable report from nephrology yet. Before I finalize the plan, I want to confirm: are we all aligned that the machine goes to the patient requiring regional citrate anticoagulation with airborne precautions, starting at 21:00, with in-room staging by 20:30?",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all for these critical inputs. Let me summarize what I'm hearing before I finalize the overnight plan: Luis has flagged that the portable CRRT machine is already fitted with the regional-citrate circuit, which is required for the patient with HIT history \u2014 so the anticoagulation protocol is regional citrate. Nora has flagged that the patient requires airborne precautions, with the machine staged in-room by 20:30 and a dedicated equipment-barrier setup before treatment begins. Ethan has flagged that the only credentialed dialysis RN is available 21:00\u201305:00, so treatment must start at exactly 21:00. I also need to note that Dr. Chen's input was unparsable, so I don't have a readable report from nephrology yet. Before I finalize the plan, I want to confirm: are we all aligned that the machine goes to the patient requiring regional citrate anticoagulation with airborne precautions, starting at 21:00, with in-room staging by 20:30?\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Yes, Maya, from a staffing perspective I'm aligned. The machine staging by 20:30 actually works well with our RN's 21:00 arrival \u2014 it gives biomedical engineering and infection prevention a 30-minute window to get the equipment-barrier setup in place before the credentialed RN starts treatment at exactly 21:00. I just want to stress that the 21:00 start time is non-negotiable from my end. If anything pushes treatment past 21:00, we risk running past 05:00, and I have no backup credentialed RN to hand off to. So we need everyone committed to that timeline.",
+            "speaker": "A5",
+            "turn": 5,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Yes, Maya, from a staffing perspective I'm aligned. The machine staging by 20:30 actually works well with our RN's 21:00 arrival \u2014 it gives biomedical engineering and infection prevention a 30-minute window to get the equipment-barrier setup in place before the credentialed RN starts treatment at exactly 21:00. I just want to stress that the 21:00 start time is non-negotiable from my end. If anything pushes treatment past 21:00, we risk running past 05:00, and I have no backup credentialed RN to hand off to. So we need everyone committed to that timeline.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "machine_assigned_to": "Patient requiring regional citrate anticoagulation with airborne precautions",
+                "anticoagulation_protocol": "Regional citrate",
+                "treatment_start_time": "21:00",
+                "machine_setup_deadline": "20:30 in-room staging with dedicated equipment-barrier setup"
+              },
+              "credited_facts": [
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "equipment_staging",
+                  "target": "Biomedical Engineering / Infection Prevention",
+                  "detail": "Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start"
+                },
+                {
+                  "type": "staffing",
+                  "target": "Ethan / Dialysis Staffing",
+                  "detail": "Credentialed dialysis RN available 21:00\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window"
+                },
+                {
+                  "type": "infection_control",
+                  "target": "Infection Prevention",
+                  "detail": "Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00"
+                },
+                {
+                  "type": "anticoagulation",
+                  "target": "Nephrology / Luis",
+                  "detail": "Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history"
+                },
+                {
+                  "type": "follow_up",
+                  "target": "Nephrology / Dr. Chen",
+                  "detail": "Dr. Chen's input was unparsable; nephrology operational requirements still needed \u2014 plan finalized with available information but nephrology should confirm orders post-huddle"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF2",
+                "PF3",
+                "PF4",
+                "S1",
+                "S2",
+                "S3",
+                "S5",
+                "S6"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"machine_assigned_to\":\"Patient requiring regional citrate anticoagulation with airborne precautions\",\"anticoagulation_protocol\":\"Regional citrate\",\"treatment_start_time\":\"21:00\",\"machine_setup_deadline\":\"20:30 in-room staging with dedicated equipment-barrier setup\"},\"credited_facts\":[\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"equipment_staging\",\"target\":\"Biomedical Engineering / Infection Prevention\",\"detail\":\"Portable CRRT machine with regional-citrate circuit must be staged in the patient's room by 20:30 with dedicated equipment-barrier setup complete before 21:00 treatment start\"},{\"type\":\"staffing\",\"target\":\"Ethan / Dialysis Staffing\",\"detail\":\"Credentialed dialysis RN available 21:00\u201305:00; treatment must start at exactly 21:00 with no delays to ensure full coverage within the eight-hour window\"},{\"type\":\"infection_control\",\"target\":\"Infection Prevention\",\"detail\":\"Airborne precautions and dedicated equipment-barrier setup must be in place before treatment begins at 21:00\"},{\"type\":\"anticoagulation\",\"target\":\"Nephrology / Luis\",\"detail\":\"Regional citrate anticoagulation protocol confirmed; machine is already fitted with regional-citrate circuit compatible with the patient's HIT history\"},{\"type\":\"follow_up\",\"target\":\"Nephrology / Dr. Chen\",\"detail\":\"Dr. Chen's input was unparsable; nephrology operational requirements still needed \u2014 plan finalized with available information but nephrology should confirm orders post-huddle\"}],\"justification_fact_ids\":[\"PF2\",\"PF3\",\"PF4\",\"S1\",\"S2\",\"S3\",\"S5\",\"S6\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.477,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF3",
+          "PF2",
+          "PF4",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "machine_assigned_to": "ICU Room 8",
+            "anticoagulation_protocol": "Regional citrate anticoagulation",
+            "treatment_start_time": "21:00",
+            "machine_setup_deadline": "20:30"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "equipment_staging",
+              "target": "Infection Prevention",
+              "detail": "Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins"
+            },
+            {
+              "type": "equipment_readiness",
+              "target": "Biomedical Engineering",
+              "detail": "Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start"
+            },
+            {
+              "type": "staffing_assignment",
+              "target": "Dialysis Staffing",
+              "detail": "CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy"
+            },
+            {
+              "type": "clinical_followup",
+              "target": "Nephrology",
+              "detail": "Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning"
+            },
+            {
+              "type": "documentation",
+              "target": "Maya",
+              "detail": "Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4",
+            "S1",
+            "S2",
+            "S3",
+            "S5",
+            "S6"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "equipment_staging",
+            "target": "Infection Prevention",
+            "detail": "Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins"
+          },
+          {
+            "type": "equipment_readiness",
+            "target": "Biomedical Engineering",
+            "detail": "Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start"
+          },
+          {
+            "type": "staffing_assignment",
+            "target": "Dialysis Staffing",
+            "detail": "CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy"
+          },
+          {
+            "type": "clinical_followup",
+            "target": "Nephrology",
+            "detail": "Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning"
+          },
+          {
+            "type": "documentation",
+            "target": "Maya",
+            "detail": "Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4",
+          "S1",
+          "S2",
+          "S3",
+          "S5",
+          "S6"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. Let's get our renal-services huddle started. We have one portable CRRT machine available for overnight use, and I understand both ICU Room 8 and ICU Room 12 have patients being evaluated for it. I'll need each service to report their operational requirements so we can determine the assignment and document the full overnight plan. Who'd like to begin?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning everyone. Let's get our renal-services huddle started. We have one portable CRRT machine available for overnight use, and I understand both ICU Room 8 and ICU Room 12 have patients being evaluated for it. I'll need each service to report their operational requirements so we can determine the assignment and document the full overnight plan. Who'd like to begin?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag an infection-control requirement: the patient who needs continuous renal replacement therapy tonight requires airborne precautions, so infection prevention requires the portable machine to be staged in that patient's room by 20:30 and requires a dedicated equipment-barrier setup before treatment begins.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag an infection-control requirement: the patient who needs continuous renal replacement therapy tonight requires airborne precautions, so infection prevention requires the portable machine to be staged in that patient's room by 20:30 and requires a dedicated equipment-barrier setup before treatment begins.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a biomedical engineering requirement: the available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the assignment decision.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a biomedical engineering requirement: the available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the assignment decision.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a dialysis staffing constraint: the only dialysis RN credentialed for this CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. This is critical for the assignment and timing decision.",
+            "speaker": "A5",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a dialysis staffing constraint: the only dialysis RN credentialed for this CRRT machine is available from 21:00 to 05:00 tonight. That means the treatment must start at exactly 21:00 to fit within the eight-hour overnight coverage window. This is critical for the assignment and timing decision.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag the nephrology clinical requirement: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. This is the clinical basis for the assignment decision.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag the nephrology clinical requirement: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. This is the clinical basis for the assignment decision.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "machine_assigned_to": "ICU Room 8",
+                "anticoagulation_protocol": "Regional citrate anticoagulation",
+                "treatment_start_time": "21:00",
+                "machine_setup_deadline": "20:30"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "equipment_staging",
+                  "target": "Infection Prevention",
+                  "detail": "Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins"
+                },
+                {
+                  "type": "equipment_readiness",
+                  "target": "Biomedical Engineering",
+                  "detail": "Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start"
+                },
+                {
+                  "type": "staffing_assignment",
+                  "target": "Dialysis Staffing",
+                  "detail": "CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy"
+                },
+                {
+                  "type": "clinical_followup",
+                  "target": "Nephrology",
+                  "detail": "Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning"
+                },
+                {
+                  "type": "documentation",
+                  "target": "Maya",
+                  "detail": "Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4",
+                "S1",
+                "S2",
+                "S3",
+                "S5",
+                "S6"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"machine_assigned_to\":\"ICU Room 8\",\"anticoagulation_protocol\":\"Regional citrate anticoagulation\",\"treatment_start_time\":\"21:00\",\"machine_setup_deadline\":\"20:30\"},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"equipment_staging\",\"target\":\"Infection Prevention\",\"detail\":\"Portable CRRT machine staged in ICU Room 8 by 20:30 with dedicated equipment-barrier setup before treatment begins\"},{\"type\":\"equipment_readiness\",\"target\":\"Biomedical Engineering\",\"detail\":\"Confirm regional-citrate circuit integrity on the portable CRRT machine before 21:00 treatment start\"},{\"type\":\"staffing_assignment\",\"target\":\"Dialysis Staffing\",\"detail\":\"CRRT-credentialed RN assigned to ICU Room 8 from 21:00 to 05:00 for continuous renal replacement therapy\"},{\"type\":\"clinical_followup\",\"target\":\"Nephrology\",\"detail\":\"Monitor potassium and ECG changes in Room 8 patient during CRRT; schedule intermittent dialysis for Room 12 patient tomorrow morning\"},{\"type\":\"documentation\",\"target\":\"Maya\",\"detail\":\"Record all overnight treatment orders, equipment requests, infection-control measures, and staffing assignments in the renal-services handoff record\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\",\"S1\",\"S2\",\"S3\",\"S5\",\"S6\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.478,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF3",
+          "PF1",
+          "PF4",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "machine_assigned_to": "ICU Room 8",
+            "anticoagulation_protocol": "regional citrate anticoagulation",
+            "treatment_start_time": "21:00",
+            "machine_setup_deadline": "20:30"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "equipment_assignment",
+              "target": "ICU Room 8",
+              "detail": "The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes."
+            },
+            {
+              "type": "anticoagulation_protocol",
+              "target": "ICU Room 8",
+              "detail": "Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history."
+            },
+            {
+              "type": "treatment_timing",
+              "target": "ICU Room 8",
+              "detail": "Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00."
+            },
+            {
+              "type": "infection_control_setup",
+              "target": "ICU Room 8",
+              "detail": "The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements."
+            },
+            {
+              "type": "deferred_treatment",
+              "target": "ICU Room 12",
+              "detail": "The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "equipment_assignment",
+            "target": "ICU Room 8",
+            "detail": "The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes."
+          },
+          {
+            "type": "anticoagulation_protocol",
+            "target": "ICU Room 8",
+            "detail": "Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history."
+          },
+          {
+            "type": "treatment_timing",
+            "target": "ICU Room 8",
+            "detail": "Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00."
+          },
+          {
+            "type": "infection_control_setup",
+            "target": "ICU Room 8",
+            "detail": "The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements."
+          },
+          {
+            "type": "deferred_treatment",
+            "target": "ICU Room 12",
+            "detail": "The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S6",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. We need to convene the routine renal-services huddle to finalize the overnight plan. As a reminder, we have one portable continuous-renal-replacement machine available for overnight use, and we have patients in ICU Rooms 8 and 12 both being evaluated for it. I'll need each service -- nephrology, biomedical engineering, infection prevention, and dialysis staffing -- to report their operational requirements before I can finalize the equipment assignment and treatment plan. Let's get started.",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning everyone. We need to convene the routine renal-services huddle to finalize the overnight plan. As a reminder, we have one portable continuous-renal-replacement machine available for overnight use, and we have patients in ICU Rooms 8 and 12 both being evaluated for it. I'll need each service -- nephrology, biomedical engineering, infection prevention, and dialysis staffing -- to report their operational requirements before I can finalize the equipment assignment and treatment plan. Let's get started.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "From infection prevention: The patient who needs continuous renal replacement therapy tonight requires airborne precautions, so we require the portable machine to be staged in that patient's room by 20:30 and a dedicated equipment-barrier setup before treatment begins.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"From infection prevention: The patient who needs continuous renal replacement therapy tonight requires airborne precautions, so we require the portable machine to be staged in that patient's room by 20:30 and a dedicated equipment-barrier setup before treatment begins.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "From nephrology: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"From nephrology: The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "From dialysis staffing: The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window.",
+            "speaker": "A5",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"From dialysis staffing: The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "From biomedical engineering: The available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs continuous renal replacement therapy tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so it is specifically configured for the patient requiring citrate anticoagulation.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"From biomedical engineering: The available portable CRRT machine has already been fitted with the regional-citrate circuit. The patient who needs continuous renal replacement therapy tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so it is specifically configured for the patient requiring citrate anticoagulation.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "machine_assigned_to": "ICU Room 8",
+                "anticoagulation_protocol": "regional citrate anticoagulation",
+                "treatment_start_time": "21:00",
+                "machine_setup_deadline": "20:30"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "equipment_assignment",
+                  "target": "ICU Room 8",
+                  "detail": "The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes."
+                },
+                {
+                  "type": "anticoagulation_protocol",
+                  "target": "ICU Room 8",
+                  "detail": "Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history."
+                },
+                {
+                  "type": "treatment_timing",
+                  "target": "ICU Room 8",
+                  "detail": "Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00."
+                },
+                {
+                  "type": "infection_control_setup",
+                  "target": "ICU Room 8",
+                  "detail": "The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements."
+                },
+                {
+                  "type": "deferred_treatment",
+                  "target": "ICU Room 12",
+                  "detail": "The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "S6",
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"machine_assigned_to\": \"ICU Room 8\",\n      \"anticoagulation_protocol\": \"regional citrate anticoagulation\",\n      \"treatment_start_time\": \"21:00\",\n      \"machine_setup_deadline\": \"20:30\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"equipment_assignment\",\n        \"target\": \"ICU Room 8\",\n        \"detail\": \"The portable CRRT machine is assigned to the patient in ICU Room 8, who requires continuous renal replacement therapy tonight due to potassium 6.7 mmol/L with ECG changes.\"\n      },\n      {\n        \"type\": \"anticoagulation_protocol\",\n        \"target\": \"ICU Room 8\",\n        \"detail\": \"Regional citrate anticoagulation will be used, consistent with the machine's current circuit configuration and the patient's heparin-induced thrombocytopenia history.\"\n      },\n      {\n        \"type\": \"treatment_timing\",\n        \"target\": \"ICU Room 8\",\n        \"detail\": \"Treatment will begin at 21:00 to align with the credentialed dialysis RN's eight-hour coverage window from 21:00 to 05:00.\"\n      },\n      {\n        \"type\": \"infection_control_setup\",\n        \"target\": \"ICU Room 8\",\n        \"detail\": \"The machine will be staged in Room 8 by 20:30 with a dedicated equipment-barrier setup completed before treatment begins, per airborne precautions requirements.\"\n      },\n      {\n        \"type\": \"deferred_treatment\",\n        \"target\": \"ICU Room 12\",\n        \"detail\": \"The patient in Room 12 will receive scheduled intermittent dialysis tomorrow morning as recommended by nephrology.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"S6\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.229,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF2",
+          "PF1",
+          "PF4",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": true,
+          "C5": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "machine_assigned_to": "ICU Room 8",
+            "anticoagulation_protocol": "Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)",
+            "treatment_start_time": "21:00",
+            "machine_setup_deadline": "20:30 staging in Room 8 with dedicated equipment-barrier setup"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4",
+            "S1",
+            "S2",
+            "S3",
+            "S5",
+            "S6"
+          ],
+          "commitments": [
+            {
+              "type": "equipment_delivery",
+              "target": "Luis / Biomedical Engineering",
+              "detail": "Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed."
+            },
+            {
+              "type": "infection_control_setup",
+              "target": "Nora / Infection Prevention",
+              "detail": "Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements."
+            },
+            {
+              "type": "staffing_assignment",
+              "target": "Ethan / Dialysis Staffing",
+              "detail": "Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window."
+            },
+            {
+              "type": "documentation",
+              "target": "Renal-Services Handoff Record",
+              "detail": "Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\u201305:00) in the renal-services handoff record."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S5",
+            "S6",
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4",
+          "S1",
+          "S2",
+          "S3",
+          "S5",
+          "S6"
+        ],
+        "commitments": [
+          {
+            "type": "equipment_delivery",
+            "target": "Luis / Biomedical Engineering",
+            "detail": "Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed."
+          },
+          {
+            "type": "infection_control_setup",
+            "target": "Nora / Infection Prevention",
+            "detail": "Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements."
+          },
+          {
+            "type": "staffing_assignment",
+            "target": "Ethan / Dialysis Staffing",
+            "detail": "Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window."
+          },
+          {
+            "type": "documentation",
+            "target": "Renal-Services Handoff Record",
+            "detail": "Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\u201305:00) in the renal-services handoff record."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S5",
+          "S6",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag something important before the huddle finalizes the overnight plan. The portable CRRT machine that's available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the equipment assignment.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something important before the huddle finalizes the overnight plan. The portable CRRT machine that's available has already been fitted with the regional-citrate circuit. The patient who needs CRRT tonight has a documented heparin-induced thrombocytopenia history and must receive regional citrate anticoagulation. The machine's current setup is not compatible with the standard heparin circuit, so this is a critical constraint for the equipment assignment.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you for flagging that, Luis. That's a critical constraint \u2014 if the available portable CRRT machine is already set up with the regional-citrate circuit and the patient who needs CRRT tonight requires regional citrate anticoagulation due to HIT history, then the machine's current configuration actually aligns with the patient's needs. However, I need to clarify something: we have two patients being evaluated for this one machine \u2014 patients in ICU Rooms 8 and 12. Before I finalize the equipment assignment, I need the team to confirm which patient has the documented HIT history and requires regional citrate anticoagulation tonight, so I can ensure the machine goes to the right patient. Can we get that clarified before we proceed with the huddle?",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you for flagging that, Luis. That's a critical constraint \u2014 if the available portable CRRT machine is already set up with the regional-citrate circuit and the patient who needs CRRT tonight requires regional citrate anticoagulation due to HIT history, then the machine's current configuration actually aligns with the patient's needs. However, I need to clarify something: we have two patients being evaluated for this one machine \u2014 patients in ICU Rooms 8 and 12. Before I finalize the equipment assignment, I need the team to confirm which patient has the documented HIT history and requires regional citrate anticoagulation tonight, so I can ensure the machine goes to the right patient. Can we get that clarified before we proceed with the huddle?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I can clarify this for the team. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. So the machine should go to Room 8.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I can clarify this for the team. The patient in Room 8 has a potassium level of 6.7 mmol/L with new electrocardiographic changes and needs continuous renal replacement therapy started tonight. The patient in Room 12 can safely wait for scheduled intermittent dialysis tomorrow morning. So the machine should go to Room 8.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to add a critical staffing constraint before we finalize this. The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window. If we can't guarantee a 21:00 start time, we won't have the credentialed staffing to run the machine overnight.",
+            "speaker": "A5",
+            "turn": 3,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to add a critical staffing constraint before we finalize this. The only dialysis RN credentialed for this machine is available from 21:00 to 05:00, so the treatment must start at exactly 21:00 to fit the eight-hour overnight coverage window. If we can't guarantee a 21:00 start time, we won't have the credentialed staffing to run the machine overnight.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag an infection-control constraint before we finalize this. The patient in Room 8 who needs CRRT tonight requires airborne precautions, so infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30 \u2014 that's 30 minutes before the 21:00 start time Ethan just specified \u2014 and we also require a dedicated equipment-barrier setup before treatment begins. This staging deadline needs to be documented as a follow-up action in the renal-services handoff record.",
+            "speaker": "A4",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to flag an infection-control constraint before we finalize this. The patient in Room 8 who needs CRRT tonight requires airborne precautions, so infection prevention requires the portable CRRT machine to be staged in that patient's room by 20:30 \u2014 that's 30 minutes before the 21:00 start time Ethan just specified \u2014 and we also require a dedicated equipment-barrier setup before treatment begins. This staging deadline needs to be documented as a follow-up action in the renal-services handoff record.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, everyone. Let me summarize what I'm hearing from a biomedical engineering perspective so Maya can finalize the plan. Dr. Chen confirmed the patient in Room 8 needs CRRT tonight, and that patient is the one with the documented HIT history requiring regional citrate anticoagulation \u2014 which aligns with the machine's current regional-citrate circuit setup. From my side, the machine is ready in that configuration and does not need to be reconfigured. Nora's infection-control requirement to stage the machine in Room 8 by 20:30 works well with Ethan's 21:00 start time, giving us a 30-minute window for barrier setup. I can confirm the machine will be physically delivered and staged in Room 8 by 20:30 to meet that deadline. Maya, from the equipment standpoint, we're clear to assign the portable CRRT machine to Room 8 with the regional-citrate circuit as currently configured.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, everyone. Let me summarize what I'm hearing from a biomedical engineering perspective so Maya can finalize the plan. Dr. Chen confirmed the patient in Room 8 needs CRRT tonight, and that patient is the one with the documented HIT history requiring regional citrate anticoagulation \u2014 which aligns with the machine's current regional-citrate circuit setup. From my side, the machine is ready in that configuration and does not need to be reconfigured. Nora's infection-control requirement to stage the machine in Room 8 by 20:30 works well with Ethan's 21:00 start time, giving us a 30-minute window for barrier setup. I can confirm the machine will be physically delivered and staged in Room 8 by 20:30 to meet that deadline. Maya, from the equipment standpoint, we're clear to assign the portable CRRT machine to Room 8 with the regional-citrate circuit as currently configured.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "machine_assigned_to": "ICU Room 8",
+                "anticoagulation_protocol": "Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)",
+                "treatment_start_time": "21:00",
+                "machine_setup_deadline": "20:30 staging in Room 8 with dedicated equipment-barrier setup"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4",
+                "S1",
+                "S2",
+                "S3",
+                "S5",
+                "S6"
+              ],
+              "commitments": [
+                {
+                  "type": "equipment_delivery",
+                  "target": "Luis / Biomedical Engineering",
+                  "detail": "Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed."
+                },
+                {
+                  "type": "infection_control_setup",
+                  "target": "Nora / Infection Prevention",
+                  "detail": "Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements."
+                },
+                {
+                  "type": "staffing_assignment",
+                  "target": "Ethan / Dialysis Staffing",
+                  "detail": "Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window."
+                },
+                {
+                  "type": "documentation",
+                  "target": "Renal-Services Handoff Record",
+                  "detail": "Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\u201305:00) in the renal-services handoff record."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S5",
+                "S6",
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"machine_assigned_to\": \"ICU Room 8\",\n      \"anticoagulation_protocol\": \"Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)\",\n      \"treatment_start_time\": \"21:00\",\n      \"machine_setup_deadline\": \"20:30 staging in Room 8 with dedicated equipment-barrier setup\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S5\",\n      \"S6\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"equipment_delivery\",\n        \"target\": \"Luis / Biomedical Engineering\",\n        \"detail\": \"Deliver and stage the portable CRRT machine in Room 8 by 20:30 in the current regional-citrate circuit configuration, no reconfiguration needed.\"\n      },\n      {\n        \"type\": \"infection_control_setup\",\n        \"target\": \"Nora / Infection Prevention\",\n        \"detail\": \"Complete dedicated equipment-barrier setup in Room 8 during the 30-minute window between 20:30 staging and 21:00 treatment start, per airborne precautions requirements.\"\n      },\n      {\n        \"type\": \"staffing_assignment\",\n        \"target\": \"Ethan / Dialysis Staffing\",\n        \"detail\": \"Assign the credentialed dialysis RN to cover the CRRT treatment from 21:00 to 05:00, ensuring treatment starts promptly at 21:00 to fit the eight-hour coverage window.\"\n      },\n      {\n        \"type\": \"documentation\",\n        \"target\": \"Renal-Services Handoff Record\",\n        \"detail\": \"Document overnight treatment orders (CRRT for Room 8 with regional citrate anticoagulation), equipment assignment (portable CRRT machine to Room 8), infection-control measures (airborne precautions, 20:30 staging, equipment-barrier setup), and staffing assignments (credentialed RN 21:00\u201305:00) in the renal-services handoff record.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S5\",\n      \"S6\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. C1 (content check on machine_assigned_to, gated by PF1): ENCODING MISMATCH in rollouts 1\u20133. The model writes 'ICU Room 8' but C1 rejects it. Loosen C1 to accept any value containing 'Room 8' (case-insensitive substring match). This is safe from LEAKED regression because 'Room 8' is the specific room number from PF1 that a lone decision-maker without PF1 would not know \u2014 the shared context mentions Rooms 8 and 12 as candidates but does not state which one should receive the machine.\n\n2. C1 in rollout 0 and P1 in rollout 0: NEVER REVEALED due to A2 emitting malformed JSON at turn 1. The raw_output was `{\"type\":\" \"reveal\", \"fact_id\": \"PF1\", ...}` \u2014 the extra quote after 'type\":\"' broke parsing. This is a model output-formatting error, not a scenario-design issue. No check or fact change will fix it; it is stochastic. Since P1 already passes 3/4 and only fails when the JSON breaks, and C1 will pass 3/4 once the encoding mismatch is fixed, no additional change is needed for this root cause \u2014 the gate requires 3/4 passes and the encoding fix delivers that.\n\n3. C2 (content check on anticoagulation_protocol, gated by PF2): ENCODING MISMATCH in rollouts 0 and 3. The model writes 'Regional citrate' (rollout 0) or 'Regional citrate anticoagulation (machine's current regional-citrate circuit configuration)' (rollout 3), but C2 appears to require exactly 'Regional citrate anticoagulation'. Loosen C2 to accept any value containing 'regional citrate' (case-insensitive substring match). This is safe from LEAKED regression because 'regional citrate' is the specific anticoagulation choice implied by PF2's HIT history \u2014 a lone decision-maker without PF2 would default to standard heparin, not citrate.\n\n4. C3 (content check on machine_setup_deadline, gated by PF3): ENCODING MISMATCH in rollouts 0 and 3. The model writes '20:30 in-room staging with dedicated equipment-barrier setup' or '20:30 staging in Room 8 with dedicated equipment-barrier setup', but C3 appears to require exactly '20:30'. Loosen C3 to accept any value containing '20:30' (substring match). This is safe from LEAKED regression because the 20:30 deadline (as opposed to, say, 21:00 or 'no specific deadline') is specifically derived from PF3's airborne-precaution staging requirement \u2014 without PF3, a lone decision-maker would not know to set a 30-minute pre-treatment staging deadline."
+}

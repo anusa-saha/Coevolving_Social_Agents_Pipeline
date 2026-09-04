@@ -1,0 +1,128 @@
+{
+  "scenario_id": "scenario_62",
+  "scenario_type": "diagnostic_imaging_allocation",
+  "description": "A radiology scheduling director must assign the hospital's only remaining same-day MRI slot between two patients and finalize the imaging protocol and alternate arrangement, with input from a radiologist and an MRI safety officer.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Radiology Scheduling Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Malik",
+      "role": "Radiologist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rosa",
+      "role": "MRI Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The imaging department has one remaining same-day MRI slot, and Patients A and B are both awaiting MRI scheduling.",
+    "S2": "Elena makes the final slot assignment and records the imaging plan.",
+    "S3": "The MRI suite's standard operating procedure requires the scheduling director to review competing referrals with the radiologist and MRI safety officer before assigning the final same-day slot."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient A had a new episode of unilateral weakness yesterday, and the neurologist's signed request specifies a brain MRI within 24 hours; Patient B's study is routine surveillance. Patient B's referring office has already confirmed an outpatient MRI for Tuesday at 10:00 if the hospital slot is used for Patient A."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient A has an implanted cardiac device that is approved only for scanning on a 1.5T magnet without contrast, with the device representative present for monitoring; this requirement is documented in the MRI safety log."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "same_day_mri_assigned_to": "string",
+      "magnet_strength": "string",
+      "contrast": "string",
+      "device_representative_monitoring": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The same-day MRI slot must be assigned to Patient A because the signed request requires imaging within 24 hours.",
+    "Patient A's MRI must use a 1.5T magnet.",
+    "Patient A's MRI must be performed without contrast.",
+    "A device representative must be present for monitoring during Patient A's scan.",
+    "Patient B must have an outpatient MRI rescheduled for Tuesday at 10:00.",
+    "The urgent clinical finding and timing must be cited as justification for assigning the slot to Patient A."
+  ],
+  "content_checks": {
+    "C1": "decisions['same_day_mri_assigned_to'] == 'Patient A'",
+    "C2": "decisions['magnet_strength'] == '1.5T'",
+    "C3": "decisions['contrast'] == 'none'",
+    "C4": "decisions['device_representative_monitoring'] == True",
+    "C5": "any(c['type'] == 'outpatient_mri_reschedule' and c['target'] == 'Patient B' and c['detail'] == 'Tuesday 10:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C5",
+        "P1"
+      ],
+      "why": "The signed within-24-hours request changes the slot assignment to Patient A, while the confirmed Tuesday 10:00 appointment changes Patient B's alternate plan to that exact outpatient time."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C4"
+      ],
+      "why": "The implanted-device approval changes the protocol to exactly 1.5T without contrast and adds the concrete requirement for device-representative monitoring."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

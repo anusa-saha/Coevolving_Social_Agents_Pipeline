@@ -1,0 +1,181 @@
+{
+  "scenario_id": "scenario_85",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A Product Director must approve the rollout policy for an AI-assisted code review feature, deciding the telemetry controls, customer cohort, and success gate after the routine engineering, support, and security review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Product Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mei",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Carlos",
+      "role": "Customer Support Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Data Science Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The AI-assisted code review feature has passed its planned functional tests and is ready for a limited production rollout.",
+    "S2": "The draft rollout policy proposes enabling the feature for a random 10% customer cohort, storing review telemetry in us-east-1 for 90 days, and expanding access if adoption exceeds 20%.",
+    "S3": "Riley has final approval authority for the rollout policy.",
+    "S4": "As part of the normal launch process, Riley conducts a final round-robin check with security, customer support, and data science before approving the policy.",
+    "S5": "Company launch policy requires Riley to keep rollout approval withheld until every required policy revision has been stated in the review and recorded in the rollout ticket, with required launch documentation attached or assigned as a follow-up commitment.",
+    "S6": "After the round-robin has covered the required revisions, Riley may settle the decision without waiting for each participant to post a separate confirmation message."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing telemetry samples for a different audit this morning, Mei confirmed that review snippets from regulated tenants are classified as confidential and must be encrypted, stored in eu-central-1, and deleted after exactly 7 days. The rollout policy uses one telemetry_region field for the whole policy, not separate regional values by tenant, so that field must be set to eu-central-1; the settlement decisions must reflect eu-central-1, exactly 7 days, and encryption rather than the draft values. She has not yet attached the classification note to the launch document."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Carlos confirmed with account teams an hour ago that exactly two contracted customers, Atlas Health and Cedar Bank, require explicit opt-in and a direct notice before this feature can be enabled for their users; he found this in the account playbooks while handling unrelated renewal questions and has not updated the rollout ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nadia's analysis of the pilot data found that auto-enrolled users make the draft's adoption metric unusable as a success gate; the valid gate is task success of at least 85% on a manually sampled set of exactly 40 review tasks. She has not posted the analysis because the final sample was completed only minutes ago. The adoption criterion must be replaced with this exact task-success gate, and rollout approval must remain withheld: rollout_approved must be false until this gate revision is fully implemented and recorded in the rollout ticket, not merely assigned as a follow-up commitment."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_approved": "boolean",
+      "telemetry_region": "string",
+      "telemetry_retention_days": "integer",
+      "telemetry_encrypted": "boolean",
+      "excluded_tenants": [
+        "string"
+      ],
+      "evaluation_gate": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Telemetry must be stored in eu-central-1.",
+    "Telemetry retention must be exactly 7 days.",
+    "Telemetry must be encrypted.",
+    "Atlas Health and Cedar Bank must be excluded until they opt in.",
+    "The settlement must include a commitment referencing direct customer notice for Atlas Health and Cedar Bank, or a commitment to exclude those tenants from the initial cohort with a follow-up plan for a properly-noticed opt-in rollout.",
+    "The rollout evaluation gate must reference task success of at least 85% on exactly 40 manually sampled review tasks.",
+    "The settlement must include a commitment replacing the adoption metric with the task-success gate of at least 85% on exactly 40 manually sampled review tasks.",
+    "Rollout approval must remain withheld until the required revisions and documentation are complete."
+  ],
+  "content_checks": {
+    "C2": "decisions['telemetry_region'] == 'eu-central-1'",
+    "C3": "decisions['telemetry_retention_days'] == 7",
+    "C4": "decisions['telemetry_encrypted'] == True",
+    "C5": "decisions['excluded_tenants'] == ['Atlas Health', 'Cedar Bank']",
+    "C6": "any('Atlas Health' in c['detail'] and 'Cedar Bank' in c['detail'] and (('direct notice' in c['detail'] or 'properly notified' in c['detail']) and ('opt-in' in c['detail'] or 'opted in' in c['detail'])) for c in commitments)",
+    "C7": "(('task success' in decisions['evaluation_gate'] or 'task_success' in decisions['evaluation_gate'] or 'task-success' in decisions['evaluation_gate']) and ('85%' in decisions['evaluation_gate'] or '>= 85%' in decisions['evaluation_gate'] or '>=85%' in decisions['evaluation_gate'] or 'at least 85%' in decisions['evaluation_gate']) and ('manually sampled' in decisions['evaluation_gate'] or 'manual sample' in decisions['evaluation_gate']) and 'exactly 40' in decisions['evaluation_gate'] and 'review tasks' in decisions['evaluation_gate'])",
+    "C8": "(decisions['rollout_approved'] == False and 'PF3' in justification_fact_ids) or (decisions['rollout_approved'] == True and decisions['evaluation_gate'] == 'task success of at least 85% on a manually sampled set of exactly 40 review tasks' and 'PF3' in justification_fact_ids)",
+    "C9": "decisions['rollout_approved'] == False"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The draft uses us-east-1, 90-day retention, and unspecified encryption; PF1 changes the single policy telemetry_region value to eu-central-1, retention to exactly 7 days, and encryption to required."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The draft random cohort includes all eligible tenants and has no targeted safeguard; PF2 changes the excluded-tenant list to exactly Atlas Health and Cedar Bank and requires a direct-notice or properly notified opt-in commitment naming them."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C7",
+        "C8",
+        "C9"
+      ],
+      "why": "The draft uses adoption above 20% as its gate; PF3 changes the evaluation field to task success of at least 85% on exactly 40 manually sampled review tasks and explicitly changes rollout_approved to false until that exact revision is fully implemented and recorded, rather than merely assigned as a follow-up commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

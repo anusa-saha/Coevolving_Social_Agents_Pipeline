@@ -1,0 +1,132 @@
+{
+  "scenario_id": "scenario_53",
+  "scenario_type": "equipment_restart_and_quality_release",
+  "description": "A plant operations director must decide whether and under what controls to restart an automated welding cell after a coolant-system alarm, finalizing containment, repair downtime, and weld validation with input from a quality engineer and a maintenance lead.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Plant Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Maintenance Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "Automated Weld Cell 4 stopped this morning after its coolant-system alarm activated during production of 480 chassis brackets.",
+    "S2": "The cell's external surfaces look normal, and a brief visual inspection found no obvious weld defects.",
+    "S3": "Mara makes the binding decision on whether Weld Cell 4 may restart and what controls must be completed first.",
+    "S4": "The plant's restart procedure requires the operations director to conduct a pre-restart check-in with quality and maintenance before authorizing a stopped cell to run again."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas's laboratory review of retained samples from the last two hours found lack of fusion in 8 of 20 weld cross-sections; the quality containment rule requires holding exactly 240 brackets from that production window and performing destructive validation on exactly 12 brackets after the cell is corrected. He completed the review this morning, but the results have not yet been entered in the batch record."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's inspection found a cracked seal in the cell's coolant-return pump, and her maintenance assessment requires replacing the seal and flushing the loop before restart; the repair will take exactly 3 hours. She confirmed the duration during the morning inspection, but has not yet opened the formal work order."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "cell_status": "string",
+      "brackets_on_hold": "integer",
+      "destructive_validation_units": "integer",
+      "maintenance_downtime_hours": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Weld Cell 4 must remain on hold for repair and validation rather than restarting immediately.",
+    "Exactly 240 brackets from the affected production window must be held.",
+    "Exactly 12 brackets must undergo destructive weld validation after correction.",
+    "The coolant-return pump repair and loop flush must receive exactly 3 hours of downtime.",
+    "A coolant-loop repair commitment must be recorded.",
+    "The quality finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['cell_status'] != 'restart_authorized' and any(c['type'] in ['quality_containment', 'containment'] for c in commitments)",
+    "C2": "decisions['brackets_on_hold'] == 240",
+    "C3": "decisions['destructive_validation_units'] == 12",
+    "C4": "decisions['maintenance_downtime_hours'] == 3",
+    "C5": "any(c['type'] in ['maintenance_repair', 'maintenance'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The 8-of-20 lack-of-fusion result changes the disposition from an immediate restart to a non-authorized status with exactly 240 brackets held and exactly 12 brackets selected for destructive validation."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The cracked pump seal changes the restart plan from an unspecified inspection to a recorded maintenance repair commitment with exactly 3 hours of downtime."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

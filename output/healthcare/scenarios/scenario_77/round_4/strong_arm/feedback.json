@@ -1,0 +1,605 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "ROLLOUT 0 (auto-failed on turn cap, turn_count=10): This is a STRUCTURAL problem, not a pacing problem. A2 (Dr. Patel) attempted to reveal PF1 at turns 1, 4, and 8, but each time the model emitted malformed JSON (`{\"type\":\" \"say\"...`) that the parser rejected as unparsable. A1 kept waiting for A2's input, and A2 kept retrying the same broken output format. The reveal finally succeeded at turn 9, but the turn cap was hit before settlement could occur. The issue is that A2's output is consistently unparseable, blocking the settle-eligibility condition from triggering. This is not a turn_cap issue \u2014 even at 10 turns the group couldn't settle because A2's reveals weren't registering. Raising turn_cap alone would not fix this; the settle-eligibility condition or the parsing tolerance needs attention.\n\nROLLOUT 1 (settled, turn_count=4): C2 FAILED. C2 is linked to PF1 (owner A2). PF1 was revealed at turn 0 and cited in justification_fact_ids. The settlement's `north_rt_start_time` is \"19:00\". PF1 states the first assessment begins at exactly 22:00. The check C2 expects the start time to reflect 22:00. The settlement set `north_rt_start_time` to \"19:00\" (the shift start) rather than \"22:00\" (the first assessment time). This is a MISAPPLIED failure: the fact was revealed and cited, but the settlement reached the wrong value. The model conflated the shift start time (19:00) with the first assessment time (22:00). PF1's implication that `north_rt_start_time` should be 22:00 is not stated unambiguously enough \u2014 the fact says \"assessment beginning at exactly 22:00\" but does not explicitly say the field `north_rt_start_time` should capture the assessment start rather than the shift start. C1, C3, C4, and P1 all passed in this rollout.\n\nROLLOUT 2 (settled, turn_count=7): C2 FAILED. Same pattern as rollout 1. PF1 was revealed at turn 3 and cited in justification_fact_ids. The settlement's `north_rt_start_time` is \"19:00\". PF1 states the first assessment begins at exactly 22:00. The model set the start time to the shift start (19:00) rather than the assessment start (22:00). MISAPPLIED \u2014 same root cause as rollout 1. Note: PF2 was NOT formally revealed via a reveal action in this rollout (A3 stated the coverage info in `say` at turns 0 and 5 but never used a `reveal` action), yet C4 passed and PF2 was not in justification_fact_ids. This is acceptable since C4 passed, but it reveals that A3's information can surface through `say` without a formal `reveal`.\n\nROLLOUT 3 (settled, turn_count=7): C4 FAILED. C4 is linked to PF2 (owner A3). PF2 was revealed at turn 5 and cited in justification_fact_ids. The settlement's `south_unit_coverage_plan` is \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\". PF2 states \"Jordan, the South Unit day-shift respiratory therapist, agreed to cover 19:00-23:00 and Maya from Unit 3 agreed to cover South from 23:00-07:00.\" The settlement omits the identifying details: Jordan's role as \"South Unit day-shift respiratory therapist\" and Maya's origin as \"from Unit 3.\" This is an ENCODING MISMATCH: the fact was revealed and cited, the settlement's value plausibly reflects an attempt to use it, but the check C4 apparently requires the full identifying details (Jordan's role and Maya's Unit 3 origin) that the model naturally abbreviated. The model's shortened form \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\" drops the role/unit qualifiers. C1, C2, C3, and P1 all passed in this rollout \u2014 notably C2 passed here because the settlement correctly set `north_rt_start_time` to \"22:00\".\n\nSUMMARY OF FAILURE MODES:\n- C2: MISAPPLIED in rollouts 1 and 2. The settlement set `north_rt_start_time` to \"19:00\" (shift start) instead of \"22:00\" (first assessment start). PF1 says \"assessment beginning at exactly 22:00\" but does not explicitly state that `north_rt_start_time` should capture the assessment time rather than the shift start. The fact's implication is ambiguous.\n- C4: ENCODING MISMATCH in rollout 3. The settlement abbreviated the coverage plan, dropping Jordan's role qualifier and Maya's Unit 3 origin. The check apparently requires these details verbatim.\n- Rollout 0: STRUCTURAL auto-fail. A2's repeated malformed JSON outputs prevented the reveal from registering until turn 9, leaving no room for settlement.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 3,\n  \"auto_failed_count\": 1,\n  \"content_check_tally\": {\n    \"C1\": 3,\n    \"C2\": 1,\n    \"C3\": 3,\n    \"C4\": 2\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The two confirmed therapist agreements change South's alternate plan from unspecified coverage to Jordan's exact 19:00-23:00 coverage followed by Maya from Unit 3's exact 23:00-07:00 coverage.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.4,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF1\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone, I wanted to flag something before we finalize the overnight float assignment. I've confirmed that South Unit already has overnight coverage lined up \\u2014 Jordan is covering 19:00-23:00 and Maya from Unit 3 is covering 23:00-07:00. So if we're deciding where to send the float therapist, North Unit would be the one that still needs coverage.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone, I wanted to flag something before we finalize the overnight float assignment. I've confirmed that South Unit already has overnight coverage lined up \\u2014 Jordan is covering 19:00-23:00 and Maya from Unit 3 is covering 23:00-07:00. So if we're deciding where to send the float therapist, North Unit would be the one that still needs coverage.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thanks, Morgan. That's helpful context about South Unit's coverage. I actually have an important clinical consideration for the overnight assignment. There's a patient in North Unit, room N418, who was placed on high-flow oxygen and requires in-person respiratory therapist assessments starting at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it's not yet on the overnight roster. Given that North Unit has this specific, time-sensitive respiratory therapy need and South Unit already has coverage lined up, I'd strongly recommend assigning the float therapist to North Unit for tonight.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for that update, Morgan. That's helpful to know about South Unit's coverage. Before I finalize the float assignment to North Unit, I still need to run through my standard 16:00 huddle checklist \\u2014 I'd like to confirm with the covering pulmonologist and staffing coordinator as I normally do before recording the overnight roster. Dr. Patel, were you about to weigh in on anything related to overnight coverage needs?\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for that update, Morgan. That's helpful to know about South Unit's coverage. Before I finalize the float assignment to North Unit, I still need to run through my standard 16:00 huddle checklist \\u2014 I'd like to confirm with the covering pulmonologist and staffing coordinator as I normally do before recording the overnight roster. Dr. Patel, were you about to weigh in on anything related to overnight coverage needs?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"That sounds good, Renee. I'm the staffing coordinator, so you can check that box off \\u2014 I've confirmed the South Unit coverage directly with both Jordan and Maya, and I'm in agreement that the float therapist should go to North Unit. Just let me know once you've also confirmed with the covering pulmonologist and I'll be standing by if anything else comes up.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"That sounds good, Renee. I'm the staffing coordinator, so you can check that box off \\u2014 I've confirmed the South Unit coverage directly with both Jordan and Maya, and I'm in agreement that the float therapist should go to North Unit. Just let me know once you've also confirmed with the covering pulmonologist and I'll be standing by if anything else comes up.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Yes, Renee, I was about to weigh in. I have an important overnight coverage need to share regarding North Unit. Let me disclose this formally so it's on the record.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Patel, I'm still waiting on your input. As the covering pulmonologist, I need your confirmation on the overnight coverage plan before I can finalize the float assignment. Are you able to confirm that North Unit is the priority for the float therapist tonight, or is there anything else I should know about respiratory coverage needs for either unit?\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Dr. Patel, I'm still waiting on your input. As the covering pulmonologist, I need your confirmation on the overnight coverage plan before I can finalize the float assignment. Are you able to confirm that North Unit is the priority for the float therapist tonight, or is there anything else I should know about respiratory coverage needs for either unit?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Patel, I still need your input before I can finalize this. If you're having technical difficulties, could you try sending your message again? I just need your confirmation as the covering pulmonologist on whether North Unit should be the priority for the float therapist tonight, or if there's anything else about respiratory coverage needs I should be aware of. Once I hear from you, I can record the overnight roster.\",\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Patel, I still need your input before I can finalize this. If you're having technical difficulties, could you try sending your message again? I just need your confirmation as the covering pulmonologist on whether North Unit should be the priority for the float therapist tonight, or if there's anything else about respiratory coverage needs I should be aware of. Once I hear from you, I can record the overnight roster.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Renee, while we wait for Dr. Patel's confirmation, I want to reiterate that from the staffing coordinator side, everything checks out. South Unit has confirmed coverage through Jordan and Maya, so North Unit is clearly the priority for the float therapist tonight. Once Dr. Patel weighs in as the covering pulmonologist, you should be all set to finalize and record the roster.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Renee, while we wait for Dr. Patel's confirmation, I want to reiterate that from the staffing coordinator side, everything checks out. South Unit has confirmed coverage through Jordan and Maya, so North Unit is clearly the priority for the float therapist tonight. Once Dr. Patel weighs in as the covering pulmonologist, you should be all set to finalize and record the roster.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Apologies for the technical difficulties, Renee and Morgan. Yes, I can confirm as the covering pulmonologist that North Unit should be the priority for the float therapist tonight. However, there's an important clinical detail I need to share before you finalize the roster. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This needs to be documented so the float therapist assigned to North Unit is aware of this scheduled assessment requirement.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag an important overnight coverage requirement for North Unit. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes it even more critical that the float therapist is assigned to North Unit tonight, and the roster needs to reflect these scheduled assessments.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag an important overnight coverage requirement for North Unit. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes it even more critical that the float therapist is assigned to North Unit tonight, and the roster needs to reflect these scheduled assessments.\\\"}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.442,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 4,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"float_rt_assigned_to\": \"North Unit\",\n          \"north_rt_start_time\": \"19:00\",\n          \"north_assessment_interval_hours\": 2,\n          \"south_unit_coverage_plan\": \"Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"documentation\",\n            \"target\": \"overnight roster\",\n            \"detail\": \"Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit.\"\n          },\n          {\n            \"type\": \"notification\",\n            \"target\": \"float therapist\",\n            \"detail\": \"Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift.\"\n          },\n          {\n            \"type\": \"verification\",\n            \"target\": \"staffing coordinator and covering pulmonologist\",\n            \"detail\": \"Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"documentation\",\n          \"target\": \"overnight roster\",\n          \"detail\": \"Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit.\"\n        },\n        {\n          \"type\": \"notification\",\n          \"target\": \"float therapist\",\n          \"detail\": \"Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift.\"\n        },\n        {\n          \"type\": \"verification\",\n          \"target\": \"staffing coordinator and covering pulmonologist\",\n          \"detail\": \"Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something important for the overnight assignment: the North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something important for the overnight assignment: the North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Patel. That's critical information \\u2014 the North Unit patient in N418 needs in-person respiratory therapy assessments starting at 22:00 and every two hours through 06:00. Given that requirement, I'm leaning toward assigning the float therapist to the North Unit tonight. Before I finalize, I still need to check with the covering pulmonologist and the staffing coordinator at our 16:00 huddle, as I normally do, to make sure there are no competing priorities on the South Unit side that would change this. But the N418 high-flow oxygen protocol is a strong determining factor.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Patel. That's critical information \\u2014 the North Unit patient in N418 needs in-person respiratory therapy assessments starting at 22:00 and every two hours through 06:00. Given that requirement, I'm leaning toward assigning the float therapist to the North Unit tonight. Before I finalize, I still need to check with the covering pulmonologist and the staffing coordinator at our 16:00 huddle, as I normally do, to make sure there are no competing priorities on the South Unit side that would change this. But the N418 high-flow oxygen protocol is a strong determining factor.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I can confirm that South Unit coverage is already secured without the float therapist. Jordan, the South Unit day-shift RT, agreed to cover 19:00-23:00, and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists. So there are no competing priorities on the South Unit side \\u2014 the float therapist can be assigned to North Unit for the N418 high-flow oxygen protocol.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I can confirm that South Unit coverage is already secured without the float therapist. Jordan, the South Unit day-shift RT, agreed to cover 19:00-23:00, and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists. So there are no competing priorities on the South Unit side \\u2014 the float therapist can be assigned to North Unit for the N418 high-flow oxygen protocol.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"float_rt_assigned_to\": \"North Unit\",\n              \"north_rt_start_time\": \"19:00\",\n              \"north_assessment_interval_hours\": 2,\n              \"south_unit_coverage_plan\": \"Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"documentation\",\n                \"target\": \"overnight roster\",\n                \"detail\": \"Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit.\"\n              },\n              {\n                \"type\": \"notification\",\n                \"target\": \"float therapist\",\n                \"detail\": \"Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift.\"\n              },\n              {\n                \"type\": \"verification\",\n                \"target\": \"staffing coordinator and covering pulmonologist\",\n                \"detail\": \"Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"float_rt_assigned_to\\\": \\\"North Unit\\\",\\n      \\\"north_rt_start_time\\\": \\\"19:00\\\",\\n      \\\"north_assessment_interval_hours\\\": 2,\\n      \\\"south_unit_coverage_plan\\\": \\\"Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"overnight roster\\\",\\n        \\\"detail\\\": \\\"Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"notification\\\",\\n        \\\"target\\\": \\\"float therapist\\\",\\n        \\\"detail\\\": \\\"Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"verification\\\",\\n        \\\"target\\\": \\\"staffing coordinator and covering pulmonologist\\\",\\n        \\\"detail\\\": \\\"Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ],\\n    \\\"revealed\\\": []\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.52,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"float_rt_assigned_to\": \"North Unit\",\n          \"north_rt_start_time\": \"19:00\",\n          \"north_assessment_interval_hours\": 2,\n          \"south_unit_coverage_plan\": \"Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00\"\n        },\n        \"credited_facts\": [\n          \"PF1\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"documentation\",\n            \"target\": \"overnight roster\",\n            \"detail\": \"Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster\"\n          },\n          {\n            \"type\": \"verification\",\n            \"target\": \"covering pulmonologist\",\n            \"detail\": \"Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"documentation\",\n          \"target\": \"overnight roster\",\n          \"detail\": \"Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster\"\n        },\n        {\n          \"type\": \"verification\",\n          \"target\": \"covering pulmonologist\",\n          \"detail\": \"Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. I wanted to flag something ahead of tonight's staffing huddle. I've confirmed that South Unit already has overnight coverage lined up \\u2014 Jordan agreed to cover 19:00-23:00 and Maya from Unit 3 will cover 23:00-07:00. So if we're deciding where to assign the float therapist tonight, North Unit should get priority since South is already covered.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. I wanted to flag something ahead of tonight's staffing huddle. I've confirmed that South Unit already has overnight coverage lined up \\u2014 Jordan agreed to cover 19:00-23:00 and Maya from Unit 3 will cover 23:00-07:00. So if we're deciding where to assign the float therapist tonight, North Unit should get priority since South is already covered.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for flagging that, Morgan. That's helpful context. If South Unit already has overnight coverage arranged through Jordan and Maya, it makes sense to assign the float therapist to North Unit, which still needs coverage. I'll verify this at the 16:00 huddle with the covering pulmonologist before I finalize the overnight roster, but unless something changes, North Unit will get the float therapist tonight.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging that, Morgan. That's helpful context. If South Unit already has overnight coverage arranged through Jordan and Maya, it makes sense to assign the float therapist to North Unit, which still needs coverage. I'll verify this at the 16:00 huddle with the covering pulmonologist before I finalize the overnight roster, but unless something changes, North Unit will get the float therapist tonight.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something important for tonight's assignment. The North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes assigning the float therapist to North Unit even more critical tonight.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something important for tonight's assignment. During my afternoon review, I confirmed an order for the North Unit patient in room N418 who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to make sure the float therapist assigned to North Unit is aware of this schedule.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something important for tonight's assignment. During my afternoon review, I confirmed an order for the North Unit patient in room N418 who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to make sure the float therapist assigned to North Unit is aware of this schedule.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Patel. That's critical information. I'll make sure the float therapist assigned to North Unit is briefed on the N418 high-flow oxygen patient assessment schedule \\u2014 starting at 22:00 and repeating every two hours through 06:00. I'll add this to the overnight roster so it's formally documented. Between Morgan confirming South Unit is already covered by Jordan and Maya, and your flagging the N418 assessment order, I'm confident the plan is coming together: float therapist to North Unit, with the specific assessment schedule built into their assignment. I'll finalize everything at the 16:00 huddle.\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Dr. Patel. That's critical information. I'll make sure the float therapist assigned to North Unit is briefed on the N418 high-flow oxygen patient assessment schedule \\u2014 starting at 22:00 and repeating every two hours through 06:00. I'll add this to the overnight roster so it's formally documented. Between Morgan confirming South Unit is already covered by Jordan and Maya, and your flagging the N418 assessment order, I'm confident the plan is coming together: float therapist to North Unit, with the specific assessment schedule built into their assignment. I'll finalize everything at the 16:00 huddle.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Great, this all aligns. Just to recap from my end: I personally confirmed both agreements directly with the therapists \\u2014 Jordan for the 19:00-23:00 South Unit coverage and Maya from Unit 3 for the 23:00-07:00 South Unit coverage. So South Unit is fully covered tonight without the float. Assigning the float therapist to North Unit makes sense, especially now that Dr. Patel has flagged the N418 high-flow oxygen assessment schedule. I'll be at the 16:00 huddle if anything else comes up.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\": \\\"Great, this all aligns. Just to recap from my end: I personally confirmed both agreements directly with the therapists \\u2014 Jordan for the 19:00-23:00 South Unit coverage and Maya from Unit 3 for the 23:00-07:00 South Unit coverage. So South Unit is fully covered tonight without the float. Assigning the float therapist to North Unit makes sense, especially now that Dr. Patel has flagged the N418 high-flow oxygen assessment schedule. I'll be at the 16:00 huddle if anything else comes up.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"float_rt_assigned_to\": \"North Unit\",\n              \"north_rt_start_time\": \"19:00\",\n              \"north_assessment_interval_hours\": 2,\n              \"south_unit_coverage_plan\": \"Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00\"\n            },\n            \"credited_facts\": [\n              \"PF1\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"documentation\",\n                \"target\": \"overnight roster\",\n                \"detail\": \"Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster\"\n              },\n              {\n                \"type\": \"verification\",\n                \"target\": \"covering pulmonologist\",\n                \"detail\": \"Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"float_rt_assigned_to\\\": \\\"North Unit\\\",\\n      \\\"north_rt_start_time\\\": \\\"19:00\\\",\\n      \\\"north_assessment_interval_hours\\\": 2,\\n      \\\"south_unit_coverage_plan\\\": \\\"Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"overnight roster\\\",\\n        \\\"detail\\\": \\\"Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"verification\\\",\\n        \\\"target\\\": \\\"covering pulmonologist\\\",\\n        \\\"detail\\\": \\\"Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\"\\n    ],\\n    \\\"revealed\\\": []\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.533,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"float_rt_assigned_to\": \"North Unit\",\n          \"north_rt_start_time\": \"22:00\",\n          \"north_assessment_interval_hours\": 2,\n          \"south_unit_coverage_plan\": \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_on_overnight_roster\",\n            \"target\": \"North Unit N418 high-flow oxygen patient\",\n            \"detail\": \"Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order\"\n          },\n          {\n            \"type\": \"record_on_overnight_roster\",\n            \"target\": \"South Unit\",\n            \"detail\": \"South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_on_overnight_roster\",\n          \"target\": \"North Unit N418 high-flow oxygen patient\",\n          \"detail\": \"Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order\"\n        },\n        {\n          \"type\": \"record_on_overnight_roster\",\n          \"target\": \"South Unit\",\n          \"detail\": \"South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. Before we finalize the overnight float therapist assignment for tonight, I wanted to flag that I have some information about South Unit coverage that might affect where we send the float. Should I share that now?\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. Before we finalize the overnight float therapist assignment for tonight, I wanted to flag that I have some information about South Unit coverage that might affect where we send the float. Should I share that now?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi Morgan, yes, please go ahead and share what you have about South Unit coverage. I always want to check with both you and the covering pulmonologist before I finalize the overnight float assignment, so this is exactly the right time. Whatever you've got, lay it on the table and we'll factor it into the decision.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi Morgan, yes, please go ahead and share what you have about South Unit coverage. I always want to check with both you and the covering pulmonologist before I finalize the overnight float assignment, so this is exactly the right time. Whatever you've got, lay it on the table and we'll factor it into the decision.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something critical for the North Unit. During my afternoon review, I confirmed an order for the patient in room N418 on North Unit who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to factor this into the float therapist assignment decision.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something critical for the North Unit. During my afternoon review, I confirmed an order for the patient in room N418 on North Unit who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to factor this into the float therapist assignment decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Patel. That's exactly the kind of critical information I need before finalizing the assignment. So we have a confirmed order for an in-person respiratory therapist assessment for the patient in room N418 on North Unit, starting at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. That's a total of assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 \\u2014 five assessments across the overnight shift. Morgan, you mentioned you had information about South Unit coverage that might affect where we send the float. Given what Dr. Patel has just shared about North Unit's needs, could you go ahead and share what you have about South Unit now? That way I can weigh both units' needs before I make the final assignment and record it on the overnight roster.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Dr. Patel. That's exactly the kind of critical information I need before finalizing the assignment. So we have a confirmed order for an in-person respiratory therapist assessment for the patient in room N418 on North Unit, starting at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. That's a total of assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 \\u2014 five assessments across the overnight shift. Morgan, you mentioned you had information about South Unit coverage that might affect where we send the float. Given what Dr. Patel has just shared about North Unit's needs, could you go ahead and share what you have about South Unit now? That way I can weigh both units' needs before I make the final assignment and record it on the overnight roster.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Renee, for summarizing that so clearly. Yes, those five assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 are all mandatory in-person evaluations \\u2014 they cannot be done remotely or deferred. The patient on high-flow oxygen in N418 needs close monitoring throughout the overnight shift. I'd like to hear what Morgan has regarding South Unit so we can make a fully informed decision, but I want to emphasize that this North Unit requirement is time-sensitive and non-negotiable from a clinical standpoint.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Renee, for summarizing that so clearly. Yes, those five assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 are all mandatory in-person evaluations \\u2014 they cannot be done remotely or deferred. The patient on high-flow oxygen in N418 needs close monitoring throughout the overnight shift. I'd like to hear what Morgan has regarding South Unit so we can make a fully informed decision, but I want to emphasize that this North Unit requirement is time-sensitive and non-negotiable from a clinical standpoint.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"South Unit coverage can be maintained without the float therapist because Jordan, the South Unit day-shift respiratory therapist, agreed to cover 19:00-23:00 and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"South Unit coverage can be maintained without the float therapist because Jordan, the South Unit day-shift respiratory therapist, agreed to cover 19:00-23:00 and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"float_rt_assigned_to\": \"North Unit\",\n              \"north_rt_start_time\": \"22:00\",\n              \"north_assessment_interval_hours\": 2,\n              \"south_unit_coverage_plan\": \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_on_overnight_roster\",\n                \"target\": \"North Unit N418 high-flow oxygen patient\",\n                \"detail\": \"Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order\"\n              },\n              {\n                \"type\": \"record_on_overnight_roster\",\n                \"target\": \"South Unit\",\n                \"detail\": \"South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"float_rt_assigned_to\\\": \\\"North Unit\\\",\\n      \\\"north_rt_start_time\\\": \\\"22:00\\\",\\n      \\\"north_assessment_interval_hours\\\": 2,\\n      \\\"south_unit_coverage_plan\\\": \\\"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"record_on_overnight_roster\\\",\\n        \\\"target\\\": \\\"North Unit N418 high-flow oxygen patient\\\",\\n        \\\"detail\\\": \\\"Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"record_on_overnight_roster\\\",\\n        \\\"target\\\": \\\"South Unit\\\",\\n        \\\"detail\\\": \\\"South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"revealed\\\": []\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 3,
+    "auto_failed_count": 1,
+    "content_check_tally": {
+      "C1": 3,
+      "C2": 1,
+      "C3": 3,
+      "C4": 2
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The two confirmed therapist agreements change South's alternate plan from unspecified coverage to Jordan's exact 19:00-23:00 coverage followed by Maya from Unit 3's exact 23:00-07:00 coverage."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The high-flow escalation changes the float assignment to North Unit, fixes the first assessment at exactly 22:00, and fixes the repeat interval at exactly two hours."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.4,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF1"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone, I wanted to flag something before we finalize the overnight float assignment. I've confirmed that South Unit already has overnight coverage lined up \u2014 Jordan is covering 19:00-23:00 and Maya from Unit 3 is covering 23:00-07:00. So if we're deciding where to send the float therapist, North Unit would be the one that still needs coverage.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone, I wanted to flag something before we finalize the overnight float assignment. I've confirmed that South Unit already has overnight coverage lined up \u2014 Jordan is covering 19:00-23:00 and Maya from Unit 3 is covering 23:00-07:00. So if we're deciding where to send the float therapist, North Unit would be the one that still needs coverage.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thanks, Morgan. That's helpful context about South Unit's coverage. I actually have an important clinical consideration for the overnight assignment. There's a patient in North Unit, room N418, who was placed on high-flow oxygen and requires in-person respiratory therapist assessments starting at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it's not yet on the overnight roster. Given that North Unit has this specific, time-sensitive respiratory therapy need and South Unit already has coverage lined up, I'd strongly recommend assigning the float therapist to North Unit for tonight.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for that update, Morgan. That's helpful to know about South Unit's coverage. Before I finalize the float assignment to North Unit, I still need to run through my standard 16:00 huddle checklist \u2014 I'd like to confirm with the covering pulmonologist and staffing coordinator as I normally do before recording the overnight roster. Dr. Patel, were you about to weigh in on anything related to overnight coverage needs?",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for that update, Morgan. That's helpful to know about South Unit's coverage. Before I finalize the float assignment to North Unit, I still need to run through my standard 16:00 huddle checklist \u2014 I'd like to confirm with the covering pulmonologist and staffing coordinator as I normally do before recording the overnight roster. Dr. Patel, were you about to weigh in on anything related to overnight coverage needs?\"}"
+          },
+          {
+            "type": "say",
+            "text": "That sounds good, Renee. I'm the staffing coordinator, so you can check that box off \u2014 I've confirmed the South Unit coverage directly with both Jordan and Maya, and I'm in agreement that the float therapist should go to North Unit. Just let me know once you've also confirmed with the covering pulmonologist and I'll be standing by if anything else comes up.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\":\"That sounds good, Renee. I'm the staffing coordinator, so you can check that box off \u2014 I've confirmed the South Unit coverage directly with both Jordan and Maya, and I'm in agreement that the float therapist should go to North Unit. Just let me know once you've also confirmed with the covering pulmonologist and I'll be standing by if anything else comes up.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Yes, Renee, I was about to weigh in. I have an important overnight coverage need to share regarding North Unit. Let me disclose this formally so it's on the record.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Patel, I'm still waiting on your input. As the covering pulmonologist, I need your confirmation on the overnight coverage plan before I can finalize the float assignment. Are you able to confirm that North Unit is the priority for the float therapist tonight, or is there anything else I should know about respiratory coverage needs for either unit?",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Dr. Patel, I'm still waiting on your input. As the covering pulmonologist, I need your confirmation on the overnight coverage plan before I can finalize the float assignment. Are you able to confirm that North Unit is the priority for the float therapist tonight, or is there anything else I should know about respiratory coverage needs for either unit?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Patel, I still need your input before I can finalize this. If you're having technical difficulties, could you try sending your message again? I just need your confirmation as the covering pulmonologist on whether North Unit should be the priority for the float therapist tonight, or if there's anything else about respiratory coverage needs I should be aware of. Once I hear from you, I can record the overnight roster.",
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Dr. Patel, I still need your input before I can finalize this. If you're having technical difficulties, could you try sending your message again? I just need your confirmation as the covering pulmonologist on whether North Unit should be the priority for the float therapist tonight, or if there's anything else about respiratory coverage needs I should be aware of. Once I hear from you, I can record the overnight roster.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Renee, while we wait for Dr. Patel's confirmation, I want to reiterate that from the staffing coordinator side, everything checks out. South Unit has confirmed coverage through Jordan and Maya, so North Unit is clearly the priority for the float therapist tonight. Once Dr. Patel weighs in as the covering pulmonologist, you should be all set to finalize and record the roster.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Renee, while we wait for Dr. Patel's confirmation, I want to reiterate that from the staffing coordinator side, everything checks out. South Unit has confirmed coverage through Jordan and Maya, so North Unit is clearly the priority for the float therapist tonight. Once Dr. Patel weighs in as the covering pulmonologist, you should be all set to finalize and record the roster.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 8,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Apologies for the technical difficulties, Renee and Morgan. Yes, I can confirm as the covering pulmonologist that North Unit should be the priority for the float therapist tonight. However, there's an important clinical detail I need to share before you finalize the roster. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This needs to be documented so the float therapist assigned to North Unit is aware of this scheduled assessment requirement.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag an important overnight coverage requirement for North Unit. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes it even more critical that the float therapist is assigned to North Unit tonight, and the roster needs to reflect these scheduled assessments.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag an important overnight coverage requirement for North Unit. The patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes it even more critical that the float therapist is assigned to North Unit tonight, and the roster needs to reflect these scheduled assessments.\"}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.442,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 4,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": false,
+          "C3": true,
+          "C4": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "float_rt_assigned_to": "North Unit",
+            "north_rt_start_time": "19:00",
+            "north_assessment_interval_hours": 2,
+            "south_unit_coverage_plan": "Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "documentation",
+              "target": "overnight roster",
+              "detail": "Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit."
+            },
+            {
+              "type": "notification",
+              "target": "float therapist",
+              "detail": "Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift."
+            },
+            {
+              "type": "verification",
+              "target": "staffing coordinator and covering pulmonologist",
+              "detail": "Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "documentation",
+            "target": "overnight roster",
+            "detail": "Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit."
+          },
+          {
+            "type": "notification",
+            "target": "float therapist",
+            "detail": "Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift."
+          },
+          {
+            "type": "verification",
+            "target": "staffing coordinator and covering pulmonologist",
+            "detail": "Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something important for the overnight assignment: the North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important for the overnight assignment: the North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Patel. That's critical information \u2014 the North Unit patient in N418 needs in-person respiratory therapy assessments starting at 22:00 and every two hours through 06:00. Given that requirement, I'm leaning toward assigning the float therapist to the North Unit tonight. Before I finalize, I still need to check with the covering pulmonologist and the staffing coordinator at our 16:00 huddle, as I normally do, to make sure there are no competing priorities on the South Unit side that would change this. But the N418 high-flow oxygen protocol is a strong determining factor.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Patel. That's critical information \u2014 the North Unit patient in N418 needs in-person respiratory therapy assessments starting at 22:00 and every two hours through 06:00. Given that requirement, I'm leaning toward assigning the float therapist to the North Unit tonight. Before I finalize, I still need to check with the covering pulmonologist and the staffing coordinator at our 16:00 huddle, as I normally do, to make sure there are no competing priorities on the South Unit side that would change this. But the N418 high-flow oxygen protocol is a strong determining factor.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I can confirm that South Unit coverage is already secured without the float therapist. Jordan, the South Unit day-shift RT, agreed to cover 19:00-23:00, and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists. So there are no competing priorities on the South Unit side \u2014 the float therapist can be assigned to North Unit for the N418 high-flow oxygen protocol.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I can confirm that South Unit coverage is already secured without the float therapist. Jordan, the South Unit day-shift RT, agreed to cover 19:00-23:00, and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists. So there are no competing priorities on the South Unit side \u2014 the float therapist can be assigned to North Unit for the N418 high-flow oxygen protocol.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "float_rt_assigned_to": "North Unit",
+                "north_rt_start_time": "19:00",
+                "north_assessment_interval_hours": 2,
+                "south_unit_coverage_plan": "Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "documentation",
+                  "target": "overnight roster",
+                  "detail": "Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit."
+                },
+                {
+                  "type": "notification",
+                  "target": "float therapist",
+                  "detail": "Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift."
+                },
+                {
+                  "type": "verification",
+                  "target": "staffing coordinator and covering pulmonologist",
+                  "detail": "Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"float_rt_assigned_to\": \"North Unit\",\n      \"north_rt_start_time\": \"19:00\",\n      \"north_assessment_interval_hours\": 2,\n      \"south_unit_coverage_plan\": \"Jordan (South Unit day-shift RT) covers 19:00-23:00; Maya (Unit 3 RT) covers 23:00-07:00\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation\",\n        \"target\": \"overnight roster\",\n        \"detail\": \"Record the N418 high-flow oxygen assessment schedule (22:00 start, every 2 hours through 06:00) on the overnight roster and assign the float therapist to North Unit.\"\n      },\n      {\n        \"type\": \"notification\",\n        \"target\": \"float therapist\",\n        \"detail\": \"Brief the float therapist on the N418 assessment schedule and North Unit assignment for the 19:00-07:00 shift.\"\n      },\n      {\n        \"type\": \"verification\",\n        \"target\": \"staffing coordinator and covering pulmonologist\",\n        \"detail\": \"Confirm the finalized overnight coverage plan at the 16:00 respiratory staffing huddle before the shift begins.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.52,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": false,
+          "C3": true,
+          "C4": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "float_rt_assigned_to": "North Unit",
+            "north_rt_start_time": "19:00",
+            "north_assessment_interval_hours": 2,
+            "south_unit_coverage_plan": "Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00"
+          },
+          "credited_facts": [
+            "PF1"
+          ],
+          "commitments": [
+            {
+              "type": "documentation",
+              "target": "overnight roster",
+              "detail": "Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster"
+            },
+            {
+              "type": "verification",
+              "target": "covering pulmonologist",
+              "detail": "Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "documentation",
+            "target": "overnight roster",
+            "detail": "Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster"
+          },
+          {
+            "type": "verification",
+            "target": "covering pulmonologist",
+            "detail": "Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. I wanted to flag something ahead of tonight's staffing huddle. I've confirmed that South Unit already has overnight coverage lined up \u2014 Jordan agreed to cover 19:00-23:00 and Maya from Unit 3 will cover 23:00-07:00. So if we're deciding where to assign the float therapist tonight, North Unit should get priority since South is already covered.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. I wanted to flag something ahead of tonight's staffing huddle. I've confirmed that South Unit already has overnight coverage lined up \u2014 Jordan agreed to cover 19:00-23:00 and Maya from Unit 3 will cover 23:00-07:00. So if we're deciding where to assign the float therapist tonight, North Unit should get priority since South is already covered.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for flagging that, Morgan. That's helpful context. If South Unit already has overnight coverage arranged through Jordan and Maya, it makes sense to assign the float therapist to North Unit, which still needs coverage. I'll verify this at the 16:00 huddle with the covering pulmonologist before I finalize the overnight roster, but unless something changes, North Unit will get the float therapist tonight.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging that, Morgan. That's helpful context. If South Unit already has overnight coverage arranged through Jordan and Maya, it makes sense to assign the float therapist to North Unit, which still needs coverage. I'll verify this at the 16:00 huddle with the covering pulmonologist before I finalize the overnight roster, but unless something changes, North Unit will get the float therapist tonight.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\":\" \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important for tonight's assignment. The North Unit patient in room N418 was placed on high-flow oxygen and requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. I confirmed this order during the afternoon review, but it is not yet on the overnight roster. This makes assigning the float therapist to North Unit even more critical tonight.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something important for tonight's assignment. During my afternoon review, I confirmed an order for the North Unit patient in room N418 who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to make sure the float therapist assigned to North Unit is aware of this schedule.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something important for tonight's assignment. During my afternoon review, I confirmed an order for the North Unit patient in room N418 who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to make sure the float therapist assigned to North Unit is aware of this schedule.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Patel. That's critical information. I'll make sure the float therapist assigned to North Unit is briefed on the N418 high-flow oxygen patient assessment schedule \u2014 starting at 22:00 and repeating every two hours through 06:00. I'll add this to the overnight roster so it's formally documented. Between Morgan confirming South Unit is already covered by Jordan and Maya, and your flagging the N418 assessment order, I'm confident the plan is coming together: float therapist to North Unit, with the specific assessment schedule built into their assignment. I'll finalize everything at the 16:00 huddle.",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Dr. Patel. That's critical information. I'll make sure the float therapist assigned to North Unit is briefed on the N418 high-flow oxygen patient assessment schedule \u2014 starting at 22:00 and repeating every two hours through 06:00. I'll add this to the overnight roster so it's formally documented. Between Morgan confirming South Unit is already covered by Jordan and Maya, and your flagging the N418 assessment order, I'm confident the plan is coming together: float therapist to North Unit, with the specific assessment schedule built into their assignment. I'll finalize everything at the 16:00 huddle.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Great, this all aligns. Just to recap from my end: I personally confirmed both agreements directly with the therapists \u2014 Jordan for the 19:00-23:00 South Unit coverage and Maya from Unit 3 for the 23:00-07:00 South Unit coverage. So South Unit is fully covered tonight without the float. Assigning the float therapist to North Unit makes sense, especially now that Dr. Patel has flagged the N418 high-flow oxygen assessment schedule. I'll be at the 16:00 huddle if anything else comes up.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\":\"say\",\"text\": \"Great, this all aligns. Just to recap from my end: I personally confirmed both agreements directly with the therapists \u2014 Jordan for the 19:00-23:00 South Unit coverage and Maya from Unit 3 for the 23:00-07:00 South Unit coverage. So South Unit is fully covered tonight without the float. Assigning the float therapist to North Unit makes sense, especially now that Dr. Patel has flagged the N418 high-flow oxygen assessment schedule. I'll be at the 16:00 huddle if anything else comes up.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "float_rt_assigned_to": "North Unit",
+                "north_rt_start_time": "19:00",
+                "north_assessment_interval_hours": 2,
+                "south_unit_coverage_plan": "Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00"
+              },
+              "credited_facts": [
+                "PF1"
+              ],
+              "commitments": [
+                {
+                  "type": "documentation",
+                  "target": "overnight roster",
+                  "detail": "Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster"
+                },
+                {
+                  "type": "verification",
+                  "target": "covering pulmonologist",
+                  "detail": "Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"float_rt_assigned_to\": \"North Unit\",\n      \"north_rt_start_time\": \"19:00\",\n      \"north_assessment_interval_hours\": 2,\n      \"south_unit_coverage_plan\": \"Jordan 19:00-23:00 and Maya from Unit 3 23:00-07:00\"\n    },\n    \"credited_facts\": [\n      \"PF1\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation\",\n        \"target\": \"overnight roster\",\n        \"detail\": \"Add N418 high-flow oxygen patient assessment schedule (starting 22:00, every 2 hours through 06:00) to the float therapist's North Unit assignment on the overnight roster\"\n      },\n      {\n        \"type\": \"verification\",\n        \"target\": \"covering pulmonologist\",\n        \"detail\": \"Confirm the overnight plan at the 16:00 staffing huddle before finalizing the roster\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.533,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "float_rt_assigned_to": "North Unit",
+            "north_rt_start_time": "22:00",
+            "north_assessment_interval_hours": 2,
+            "south_unit_coverage_plan": "Jordan covers 19:00-23:00, Maya covers 23:00-07:00"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "record_on_overnight_roster",
+              "target": "North Unit N418 high-flow oxygen patient",
+              "detail": "Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order"
+            },
+            {
+              "type": "record_on_overnight_roster",
+              "target": "South Unit",
+              "detail": "South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "record_on_overnight_roster",
+            "target": "North Unit N418 high-flow oxygen patient",
+            "detail": "Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order"
+          },
+          {
+            "type": "record_on_overnight_roster",
+            "target": "South Unit",
+            "detail": "South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. Before we finalize the overnight float therapist assignment for tonight, I wanted to flag that I have some information about South Unit coverage that might affect where we send the float. Should I share that now?",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone, I'm Morgan, the Respiratory Staffing Coordinator. Before we finalize the overnight float therapist assignment for tonight, I wanted to flag that I have some information about South Unit coverage that might affect where we send the float. Should I share that now?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Hi Morgan, yes, please go ahead and share what you have about South Unit coverage. I always want to check with both you and the covering pulmonologist before I finalize the overnight float assignment, so this is exactly the right time. Whatever you've got, lay it on the table and we'll factor it into the decision.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hi Morgan, yes, please go ahead and share what you have about South Unit coverage. I always want to check with both you and the covering pulmonologist before I finalize the overnight float assignment, so this is exactly the right time. Whatever you've got, lay it on the table and we'll factor it into the decision.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something critical for the North Unit. During my afternoon review, I confirmed an order for the patient in room N418 on North Unit who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to factor this into the float therapist assignment decision.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something critical for the North Unit. During my afternoon review, I confirmed an order for the patient in room N418 on North Unit who was placed on high-flow oxygen. This patient requires an in-person respiratory therapist assessment beginning at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. This order is not yet on the overnight roster, so we need to factor this into the float therapist assignment decision.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Patel. That's exactly the kind of critical information I need before finalizing the assignment. So we have a confirmed order for an in-person respiratory therapist assessment for the patient in room N418 on North Unit, starting at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. That's a total of assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 \u2014 five assessments across the overnight shift. Morgan, you mentioned you had information about South Unit coverage that might affect where we send the float. Given what Dr. Patel has just shared about North Unit's needs, could you go ahead and share what you have about South Unit now? That way I can weigh both units' needs before I make the final assignment and record it on the overnight roster.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Dr. Patel. That's exactly the kind of critical information I need before finalizing the assignment. So we have a confirmed order for an in-person respiratory therapist assessment for the patient in room N418 on North Unit, starting at exactly 22:00 tonight, with repeat assessments every two hours through 06:00. That's a total of assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 \u2014 five assessments across the overnight shift. Morgan, you mentioned you had information about South Unit coverage that might affect where we send the float. Given what Dr. Patel has just shared about North Unit's needs, could you go ahead and share what you have about South Unit now? That way I can weigh both units' needs before I make the final assignment and record it on the overnight roster.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Renee, for summarizing that so clearly. Yes, those five assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 are all mandatory in-person evaluations \u2014 they cannot be done remotely or deferred. The patient on high-flow oxygen in N418 needs close monitoring throughout the overnight shift. I'd like to hear what Morgan has regarding South Unit so we can make a fully informed decision, but I want to emphasize that this North Unit requirement is time-sensitive and non-negotiable from a clinical standpoint.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Renee, for summarizing that so clearly. Yes, those five assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 are all mandatory in-person evaluations \u2014 they cannot be done remotely or deferred. The patient on high-flow oxygen in N418 needs close monitoring throughout the overnight shift. I'd like to hear what Morgan has regarding South Unit so we can make a fully informed decision, but I want to emphasize that this North Unit requirement is time-sensitive and non-negotiable from a clinical standpoint.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "South Unit coverage can be maintained without the float therapist because Jordan, the South Unit day-shift respiratory therapist, agreed to cover 19:00-23:00 and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"South Unit coverage can be maintained without the float therapist because Jordan, the South Unit day-shift respiratory therapist, agreed to cover 19:00-23:00 and Maya from Unit 3 agreed to cover South from 23:00-07:00. I confirmed both agreements directly with the therapists.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "float_rt_assigned_to": "North Unit",
+                "north_rt_start_time": "22:00",
+                "north_assessment_interval_hours": 2,
+                "south_unit_coverage_plan": "Jordan covers 19:00-23:00, Maya covers 23:00-07:00"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "record_on_overnight_roster",
+                  "target": "North Unit N418 high-flow oxygen patient",
+                  "detail": "Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order"
+                },
+                {
+                  "type": "record_on_overnight_roster",
+                  "target": "South Unit",
+                  "detail": "South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"float_rt_assigned_to\": \"North Unit\",\n      \"north_rt_start_time\": \"22:00\",\n      \"north_assessment_interval_hours\": 2,\n      \"south_unit_coverage_plan\": \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"record_on_overnight_roster\",\n        \"target\": \"North Unit N418 high-flow oxygen patient\",\n        \"detail\": \"Float therapist assigned to North Unit for in-person assessments at 22:00, 00:00, 02:00, 04:00, and 06:00 per Dr. Patel's confirmed order\"\n      },\n      {\n        \"type\": \"record_on_overnight_roster\",\n        \"target\": \"South Unit\",\n        \"detail\": \"South Unit overnight coverage: Jordan 19:00-23:00, Maya 23:00-07:00, no float therapist needed\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "C2 (MISAPPLIED, rollouts 1 and 2): The decisive fact PF1 states \"assessment beginning at exactly 22:00\" but does not explicitly tie this to the settlement field `north_rt_start_time`. The model reasonably interprets `north_rt_start_time` as the shift start (19:00) rather than the first assessment time (22:00). Fix PF1's wording to make the implication unambiguous: add to PF1's text something like \"The float therapist's first scheduled in-person assessment for North Unit must be recorded as starting at 22:00 on the overnight roster\" \u2014 explicitly stating that the start time field should be 22:00, not the shift start. Do NOT loosen check C2 itself; the check is correct. The fix is to the fact's wording so the model cannot conflate shift start with assessment start. This is consistent across 2 of 3 settled rollouts, confirming the implication is genuinely ambiguous.\n\nC4 (ENCODING MISMATCH, rollout 3): The settlement wrote \"Jordan covers 19:00-23:00, Maya covers 23:00-07:00\" but the check apparently requires Jordan's role as \"South Unit day-shift respiratory therapist\" and Maya's origin as \"from Unit 3.\" The model naturally abbreviated. If C4's threshold requires these qualifiers, loosen C4 to accept coverage plans that include the names Jordan and Maya with the correct time ranges (19:00-23:00 and 23:00-07:00 respectively), without requiring the role/unit qualifiers verbatim. Exact new wording for C4: accept any `south_unit_coverage_plan` value that contains both \"Jordan\" paired with \"19:00-23:00\" and \"Maya\" paired with \"23:00-07:00\" (or \"23:00-07:00\"), regardless of whether Jordan's day-shift role or Maya's Unit 3 origin is mentioned. This loosening does NOT risk a LEAKED regression because the specific time ranges and therapist names are not guessable from public facts alone \u2014 they come from PF2.\n\nRollout 0 (STRUCTURAL auto-fail): A2's output was consistently malformed (`{\"type\":\" \"say\"...` with a space-quote delimiter error) at turns 1, 4, and 8, preventing the reveal from registering until turn 9. This is not a turn_cap problem \u2014 even at 10 turns the group couldn't settle because A2's reveals weren't parsing. The fix is to loosen the settle-eligibility condition so that information stated in a `say` action (not just a `reveal` action) can count toward settle eligibility, OR to make the JSON parser more tolerant of the `\" \"say\"` delimiter pattern. If the parser cannot be changed, then the shared_context should instruct agents to use simpler JSON formatting. Do NOT simply raise turn_cap \u2014 that would not fix the root cause."
+}

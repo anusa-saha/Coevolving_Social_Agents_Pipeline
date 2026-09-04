@@ -1,0 +1,149 @@
+{
+  "scenario_id": "scenario_74",
+  "scenario_type": "equipment_for_catering_swap",
+  "description": "A neighborhood sound technician must decide whether to lend a portable PA system for a wedding in exchange for boxed meals, then settle the meal quantity, handoff, and safe equipment setup with the event organizer and venue contact.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Rosa",
+      "role": "PA System Owner and Final Decision-Maker"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Eli",
+      "role": "Wedding Organizer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "June",
+      "role": "Venue Contact"
+    }
+  ],
+  "shared_context": {
+    "S1": "Rosa owns a portable PA system with two speakers and an optional powered subwoofer.",
+    "S2": "Eli has asked to borrow the PA for a wedding reception this Sunday.",
+    "S3": "The proposed arrangement is an informal exchange rather than a standard cash rental.",
+    "S4": "Rosa makes the final decision about whether to lend the equipment and what terms to accept.",
+    "S5": "The wedding reception is scheduled for Sunday evening at the venue, and the PA would be collected before the event and returned afterward.",
+    "S6": "Rosa's normal pre-deal check is to call on Eli and June in turn before settling the equipment terms."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Eli's reception has exactly 36 guests, and Eli will provide exactly 36 boxed lunches in exchange for the PA: 30 regular lunches and 6 vegetarian lunches, with no cash payment. Eli can pick up the PA on Saturday at 10 AM and will return it on Sunday at 8 PM."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "June confirmed that only 600 watts remain available on the venue's shared circuit because the kitchen warmers use the rest; the two standard speakers together draw 450 watts, while adding the powered subwoofer would raise the load to 750 watts and overload the circuit."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 11
+  },
+  "settlement_schema": {
+    "decisions": {
+      "proceed": "boolean",
+      "partner": "string",
+      "regular_lunches": "integer",
+      "vegetarian_lunches": "integer",
+      "cash_payment": "integer",
+      "subwoofer_included": "boolean",
+      "pickup_time": "string",
+      "return_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Rosa must proceed with Eli as the exchange partner.",
+    "The exchange must provide exactly 30 regular boxed lunches and exactly 6 vegetarian boxed lunches.",
+    "No cash payment may be required.",
+    "The powered subwoofer must not be included because the venue circuit cannot safely support it.",
+    "The PA must be picked up Saturday at 10 AM and returned Sunday at 8 PM.",
+    "The settlement must include a commitment stating that only the two standard speakers may be used and the subwoofer is excluded because of the 600-watt limit.",
+    "The venue power limitation must be cited as justification for excluding the subwoofer.",
+    "Eli's complete proposed terms must be cited as justification for the exchange terms and schedule."
+  ],
+  "content_checks": {
+    "C1": "decisions['proceed'] == True and decisions['partner'] == 'Eli'",
+    "C2": "decisions['regular_lunches'] == 30 and decisions['vegetarian_lunches'] == 6",
+    "C3": "decisions['cash_payment'] == 0",
+    "C4": "decisions['subwoofer_included'] == False",
+    "C5": "decisions['pickup_time'] in ['Saturday 10 AM', 'Saturday at 10 AM'] and decisions['return_time'] in ['Sunday 8 PM', 'Sunday at 8 PM']",
+    "C6": "decisions['subwoofer_included'] == False and any(c['type'] == 'venue_compliance' and '600' in c['detail'] and ('subwoofer' in c['detail'] or 'Subwoofer' in c['detail']) and ('exclude' in c['detail'] or 'excluded' in c['detail'] or 'not' in c['detail'] or 'only' in c['detail'] or 'without' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed",
+    "P2": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C5",
+        "P2"
+      ],
+      "why": "Eli's revealed terms change the settlement to exactly 30 regular lunches, exactly 6 vegetarian lunches, zero cash, Saturday 10 AM pickup, and Sunday 8 PM return."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "June's exact 600-watt available capacity makes the 750-watt subwoofer setup fail while the 450-watt two-speaker setup passes, requiring exclusion of the subwoofer and a commitment recording that limit."
+    }
+  ],
+  "domain": "informal_commerce_bargaining",
+  "requested_num_agents": 3
+}

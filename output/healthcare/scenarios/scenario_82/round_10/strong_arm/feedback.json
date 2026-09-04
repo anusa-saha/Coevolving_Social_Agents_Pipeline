@@ -1,0 +1,845 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "The scenario has two distinct failure modes: (1) a structural pacing problem causing 3 of 4 rollouts to auto-fail at the 18-turn cap, and (2) a check-encoding problem causing provenance checks to fail even on the single settled rollout. \n\n=== STRUCTURAL / PACING PROBLEM (rollouts 0, 2, 3) ===\n3 of 4 rollouts auto-failed on turn cap at 18 turns. The root cause is the shared_context's rigid sequential-call protocol: A1 (the Director) is instructed to call specialists one-at-a-time in order (genetics \u2192 lab ops \u2192 genetic counseling \u2192 utilization mgmt) AND to wait for 'direct confirmation' from each before proceeding. This burns turns on protocol overhead: each specialist first announces readiness (turns 0-4), A1 calls them (another turn), each reveals, A1 acknowledges and calls the next (another turn), and agents frequently repeat 'I'll wait until you call me' messages. In rollout 0, PF1/PF2/PF3/PF4 were all revealed by turn 15 but A1 never reached the settle action by turn 18 because it was still processing the last reveal and summarizing. In rollout 2, only PF1 and PF2 were revealed by turn 14 and A1 was still calling for PF3 at turn 16 \u2014 the 18-turn cap ran out before the final two specialists could be called and a settle issued. In rollout 3, PF1/PF3/PF2 were revealed by turn 9 but PF4 was never called on, and the cap hit at 18 turns of protocol overhead. The settle-eligibility condition appears to require all four disciplines to confirm in strict sequence with A1 explicitly moving between each, which combined with the 18-turn cap means the scenario needs roughly 20-22 turns minimum to complete all four reveal-acknowledge-call cycles plus the final settle \u2014 but the cap is 18. This is primarily a turn_cap-too-low problem (all facts eventually get revealed; the protocol just needs more turns to cycle through) but compounded by the sequential protocol generating excessive protocol chatter. A turn_cap increase to 24 would cover the worst case observed, but reducing the protocol overhead in shared_context (letting A1 call all remaining specialists at once once each has flagged readiness, rather than strictly one-at-a-time) would also help.\n\n=== CHECK ENCODING PROBLEM (rollout 1 \u2014 the only settled rollout) ===\nRollout 1 settled successfully with all four facts revealed (PF1 at turn 9, PF2 at turn 10, PF3 at turn 12, PF4 at turn 13) and all content checks C1-C5 passed. The settlement's decisions block correctly contains all required values (selected_case=Alder, assay=rapid whole-genome sequencing, specimen_volume_ml=3.2, specimen_handling=standard EDTA extraction protocol, consent_scope=primary_and_secondary_findings, authorization_status=approved, authorization_code=UM-4821). The settlement's justification_fact_ids correctly lists [PF1, PF2, PF3, PF4]. The settlement also includes a 'revealed' array with fact_id\u2192speaker mappings. However, ALL four provenance checks (P1, P2, P3, P4) failed with provenance_check_tally showing 0/4 for each. The facts were genuinely revealed, properly cited in justification_fact_ids, and the settlement values are correct \u2014 so this is NOT telepathy, NOT revealed-but-unused, and NOT misapplied. The provenance checks are failing because they expect the fact to appear in a specific location/format within the settlement that the model is not matching. The settlement encodes provenance via the 'revealed' array (with fact_id + speaker fields) and via justification_fact_ids \u2014 but the provenance checks apparently look for a different field or format (possibly a 'revealed_by' field, a 'provenance' block, or exact speaker-name matching against owner agent IDs rather than human names like 'Dr. Ravi Shah'). This is an ENCODING MISMATCH: the model's natural settlement format places provenance in the 'revealed' array with human speaker names, but the provenance checks expect a different structure or agent-ID-based attribution that the model never produces. The content checks for the same facts (C1-C5) all passed, confirming the values are correct \u2014 only the provenance-verification layer is failing due to format mismatch.\n\n=== Content check C6 ===\nC6 passed in 0 of 4 rollouts (content_check_tally shows C6=0 even for the settled rollout 1 where C6 is explicitly listed as false). C6 is linked to PF1 and gates a commitment about moving the clinical-actionability service note into the laboratory queue. In rollout 1's settlement, the only commitment is about Nadia Brooks completing the payer-authorization screen entry \u2014 there is NO commitment about moving PF1's service note to the laboratory queue, even though PF1 explicitly states 'the note has not yet reached the laboratory queue.' The commitment required by C6 (service note \u2192 lab queue) is missing from the settlement entirely. This is REVEALED BUT UNUSED for the commitment portion: PF1 was revealed and cited in justification_fact_ids, but its specific implication about the service note needing to be moved to the lab queue was never translated into a commitment in the settlement.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 1,\n  \"auto_failed_count\": 3,\n  \"content_check_tally\": {\n    \"C1\": 1,\n    \"C2\": 1,\n    \"C3\": 1,\n    \"C4\": 1,\n    \"C5\": 1,\n    \"C6\": 0\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 0,\n    \"P2\": 0,\n    \"P3\": 0,\n    \"P4\": 0\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue.\"\n      }\n    ],\n    \"P3\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The completed consent review changes the report scope to exactly primary_and_secondary_findings rather than an unspecified or primary-only scope.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The completed consent review changes the report scope to exactly primary_and_secondary_findings rather than an unspecified or primary-only scope.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF4\",\n        \"owner\": \"A5\",\n        \"why\": \"The payer notice changes the authorization fields to approved and the exact authorization code UM-4821.\"\n      }\n    ],\n    \"P4\": [\n      {\n        \"fact_id\": \"PF4\",\n        \"owner\": \"A5\",\n        \"why\": \"The payer notice changes the authorization fields to approved and the exact authorization code UM-4821.\"\n      }\n    ],\n    \"P2\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The accessioned specimen measurement changes the specimen volume to exactly 3.2 mL and the handling field to the standard EDTA extraction protocol.\"\n      }\n    ],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The accessioned specimen measurement changes the specimen volume to exactly 3.2 mL and the handling field to the standard EDTA extraction protocol.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.57,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 18,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF4\",\n        \"PF3\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I'd like to share what I've verified at accession regarding Case Alder's specimen, so the team has the laboratory operations details for the huddle.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I'd like to share what I've verified at accession regarding Case Alder's specimen, so the team has the laboratory operations details for the huddle.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello Mei, and hello everyone. I'm Carlos Rivera, the Genetic Counselor. Mei, I'm glad you're starting with the specimen details for Case Alder. When Dr. Morris calls on genetics and genetic counseling during the huddle, I'll be ready to provide the consent scope confirmation for Case Alder. Please go ahead with what you've verified.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello Mei, and hello everyone. I'm Carlos Rivera, the Genetic Counselor. Mei, I'm glad you're starting with the specimen details for Case Alder. When Dr. Morris calls on genetics and genetic counseling during the huddle, I'll be ready to provide the consent scope confirmation for Case Alder. Please go ahead with what you've verified.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei, Carlos, and Ravi. I appreciate the information coming in. As we proceed with the huddle, I'll be calling on each of you one at a time in the routine order: genetics first, then laboratory operations, then genetic counseling, and finally utilization management. I need each specialist's direct confirmation with exact values recorded in the checklist before I can close the review for any case. Mei, please go ahead with the specimen details you've verified for Case Alder.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mei, Carlos, and Ravi. I appreciate the information coming in. As we proceed with the huddle, I'll be calling on each of you one at a time in the routine order: genetics first, then laboratory operations, then genetic counseling, and finally utilization management. I need each specialist's direct confirmation with exact values recorded in the checklist before I can close the review for any case. Mei, please go ahead with the specimen details you've verified for Case Alder.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello everyone, I'm Nadia Brooks, the Utilization Management Specialist. I'm ready for when Dr. Morris calls on utilization management during the huddle. I have payer authorization information for Case Alder that I'll need to confirm at that point.\",\n          \"speaker\": \"A5\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello everyone, I'm Nadia Brooks, the Utilization Management Specialist. I'm ready for when Dr. Morris calls on utilization management during the huddle. I have payer authorization information for Case Alder that I'll need to confirm at that point.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei. I've recorded the specimen details for Case Alder: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Now, following the routine huddle order, I'll call on genetics first. Dr. Shah, please provide your direct confirmation regarding the clinical actionability of Case Alder for this overnight rapid whole-genome sequencing run.\",\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mei. I've recorded the specimen details for Case Alder: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Now, following the routine huddle order, I'll call on genetics first. Dr. Shah, please provide your direct confirmation regarding the clinical actionability of Case Alder for this overnight rapid whole-genome sequencing run.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I can confirm that Case Alder is the clinically actionable priority for this overnight rapid whole-genome sequencing run. The clinical team has designated Alder as such because there is a medication-selection decision that depends on a rapid whole-genome result. I documented this decision in my service note, though the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Morris, I noted that Dr. Shah's response didn't come through clearly. I'll hold for my turn in the utilization management slot, but I want to flag now that I do have payer authorization information for Case Alder ready to confirm when you call on me. I'll wait for the huddle to proceed in order.\",\n          \"speaker\": \"A5\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I noted that Dr. Shah's response didn't come through clearly. I'll hold for my turn in the utilization management slot, but I want to flag now that I do have payer authorization information for Case Alder ready to confirm when you call on me. I'll wait for the huddle to proceed in order.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Morris, I noted that Dr. Shah's confirmation didn't come through clearly. Since the huddle proceeds in order and genetics is called first, I'll hold for my turn in the genetic counseling slot. When you call on me, I'm ready to provide my direct consent scope confirmation for Case Alder with the exact report-scope field value as required for the final report.\",\n          \"speaker\": \"A4\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I noted that Dr. Shah's confirmation didn't come through clearly. Since the huddle proceeds in order and genetics is called first, I'll hold for my turn in the genetic counseling slot. When you call on me, I'm ready to provide my direct consent scope confirmation for Case Alder with the exact report-scope field value as required for the final report.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Morris, I'm still holding for my turn in the genetic counseling slot. Since Dr. Shah's confirmation didn't come through clearly, we may need him to re-state his clinical actionability confirmation for Case Alder before the huddle can proceed in order. I'm ready whenever you call on me, but I'll wait for the proper sequence.\",\n          \"speaker\": \"A4\",\n          \"turn\": 10,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I'm still holding for my turn in the genetic counseling slot. Since Dr. Shah's confirmation didn't come through clearly, we may need him to re-state his clinical actionability confirmation for Case Alder before the huddle can proceed in order. I'm ready whenever you call on me, but I'll wait for the proper sequence.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Morris, I apologize for the unclear response. Let me re-state my direct confirmation for the clinical actionability of Case Alder. Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.\",\n          \"speaker\": \"A2\",\n          \"turn\": 11,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I apologize for the unclear response. Let me re-state my direct confirmation for the clinical actionability of Case Alder. Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"Dr. Morris, for the utilization management confirmation: The payer approved rapid whole-genome sequencing for Case Alder under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\",\n          \"speaker\": \"A5\",\n          \"turn\": 12,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"Dr. Morris, for the utilization management confirmation: The payer approved rapid whole-genome sequencing for Case Alder under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah, for re-stating your clinical actionability confirmation for Case Alder. I've recorded it in the checklist. Now, following the routine huddle order, the next slot is laboratory operations. Mei, you've already provided the specimen details for Case Alder \\u2014 3.2 mL of viable blood meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction \\u2014 so I'll mark the laboratory operations confirmation as recorded. Next is genetic counseling. Carlos, please go ahead and provide your direct consent scope confirmation for Case Alder, stating the approved report-scope field value exactly as it should appear in the final report.\",\n          \"speaker\": \"A1\",\n          \"turn\": 13,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah, for re-stating your clinical actionability confirmation for Case Alder. I've recorded it in the checklist. Now, following the routine huddle order, the next slot is laboratory operations. Mei, you've already provided the specimen details for Case Alder \\u2014 3.2 mL of viable blood meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction \\u2014 so I'll mark the laboratory operations confirmation as recorded. Next is genetic counseling. Carlos, please go ahead and provide your direct consent scope confirmation for Case Alder, stating the approved report-scope field value exactly as it should appear in the final report.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris, for marking the laboratory operations confirmation as recorded. The specimen details for Case Alder are confirmed: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. I'll stand by in case any further laboratory operations clarification is needed as the huddle continues.\",\n          \"speaker\": \"A3\",\n          \"turn\": 14,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Dr. Morris, for marking the laboratory operations confirmation as recorded. The specimen details for Case Alder are confirmed: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. I'll stand by in case any further laboratory operations clarification is needed as the huddle continues.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings. I completed the consent review this afternoon. This is my direct consent scope confirmation for Case Alder, and the approved report-scope field value to be entered in the final report is: primary_and_secondary_findings.\",\n          \"speaker\": \"A4\",\n          \"turn\": 15,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings. I completed the consent review this afternoon. This is my direct consent scope confirmation for Case Alder, and the approved report-scope field value to be entered in the final report is: primary_and_secondary_findings.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris, for recording my clinical actionability confirmation. With all four requirements now addressed in the huddle \\u2014 clinical actionability from genetics, specimen adequacy from laboratory operations, consent scope from genetic counseling, and payer authorization from utilization management \\u2014 Case Alder satisfies the clinical-actionability, specimen-adequacy, consent-scope, and payer-authorization requirements for the overnight rapid whole-genome sequencing run. I'd note that the final report should identify Case Alder as the selected case, the assay as rapid whole-genome sequencing, the specimen amount as 3.2 mL of viable blood with standard EDTA extraction protocol, the consent scope as primary_and_secondary_findings, and the authorization status as approved under code UM-4821.\",\n          \"speaker\": \"A2\",\n          \"turn\": 16,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Dr. Morris, for recording my clinical actionability confirmation. With all four requirements now addressed in the huddle \\u2014 clinical actionability from genetics, specimen adequacy from laboratory operations, consent scope from genetic counseling, and payer authorization from utilization management \\u2014 Case Alder satisfies the clinical-actionability, specimen-adequacy, consent-scope, and payer-authorization requirements for the overnight rapid whole-genome sequencing run. I'd note that the final report should identify Case Alder as the selected case, the assay as rapid whole-genome sequencing, the specimen amount as 3.2 mL of viable blood with standard EDTA extraction protocol, the consent scope as primary_and_secondary_findings, and the authorization status as approved under code UM-4821.\\\"}\"\n        },\n        {\n          \"type\": \" \",\n          \"speaker\": \"A3\",\n          \"turn\": 17,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.559,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 18,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false,\n        \"P2\": false,\n        \"P3\": false,\n        \"P4\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"selected_case\": \"Alder\",\n          \"assay\": \"rapid whole-genome sequencing\",\n          \"specimen_volume_ml\": 3.2,\n          \"specimen_handling\": \"standard EDTA extraction protocol\",\n          \"consent_scope\": \"primary_and_secondary_findings\",\n          \"authorization_status\": \"approved\",\n          \"authorization_code\": \"UM-4821\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"administrative_entry\",\n            \"target\": \"Nadia Brooks\",\n            \"detail\": \"Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"S6\"\n        ],\n        \"revealed\": [\n          {\n            \"fact_id\": \"PF1\",\n            \"speaker\": \"Dr. Ravi Shah\"\n          },\n          {\n            \"fact_id\": \"PF2\",\n            \"speaker\": \"Mei Chen\"\n          },\n          {\n            \"fact_id\": \"PF3\",\n            \"speaker\": \"Carlos Rivera\"\n          },\n          {\n            \"fact_id\": \"PF4\",\n            \"speaker\": \"Nadia Brooks\"\n          }\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"administrative_entry\",\n          \"target\": \"Nadia Brooks\",\n          \"detail\": \"Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"S6\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I'm Dr. Ravi Shah, clinical genetics. Before we go through the huddle, I want to flag that I have clinical-actionability information relevant to one of these cases that I believe the laboratory may not yet have received through the normal documentation queue. I'd like to share that with the group now so it's on record for our decision-making.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I'm Dr. Ravi Shah, clinical genetics. Before we go through the huddle, I want to flag that I have clinical-actionability information relevant to one of these cases that I believe the laboratory may not yet have received through the normal documentation queue. I'd like to share that with the group now so it's on record for our decision-making.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Dr. Shah. Thank you for flagging that. As the molecular laboratory scientist, I have specimen-adequacy information for one of the cases that I verified at accession. I'm ready to share that when we reach the laboratory operations portion of the huddle. Please go ahead with your clinical-actionability information whenever Dr. Morris calls on genetics.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Dr. Shah. Thank you for flagging that. As the molecular laboratory scientist, I have specimen-adequacy information for one of the cases that I verified at accession. I'm ready to share that when we reach the laboratory operations portion of the huddle. Please go ahead with your clinical-actionability information whenever Dr. Morris calls on genetics.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I'm Nadia Brooks, utilization management. I have payer-authorization information for one of the cases that I'm ready to share when Dr. Morris reaches the utilization management portion of the huddle. I'll hold until called on, per the routine process.\",\n          \"speaker\": \"A5\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I'm Nadia Brooks, utilization management. I have payer-authorization information for one of the cases that I'm ready to share when Dr. Morris reaches the utilization management portion of the huddle. I'll hold until called on, per the routine process.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Thank you for being ready. Let's proceed through the routine multidisciplinary huddle in our standard order. Dr. Shah, as clinical genetics, please go ahead and share your clinical-actionability information for the record.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Thank you for being ready. Let's proceed through the routine multidisciplinary huddle in our standard order. Dr. Shah, as clinical genetics, please go ahead and share your clinical-actionability information for the record.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I'm Carlos Rivera, genetic counseling. I have consent-scope information for one of the cases that I'm ready to share when Dr. Morris reaches the genetic counseling portion of the huddle. I'll hold until called on, per the routine process.\",\n          \"speaker\": \"A4\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I'm Carlos Rivera, genetic counseling. I have consent-scope information for one of the cases that I'm ready to share when Dr. Morris reaches the genetic counseling portion of the huddle. I'll hold until called on, per the routine process.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah. Please go ahead and share your clinical-actionability information for the record.\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Dr. Shah. Please go ahead and share your clinical-actionability information for the record.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'll continue to hold my payer-authorization information until you reach the utilization management portion of the huddle, per our routine process.\",\n          \"speaker\": \"A5\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'll continue to hold my payer-authorization information until you reach the utilization management portion of the huddle, per our routine process.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'm ready to share my specimen-adequacy information when you reach the laboratory operations portion of the huddle. I'll hold until called on, per our routine process.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'm ready to share my specimen-adequacy information when you reach the laboratory operations portion of the huddle. I'll hold until called on, per our routine process.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'm Carlos Rivera, genetic counseling, and I'm holding my consent-scope information until you reach the genetic counseling portion of the huddle, per our routine process.\",\n          \"speaker\": \"A4\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'm Carlos Rivera, genetic counseling, and I'm holding my consent-scope information until you reach the genetic counseling portion of the huddle, per our routine process.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. I'm disclosing this now so the group has the clinical-actionability information on record for our decision-making.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. I'm disclosing this now so the group has the clinical-actionability information on record for our decision-making.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"For the laboratory operations portion, I can confirm that Case Alder's received specimen contains exactly 3.2 mL of viable blood, which meets our laboratory's 3.0 mL minimum requirement. Additionally, Case Alder's specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\",\n          \"speaker\": \"A3\",\n          \"turn\": 10,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"For the laboratory operations portion, I can confirm that Case Alder's received specimen contains exactly 3.2 mL of viable blood, which meets our laboratory's 3.0 mL minimum requirement. Additionally, Case Alder's specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah, for the clinical-actionability information on Case Alder, and thank you, Mei, for the specimen-adequacy confirmation. I've recorded both. We still need to complete the genetic counseling and utilization management portions of the huddle before I can finalize. Carlos, as genetic counseling, please go ahead and share your consent-scope information for the record.\",\n          \"speaker\": \"A1\",\n          \"turn\": 11,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah, for the clinical-actionability information on Case Alder, and thank you, Mei, for the specimen-adequacy confirmation. I've recorded both. We still need to complete the genetic counseling and utilization management portions of the huddle before I can finalize. Carlos, as genetic counseling, please go ahead and share your consent-scope information for the record.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"For Case Alder, the patient signed consent for both primary findings and secondary findings, so the approved report-scope field value must be recorded exactly as primary_and_secondary_findings. I completed the consent review this afternoon.\",\n          \"speaker\": \"A4\",\n          \"turn\": 12,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"For Case Alder, the patient signed consent for both primary findings and secondary findings, so the approved report-scope field value must be recorded exactly as primary_and_secondary_findings. I completed the consent review this afternoon.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"For Case Alder, the payer approved rapid whole-genome sequencing under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\",\n          \"speaker\": \"A5\",\n          \"turn\": 13,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"For Case Alder, the payer approved rapid whole-genome sequencing under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Carlos and Nadia. To summarize for the record: Case Alder now has all four requirements confirmed in this huddle \\u2014 clinical actionability (medication-selection decision, designated priority), specimen adequacy (3.2 mL viable blood, meets 3.0 mL minimum, standard EDTA extraction protocol), consent scope (primary_and_secondary_findings), and payer authorization (code UM-4821, status approved). Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been directly confirmed by each specialist during this huddle, and I'd support finalizing Alder for the overnight run if you're satisfied the checklist is complete.\",\n          \"speaker\": \"A2\",\n          \"turn\": 14,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Carlos and Nadia. To summarize for the record: Case Alder now has all four requirements confirmed in this huddle \\u2014 clinical actionability (medication-selection decision, designated priority), specimen adequacy (3.2 mL viable blood, meets 3.0 mL minimum, standard EDTA extraction protocol), consent scope (primary_and_secondary_findings), and payer authorization (code UM-4821, status approved). Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been directly confirmed by each specialist during this huddle, and I'd support finalizing Alder for the overnight run if you're satisfied the checklist is complete.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah. To confirm from the utilization management standpoint: Case Alder has payer authorization confirmed during this huddle \\u2014 authorization code UM-4821, status approved. I did note that I received the approval notice but have not yet entered it in the laboratory authorization screen, so I will need to complete that entry before the run is released. Dr. Morris, from my portion, the payer-authorization requirement for Case Alder is satisfied, and I support finalizing Alder for the overnight run once that screen entry is completed.\",\n          \"speaker\": \"A5\",\n          \"turn\": 15,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah. To confirm from the utilization management standpoint: Case Alder has payer authorization confirmed during this huddle \\u2014 authorization code UM-4821, status approved. I did note that I received the approval notice but have not yet entered it in the laboratory authorization screen, so I will need to complete that entry before the run is released. Dr. Morris, from my portion, the payer-authorization requirement for Case Alder is satisfied, and I support finalizing Alder for the overnight run once that screen entry is completed.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Nadia. I note that the authorization screen entry still needs to be completed before the run is released, but the payer-authorization requirement itself has been directly confirmed in this huddle. Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been confirmed \\u2014 clinical actionability, specimen adequacy, consent scope, and payer authorization \\u2014 and I support finalizing Alder for the overnight run once that administrative entry is completed.\",\n          \"speaker\": \"A2\",\n          \"turn\": 16,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Nadia. I note that the authorization screen entry still needs to be completed before the run is released, but the payer-authorization requirement itself has been directly confirmed in this huddle. Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been confirmed \\u2014 clinical actionability, specimen adequacy, consent scope, and payer authorization \\u2014 and I support finalizing Alder for the overnight run once that administrative entry is completed.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"selected_case\": \"Alder\",\n              \"assay\": \"rapid whole-genome sequencing\",\n              \"specimen_volume_ml\": 3.2,\n              \"specimen_handling\": \"standard EDTA extraction protocol\",\n              \"consent_scope\": \"primary_and_secondary_findings\",\n              \"authorization_status\": \"approved\",\n              \"authorization_code\": \"UM-4821\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"administrative_entry\",\n                \"target\": \"Nadia Brooks\",\n                \"detail\": \"Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"S6\"\n            ],\n            \"revealed\": [\n              {\n                \"fact_id\": \"PF1\",\n                \"speaker\": \"Dr. Ravi Shah\"\n              },\n              {\n                \"fact_id\": \"PF2\",\n                \"speaker\": \"Mei Chen\"\n              },\n              {\n                \"fact_id\": \"PF3\",\n                \"speaker\": \"Carlos Rivera\"\n              },\n              {\n                \"fact_id\": \"PF4\",\n                \"speaker\": \"Nadia Brooks\"\n              }\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 17,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"selected_case\\\": \\\"Alder\\\",\\n      \\\"assay\\\": \\\"rapid whole-genome sequencing\\\",\\n      \\\"specimen_volume_ml\\\": 3.2,\\n      \\\"specimen_handling\\\": \\\"standard EDTA extraction protocol\\\",\\n      \\\"consent_scope\\\": \\\"primary_and_secondary_findings\\\",\\n      \\\"authorization_status\\\": \\\"approved\\\",\\n      \\\"authorization_code\\\": \\\"UM-4821\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"administrative_entry\\\",\\n        \\\"target\\\": \\\"Nadia Brooks\\\",\\n        \\\"detail\\\": \\\"Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"S6\\\"\\n    ],\\n    \\\"revealed\\\": [\\n      {\\n        \\\"fact_id\\\": \\\"PF1\\\",\\n        \\\"speaker\\\": \\\"Dr. Ravi Shah\\\"\\n      },\\n      {\\n        \\\"fact_id\\\": \\\"PF2\\\",\\n        \\\"speaker\\\": \\\"Mei Chen\\\"\\n      },\\n      {\\n        \\\"fact_id\\\": \\\"PF3\\\",\\n        \\\"speaker\\\": \\\"Carlos Rivera\\\"\\n      },\\n      {\\n        \\\"fact_id\\\": \\\"PF4\\\",\\n        \\\"speaker\\\": \\\"Nadia Brooks\\\"\\n      }\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.599,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 18,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Dr. Ravi Shah here, clinical genetics. Before we begin the huddle, I want to flag that I have clinically actionable information regarding one of the three cases that I believe is relevant to today's decision about the overnight rapid whole-genome sequencing run. I'd like to share that with the group.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Dr. Ravi Shah here, clinical genetics. Before we begin the huddle, I want to flag that I have clinically actionable information regarding one of the three cases that I believe is relevant to today's decision about the overnight rapid whole-genome sequencing run. I'd like to share that with the group.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Dr. Shah. This is Carlos Rivera, genetic counseling. I'm ready for the huddle whenever Dr. Morris calls on genetics. I also have consent-scope information for one of the three cases that I'll need to formally disclose when it's my turn. Please go ahead.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Dr. Shah. This is Carlos Rivera, genetic counseling. I'm ready for the huddle whenever Dr. Morris calls on genetics. I also have consent-scope information for one of the three cases that I'll need to formally disclose when it's my turn. Please go ahead.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Mei Chen here, molecular laboratory scientist. I have specimen-adequacy information for one of the three cases that I'll need to formally disclose when Dr. Morris calls on laboratory operations during the huddle. Dr. Shah, please go ahead with your clinical information.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Mei Chen here, molecular laboratory scientist. I have specimen-adequacy information for one of the three cases that I'll need to formally disclose when Dr. Morris calls on laboratory operations during the huddle. Dr. Shah, please go ahead with your clinical information.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Nadia Brooks here, utilization management. I'm ready for the huddle whenever Dr. Morris calls on utilization management. I have payer-authorization information for one of the three cases that I'll need to formally disclose when it's my turn.\",\n          \"speaker\": \"A5\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Nadia Brooks here, utilization management. I'm ready for the huddle whenever Dr. Morris calls on utilization management. I have payer-authorization information for one of the three cases that I'll need to formally disclose when it's my turn.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Dr. Lena Morris here, Molecular Diagnostics Director. Thank you all for being ready. I'll now conduct the routine multidisciplinary huddle as per our policy. I'll call on each of you one at a time: genetics, laboratory operations, genetic counseling, and then utilization management. Please wait until I call on your discipline before disclosing your information. Dr. Ravi Shah, please go ahead with the clinical genetics information for the huddle.\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Good morning, everyone. Dr. Lena Morris here, Molecular Diagnostics Director. Thank you all for being ready. I'll now conduct the routine multidisciplinary huddle as per our policy. I'll call on each of you one at a time: genetics, laboratory operations, genetic counseling, and then utilization management. Please wait until I call on your discipline before disclosing your information. Dr. Ravi Shah, please go ahead with the clinical genetics information for the huddle.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A4\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah. I've noted the clinical-actionability information for Case Alder. I'll wait for Dr. Morris to call on genetic counseling before I formally disclose my consent-scope information.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah. I'll wait until Dr. Morris calls on utilization management to formally disclose my payer-authorization information.\",\n          \"speaker\": \"A5\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah. I'll wait until Dr. Morris calls on utilization management to formally disclose my payer-authorization information.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder. I'll wait until Dr. Morris calls on laboratory operations to formally disclose my specimen-adequacy information.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder's clinical actionability. I've recorded that in the checklist. I note that two of the previous messages were unparsable, so I'll proceed carefully. Next, I'd like to call on laboratory operations. Mei Chen, please go ahead with your specimen-adequacy information for the huddle.\",\n          \"speaker\": \"A1\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder's clinical actionability. I've recorded that in the checklist. I note that two of the previous messages were unparsable, so I'll proceed carefully. Next, I'd like to call on laboratory operations. Mei Chen, please go ahead with your specimen-adequacy information for the huddle.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'll wait until you call on genetic counseling to formally disclose my consent-scope information, as per the huddle order.\",\n          \"speaker\": \"A4\",\n          \"turn\": 10,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'll wait until you call on genetic counseling to formally disclose my consent-scope information, as per the huddle order.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\",\n          \"speaker\": \"A5\",\n          \"turn\": 11,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris, for recording the clinical genetics information. I've completed my disclosure for the genetics portion of the huddle. I'll remain available if any further clinical genetics input is needed as the review proceeds.\",\n          \"speaker\": \"A2\",\n          \"turn\": 12,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris, for recording the clinical genetics information. I've completed my disclosure for the genetics portion of the huddle. I'll remain available if any further clinical genetics input is needed as the review proceeds.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei Chen, in advance for your specimen-adequacy information. I notice your previous message was unparsable, so please go ahead and disclose your specimen-adequacy information now for the huddle. I'm ready to record the exact values in the checklist.\",\n          \"speaker\": \"A1\",\n          \"turn\": 13,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mei Chen, in advance for your specimen-adequacy information. I notice your previous message was unparsable, so please go ahead and disclose your specimen-adequacy information now for the huddle. I'm ready to record the exact values in the checklist.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\",\n          \"speaker\": \"A3\",\n          \"turn\": 14,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\",\n          \"speaker\": \"A5\",\n          \"turn\": 15,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei Chen, for that specimen-adequacy information regarding Case Alder. I've recorded in the checklist: specimen volume 3.2 mL, handling instruction standard EDTA extraction protocol. Next, I'll call on genetic counseling. Carlos Rivera, please go ahead with your consent-scope information for the huddle. Per our policy, please state the approved report-scope field value exactly as it should appear in the final report.\",\n          \"speaker\": \"A1\",\n          \"turn\": 16,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mei Chen, for that specimen-adequacy information regarding Case Alder. I've recorded in the checklist: specimen volume 3.2 mL, handling instruction standard EDTA extraction protocol. Next, I'll call on genetic counseling. Carlos Rivera, please go ahead with your consent-scope information for the huddle. Per our policy, please state the approved report-scope field value exactly as it should appear in the final report.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'll defer to Carlos Rivera for the genetic counseling disclosure, as that's his discipline's turn now. I have no further clinical genetics information to add at this time.\",\n          \"speaker\": \"A2\",\n          \"turn\": 17,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Dr. Morris. I'll defer to Carlos Rivera for the genetic counseling disclosure, as that's his discipline's turn now. I have no further clinical genetics information to add at this time.\\\"}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.546,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 18,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF3\",\n        \"PF2\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I've completed my specimen adequacy review for Case Alder and can share those findings when Dr. Morris begins the huddle. I'm ready to go through the checklist whenever the team is assembled.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I've completed my specimen adequacy review for Case Alder and can share those findings when Dr. Morris begins the huddle. I'm ready to go through the checklist whenever the team is assembled.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello Mei. I'm Carlos Rivera, the Genetic Counselor. I've completed the consent scope review for Case Alder this afternoon and have the approved report-scope field value ready to confirm when Dr. Morris calls on genetics during the huddle.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello Mei. I'm Carlos Rivera, the Genetic Counselor. I've completed the consent scope review for Case Alder this afternoon and have the approved report-scope field value ready to confirm when Dr. Morris calls on genetics during the huddle.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good afternoon, everyone. Thank you for being ready. Let's begin the routine multidisciplinary huddle for the overnight rapid whole-genome sequencing run. We have three cases \\u2014 Alder, Birch, and Cedar \\u2014 and one overnight slot available. I'll go through the checklist one specialist at a time, starting with clinical actionability. Dr. Shah, I understand you have information regarding Case Alder's clinical actionability. Could you please confirm the clinical-actionability status for the record?\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good afternoon, everyone. Thank you for being ready. Let's begin the routine multidisciplinary huddle for the overnight rapid whole-genome sequencing run. We have three cases \\u2014 Alder, Birch, and Cedar \\u2014 and one overnight slot available. I'll go through the checklist one specialist at a time, starting with clinical actionability. Dr. Shah, I understand you have information regarding Case Alder's clinical actionability. Could you please confirm the clinical-actionability status for the record?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hello, Dr. Morris and everyone. This is Nadia Brooks, Utilization Management Specialist. I'm standing by for when you reach the payer-authorization step in the checklist. I have information regarding Case Alder's authorization status that I'll be ready to confirm at that point.\",\n          \"speaker\": \"A5\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hello, Dr. Morris and everyone. This is Nadia Brooks, Utilization Management Specialist. I'm standing by for when you reach the payer-authorization step in the checklist. I have information regarding Case Alder's authorization status that I'll be ready to confirm at that point.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings; I completed the consent review this afternoon.\",\n          \"speaker\": \"A4\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings; I completed the consent review this afternoon.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'm ready whenever you reach the payer-authorization step in the checklist.\",\n          \"speaker\": \"A5\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'm ready whenever you reach the payer-authorization step in the checklist.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Shah, for that information regarding Case Alder's clinical actionability. I note that you've documented the medication-selection decision and Alder's designation as the clinically actionable priority in your service note. For the checklist, I'm recording the clinical-actionability status for Case Alder as confirmed: clinically actionable priority due to a medication-selection decision dependent on a rapid whole-genome result. Now, moving to the next item on the checklist \\u2014 specimen adequacy. Mei Chen, you mentioned you've completed the specimen adequacy review for Case Alder. Could you please confirm the specimen amount and handling instruction for the record?\",\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah, for that information regarding Case Alder's clinical actionability. I note that you've documented the medication-selection decision and Alder's designation as the clinically actionable priority in your service note. For the checklist, I'm recording the clinical-actionability status for Case Alder as confirmed: clinically actionable priority due to a medication-selection decision dependent on a rapid whole-genome result. Now, moving to the next item on the checklist \\u2014 specimen adequacy. Mei Chen, you mentioned you've completed the specimen adequacy review for Case Alder. Could you please confirm the specimen amount and handling instruction for the record?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I've confirmed Alder's clinical-actionability status for the checklist. I'll defer to Mei Chen for the specimen-adequacy findings, as that's outside my area. Mei, please go ahead with the specimen amount and handling instruction for Case Alder.\",\n          \"speaker\": \"A2\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I've confirmed Alder's clinical-actionability status for the checklist. I'll defer to Mei Chen for the specimen-adequacy findings, as that's outside my area. Mei, please go ahead with the specimen amount and handling instruction for Case Alder.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"For Case Alder, the received specimen contains exactly 3.2 mL of viable blood, which meets the laboratory's 3.0 mL minimum. The specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\",\n          \"speaker\": \"A3\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"For Case Alder, the received specimen contains exactly 3.2 mL of viable blood, which meets the laboratory's 3.0 mL minimum. The specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei. The specimen adequacy for Case Alder is now confirmed on the checklist. Dr. Morris, we now have clinical actionability and specimen adequacy confirmed for Case Alder. The next items remaining are consent scope and payer authorization. Carlos has already indicated he has the consent scope ready, and Nadia is standing by for the payer-authorization step. Please proceed with the next checklist item.\",\n          \"speaker\": \"A2\",\n          \"turn\": 10,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mei. The specimen adequacy for Case Alder is now confirmed on the checklist. Dr. Morris, we now have clinical actionability and specimen adequacy confirmed for Case Alder. The next items remaining are consent scope and payer authorization. Carlos has already indicated he has the consent scope ready, and Nadia is standing by for the payer-authorization step. Please proceed with the next checklist item.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 11,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Shah. To confirm for the record: Case Alder's specimen adequacy is verified \\u2014 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Both details were confirmed at accession. I'm now standing by as Dr. Morris continues through the remaining checklist items.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Dr. Morris, I'm ready to formally confirm the consent scope for Case Alder whenever you call on genetics as the next step in the checklist. As I've already noted, the approved report-scope field value for the final report is primary_and_secondary_findings, based on the consent review I completed this afternoon.\",\n          \"speaker\": \"A4\",\n          \"turn\": 12,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Dr. Morris, I'm ready to formally confirm the consent scope for Case Alder whenever you call on genetics as the next step in the checklist. As I've already noted, the approved report-scope field value for the final report is primary_and_secondary_findings, based on the consent review I completed this afternoon.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Carlos. I'm still standing by for when Dr. Morris reaches the payer-authorization step in the checklist. I have the authorization information for Case Alder ready to confirm at that point.\",\n          \"speaker\": \"A5\",\n          \"turn\": 13,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Carlos. I'm still standing by for when Dr. Morris reaches the payer-authorization step in the checklist. I have the authorization information for Case Alder ready to confirm at that point.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mei, for confirming the specimen adequacy for Case Alder. I'm recording on the checklist: specimen amount 3.2 mL of viable blood, handling instruction standard EDTA extraction protocol. Now, moving to the next item \\u2014 consent scope. Carlos, as the genetic counselor, could you please provide your formal confirmation of the approved report-scope field value for Case Alder for the record?\",\n          \"speaker\": \"A1\",\n          \"turn\": 14,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Mei, for confirming the specimen adequacy for Case Alder. I'm recording on the checklist: specimen amount 3.2 mL of viable blood, handling instruction standard EDTA extraction protocol. Now, moving to the next item \\u2014 consent scope. Carlos, as the genetic counselor, could you please provide your formal confirmation of the approved report-scope field value for Case Alder for the record?\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I'm continuing to stand by for the payer-authorization step. Once Carlos has formally confirmed the consent scope and you move to that next checklist item, I'll be ready to provide the authorization information for Case Alder.\",\n          \"speaker\": \"A5\",\n          \"turn\": 15,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I'm continuing to stand by for the payer-authorization step. Once Carlos has formally confirmed the consent scope and you move to that next checklist item, I'll be ready to provide the authorization information for Case Alder.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris, for recording the specimen adequacy details on the checklist. I've noted that both the specimen amount and handling instruction are now captured. I'll remain available for any further specimen-related questions as the huddle continues through the consent scope and payer authorization steps.\",\n          \"speaker\": \"A3\",\n          \"turn\": 16,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris, for recording the specimen adequacy details on the checklist. I've noted that both the specimen amount and handling instruction are now captured. I'll remain available for any further specimen-related questions as the huddle continues through the consent scope and payer authorization steps.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morris. I am now formally confirming the consent scope for Case Alder for the checklist record. The patient for Case Alder signed consent for both primary findings and secondary findings. The approved report-scope field value to be recorded in the final report is primary_and_secondary_findings. I completed the consent review this afternoon, and this is my formal confirmation for the genetics step of the huddle.\",\n          \"speaker\": \"A4\",\n          \"turn\": 17,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morris. I am now formally confirming the consent scope for Case Alder for the checklist record. The patient for Case Alder signed consent for both primary findings and secondary findings. The approved report-scope field value to be recorded in the final report is primary_and_secondary_findings. I completed the consent review this afternoon, and this is my formal confirmation for the genetics step of the huddle.\\\"}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 1,
+    "auto_failed_count": 3,
+    "content_check_tally": {
+      "C1": 1,
+      "C2": 1,
+      "C3": 1,
+      "C4": 1,
+      "C5": 1,
+      "C6": 0
+    },
+    "provenance_check_tally": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0
+    },
+    "facts_linked_to_failing_checks": {
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue."
+        }
+      ],
+      "P3": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The completed consent review changes the report scope to exactly primary_and_secondary_findings rather than an unspecified or primary-only scope."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The completed consent review changes the report scope to exactly primary_and_secondary_findings rather than an unspecified or primary-only scope."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF4",
+          "owner": "A5",
+          "why": "The payer notice changes the authorization fields to approved and the exact authorization code UM-4821."
+        }
+      ],
+      "P4": [
+        {
+          "fact_id": "PF4",
+          "owner": "A5",
+          "why": "The payer notice changes the authorization fields to approved and the exact authorization code UM-4821."
+        }
+      ],
+      "P2": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The accessioned specimen measurement changes the specimen volume to exactly 3.2 mL and the handling field to the standard EDTA extraction protocol."
+        }
+      ],
+      "C6": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The accessioned specimen measurement changes the specimen volume to exactly 3.2 mL and the handling field to the standard EDTA extraction protocol."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The clinical geneticist's designation changes the selected case to Alder, identifies rapid whole-genome sequencing as the assay, and requires a commitment to move the clinical-actionability service note into the laboratory queue."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.57,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 18,
+        "revealed_facts": [
+          "PF1",
+          "PF2",
+          "PF4",
+          "PF3"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I'd like to share what I've verified at accession regarding Case Alder's specimen, so the team has the laboratory operations details for the huddle.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I'd like to share what I've verified at accession regarding Case Alder's specimen, so the team has the laboratory operations details for the huddle.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Hello Mei, and hello everyone. I'm Carlos Rivera, the Genetic Counselor. Mei, I'm glad you're starting with the specimen details for Case Alder. When Dr. Morris calls on genetics and genetic counseling during the huddle, I'll be ready to provide the consent scope confirmation for Case Alder. Please go ahead with what you've verified.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hello Mei, and hello everyone. I'm Carlos Rivera, the Genetic Counselor. Mei, I'm glad you're starting with the specimen details for Case Alder. When Dr. Morris calls on genetics and genetic counseling during the huddle, I'll be ready to provide the consent scope confirmation for Case Alder. Please go ahead with what you've verified.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei, Carlos, and Ravi. I appreciate the information coming in. As we proceed with the huddle, I'll be calling on each of you one at a time in the routine order: genetics first, then laboratory operations, then genetic counseling, and finally utilization management. I need each specialist's direct confirmation with exact values recorded in the checklist before I can close the review for any case. Mei, please go ahead with the specimen details you've verified for Case Alder.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Mei, Carlos, and Ravi. I appreciate the information coming in. As we proceed with the huddle, I'll be calling on each of you one at a time in the routine order: genetics first, then laboratory operations, then genetic counseling, and finally utilization management. I need each specialist's direct confirmation with exact values recorded in the checklist before I can close the review for any case. Mei, please go ahead with the specimen details you've verified for Case Alder.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Hello everyone, I'm Nadia Brooks, the Utilization Management Specialist. I'm ready for when Dr. Morris calls on utilization management during the huddle. I have payer authorization information for Case Alder that I'll need to confirm at that point.",
+            "speaker": "A5",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hello everyone, I'm Nadia Brooks, the Utilization Management Specialist. I'm ready for when Dr. Morris calls on utilization management during the huddle. I have payer authorization information for Case Alder that I'll need to confirm at that point.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei. I've recorded the specimen details for Case Alder: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Now, following the routine huddle order, I'll call on genetics first. Dr. Shah, please provide your direct confirmation regarding the clinical actionability of Case Alder for this overnight rapid whole-genome sequencing run.",
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Mei. I've recorded the specimen details for Case Alder: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Now, following the routine huddle order, I'll call on genetics first. Dr. Shah, please provide your direct confirmation regarding the clinical actionability of Case Alder for this overnight rapid whole-genome sequencing run.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 7,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Dr. Morris, I can confirm that Case Alder is the clinically actionable priority for this overnight rapid whole-genome sequencing run. The clinical team has designated Alder as such because there is a medication-selection decision that depends on a rapid whole-genome result. I documented this decision in my service note, though the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Morris, I noted that Dr. Shah's response didn't come through clearly. I'll hold for my turn in the utilization management slot, but I want to flag now that I do have payer authorization information for Case Alder ready to confirm when you call on me. I'll wait for the huddle to proceed in order.",
+            "speaker": "A5",
+            "turn": 8,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Dr. Morris, I noted that Dr. Shah's response didn't come through clearly. I'll hold for my turn in the utilization management slot, but I want to flag now that I do have payer authorization information for Case Alder ready to confirm when you call on me. I'll wait for the huddle to proceed in order.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Morris, I noted that Dr. Shah's confirmation didn't come through clearly. Since the huddle proceeds in order and genetics is called first, I'll hold for my turn in the genetic counseling slot. When you call on me, I'm ready to provide my direct consent scope confirmation for Case Alder with the exact report-scope field value as required for the final report.",
+            "speaker": "A4",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Dr. Morris, I noted that Dr. Shah's confirmation didn't come through clearly. Since the huddle proceeds in order and genetics is called first, I'll hold for my turn in the genetic counseling slot. When you call on me, I'm ready to provide my direct consent scope confirmation for Case Alder with the exact report-scope field value as required for the final report.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Morris, I'm still holding for my turn in the genetic counseling slot. Since Dr. Shah's confirmation didn't come through clearly, we may need him to re-state his clinical actionability confirmation for Case Alder before the huddle can proceed in order. I'm ready whenever you call on me, but I'll wait for the proper sequence.",
+            "speaker": "A4",
+            "turn": 10,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Dr. Morris, I'm still holding for my turn in the genetic counseling slot. Since Dr. Shah's confirmation didn't come through clearly, we may need him to re-state his clinical actionability confirmation for Case Alder before the huddle can proceed in order. I'm ready whenever you call on me, but I'll wait for the proper sequence.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Morris, I apologize for the unclear response. Let me re-state my direct confirmation for the clinical actionability of Case Alder. Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.",
+            "speaker": "A2",
+            "turn": 11,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Dr. Morris, I apologize for the unclear response. Let me re-state my direct confirmation for the clinical actionability of Case Alder. Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. This is my direct confirmation for the clinical-actionability requirement for Case Alder.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "Dr. Morris, for the utilization management confirmation: The payer approved rapid whole-genome sequencing for Case Alder under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.",
+            "speaker": "A5",
+            "turn": 12,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"Dr. Morris, for the utilization management confirmation: The payer approved rapid whole-genome sequencing for Case Alder under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah, for re-stating your clinical actionability confirmation for Case Alder. I've recorded it in the checklist. Now, following the routine huddle order, the next slot is laboratory operations. Mei, you've already provided the specimen details for Case Alder \u2014 3.2 mL of viable blood meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction \u2014 so I'll mark the laboratory operations confirmation as recorded. Next is genetic counseling. Carlos, please go ahead and provide your direct consent scope confirmation for Case Alder, stating the approved report-scope field value exactly as it should appear in the final report.",
+            "speaker": "A1",
+            "turn": 13,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah, for re-stating your clinical actionability confirmation for Case Alder. I've recorded it in the checklist. Now, following the routine huddle order, the next slot is laboratory operations. Mei, you've already provided the specimen details for Case Alder \u2014 3.2 mL of viable blood meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction \u2014 so I'll mark the laboratory operations confirmation as recorded. Next is genetic counseling. Carlos, please go ahead and provide your direct consent scope confirmation for Case Alder, stating the approved report-scope field value exactly as it should appear in the final report.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris, for marking the laboratory operations confirmation as recorded. The specimen details for Case Alder are confirmed: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. I'll stand by in case any further laboratory operations clarification is needed as the huddle continues.",
+            "speaker": "A3",
+            "turn": 14,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Dr. Morris, for marking the laboratory operations confirmation as recorded. The specimen details for Case Alder are confirmed: 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. I'll stand by in case any further laboratory operations clarification is needed as the huddle continues.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings. I completed the consent review this afternoon. This is my direct consent scope confirmation for Case Alder, and the approved report-scope field value to be entered in the final report is: primary_and_secondary_findings.",
+            "speaker": "A4",
+            "turn": 15,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings. I completed the consent review this afternoon. This is my direct consent scope confirmation for Case Alder, and the approved report-scope field value to be entered in the final report is: primary_and_secondary_findings.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris, for recording my clinical actionability confirmation. With all four requirements now addressed in the huddle \u2014 clinical actionability from genetics, specimen adequacy from laboratory operations, consent scope from genetic counseling, and payer authorization from utilization management \u2014 Case Alder satisfies the clinical-actionability, specimen-adequacy, consent-scope, and payer-authorization requirements for the overnight rapid whole-genome sequencing run. I'd note that the final report should identify Case Alder as the selected case, the assay as rapid whole-genome sequencing, the specimen amount as 3.2 mL of viable blood with standard EDTA extraction protocol, the consent scope as primary_and_secondary_findings, and the authorization status as approved under code UM-4821.",
+            "speaker": "A2",
+            "turn": 16,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Dr. Morris, for recording my clinical actionability confirmation. With all four requirements now addressed in the huddle \u2014 clinical actionability from genetics, specimen adequacy from laboratory operations, consent scope from genetic counseling, and payer authorization from utilization management \u2014 Case Alder satisfies the clinical-actionability, specimen-adequacy, consent-scope, and payer-authorization requirements for the overnight rapid whole-genome sequencing run. I'd note that the final report should identify Case Alder as the selected case, the assay as rapid whole-genome sequencing, the specimen amount as 3.2 mL of viable blood with standard EDTA extraction protocol, the consent scope as primary_and_secondary_findings, and the authorization status as approved under code UM-4821.\"}"
+          },
+          {
+            "type": " ",
+            "speaker": "A3",
+            "turn": 17,
+            "raw_output": "{\"type\":\" \"}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.559,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 18,
+        "revealed_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": false,
+          "P2": false,
+          "P3": false,
+          "P4": false
+        },
+        "settlement": {
+          "decisions": {
+            "selected_case": "Alder",
+            "assay": "rapid whole-genome sequencing",
+            "specimen_volume_ml": 3.2,
+            "specimen_handling": "standard EDTA extraction protocol",
+            "consent_scope": "primary_and_secondary_findings",
+            "authorization_status": "approved",
+            "authorization_code": "UM-4821"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "administrative_entry",
+              "target": "Nadia Brooks",
+              "detail": "Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4",
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6"
+          ],
+          "revealed": [
+            {
+              "fact_id": "PF1",
+              "speaker": "Dr. Ravi Shah"
+            },
+            {
+              "fact_id": "PF2",
+              "speaker": "Mei Chen"
+            },
+            {
+              "fact_id": "PF3",
+              "speaker": "Carlos Rivera"
+            },
+            {
+              "fact_id": "PF4",
+              "speaker": "Nadia Brooks"
+            }
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "administrative_entry",
+            "target": "Nadia Brooks",
+            "detail": "Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S6"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I'm Dr. Ravi Shah, clinical genetics. Before we go through the huddle, I want to flag that I have clinical-actionability information relevant to one of these cases that I believe the laboratory may not yet have received through the normal documentation queue. I'd like to share that with the group now so it's on record for our decision-making.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. I'm Dr. Ravi Shah, clinical genetics. Before we go through the huddle, I want to flag that I have clinical-actionability information relevant to one of these cases that I believe the laboratory may not yet have received through the normal documentation queue. I'd like to share that with the group now so it's on record for our decision-making.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Dr. Shah. Thank you for flagging that. As the molecular laboratory scientist, I have specimen-adequacy information for one of the cases that I verified at accession. I'm ready to share that when we reach the laboratory operations portion of the huddle. Please go ahead with your clinical-actionability information whenever Dr. Morris calls on genetics.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, Dr. Shah. Thank you for flagging that. As the molecular laboratory scientist, I have specimen-adequacy information for one of the cases that I verified at accession. I'm ready to share that when we reach the laboratory operations portion of the huddle. Please go ahead with your clinical-actionability information whenever Dr. Morris calls on genetics.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I'm Nadia Brooks, utilization management. I have payer-authorization information for one of the cases that I'm ready to share when Dr. Morris reaches the utilization management portion of the huddle. I'll hold until called on, per the routine process.",
+            "speaker": "A5",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. I'm Nadia Brooks, utilization management. I have payer-authorization information for one of the cases that I'm ready to share when Dr. Morris reaches the utilization management portion of the huddle. I'll hold until called on, per the routine process.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Thank you for being ready. Let's proceed through the routine multidisciplinary huddle in our standard order. Dr. Shah, as clinical genetics, please go ahead and share your clinical-actionability information for the record.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. Thank you for being ready. Let's proceed through the routine multidisciplinary huddle in our standard order. Dr. Shah, as clinical genetics, please go ahead and share your clinical-actionability information for the record.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I'm Carlos Rivera, genetic counseling. I have consent-scope information for one of the cases that I'm ready to share when Dr. Morris reaches the genetic counseling portion of the huddle. I'll hold until called on, per the routine process.",
+            "speaker": "A4",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. I'm Carlos Rivera, genetic counseling. I have consent-scope information for one of the cases that I'm ready to share when Dr. Morris reaches the genetic counseling portion of the huddle. I'll hold until called on, per the routine process.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah. Please go ahead and share your clinical-actionability information for the record.",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Dr. Shah. Please go ahead and share your clinical-actionability information for the record.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'll continue to hold my payer-authorization information until you reach the utilization management portion of the huddle, per our routine process.",
+            "speaker": "A5",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'll continue to hold my payer-authorization information until you reach the utilization management portion of the huddle, per our routine process.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'm ready to share my specimen-adequacy information when you reach the laboratory operations portion of the huddle. I'll hold until called on, per our routine process.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'm ready to share my specimen-adequacy information when you reach the laboratory operations portion of the huddle. I'll hold until called on, per our routine process.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'm Carlos Rivera, genetic counseling, and I'm holding my consent-scope information until you reach the genetic counseling portion of the huddle, per our routine process.",
+            "speaker": "A4",
+            "turn": 8,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'm Carlos Rivera, genetic counseling, and I'm holding my consent-scope information until you reach the genetic counseling portion of the huddle, per our routine process.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. I'm disclosing this now so the group has the clinical-actionability information on record for our decision-making.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue. I'm disclosing this now so the group has the clinical-actionability information on record for our decision-making.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "For the laboratory operations portion, I can confirm that Case Alder's received specimen contains exactly 3.2 mL of viable blood, which meets our laboratory's 3.0 mL minimum requirement. Additionally, Case Alder's specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.",
+            "speaker": "A3",
+            "turn": 10,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"For the laboratory operations portion, I can confirm that Case Alder's received specimen contains exactly 3.2 mL of viable blood, which meets our laboratory's 3.0 mL minimum requirement. Additionally, Case Alder's specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah, for the clinical-actionability information on Case Alder, and thank you, Mei, for the specimen-adequacy confirmation. I've recorded both. We still need to complete the genetic counseling and utilization management portions of the huddle before I can finalize. Carlos, as genetic counseling, please go ahead and share your consent-scope information for the record.",
+            "speaker": "A1",
+            "turn": 11,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah, for the clinical-actionability information on Case Alder, and thank you, Mei, for the specimen-adequacy confirmation. I've recorded both. We still need to complete the genetic counseling and utilization management portions of the huddle before I can finalize. Carlos, as genetic counseling, please go ahead and share your consent-scope information for the record.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "For Case Alder, the patient signed consent for both primary findings and secondary findings, so the approved report-scope field value must be recorded exactly as primary_and_secondary_findings. I completed the consent review this afternoon.",
+            "speaker": "A4",
+            "turn": 12,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"For Case Alder, the patient signed consent for both primary findings and secondary findings, so the approved report-scope field value must be recorded exactly as primary_and_secondary_findings. I completed the consent review this afternoon.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "For Case Alder, the payer approved rapid whole-genome sequencing under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.",
+            "speaker": "A5",
+            "turn": 13,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"For Case Alder, the payer approved rapid whole-genome sequencing under authorization code UM-4821, with the authorization status recorded as approved. I received the approval notice but have not yet entered it in the laboratory authorization screen.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Carlos and Nadia. To summarize for the record: Case Alder now has all four requirements confirmed in this huddle \u2014 clinical actionability (medication-selection decision, designated priority), specimen adequacy (3.2 mL viable blood, meets 3.0 mL minimum, standard EDTA extraction protocol), consent scope (primary_and_secondary_findings), and payer authorization (code UM-4821, status approved). Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been directly confirmed by each specialist during this huddle, and I'd support finalizing Alder for the overnight run if you're satisfied the checklist is complete.",
+            "speaker": "A2",
+            "turn": 14,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Carlos and Nadia. To summarize for the record: Case Alder now has all four requirements confirmed in this huddle \u2014 clinical actionability (medication-selection decision, designated priority), specimen adequacy (3.2 mL viable blood, meets 3.0 mL minimum, standard EDTA extraction protocol), consent scope (primary_and_secondary_findings), and payer authorization (code UM-4821, status approved). Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been directly confirmed by each specialist during this huddle, and I'd support finalizing Alder for the overnight run if you're satisfied the checklist is complete.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah. To confirm from the utilization management standpoint: Case Alder has payer authorization confirmed during this huddle \u2014 authorization code UM-4821, status approved. I did note that I received the approval notice but have not yet entered it in the laboratory authorization screen, so I will need to complete that entry before the run is released. Dr. Morris, from my portion, the payer-authorization requirement for Case Alder is satisfied, and I support finalizing Alder for the overnight run once that screen entry is completed.",
+            "speaker": "A5",
+            "turn": 15,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah. To confirm from the utilization management standpoint: Case Alder has payer authorization confirmed during this huddle \u2014 authorization code UM-4821, status approved. I did note that I received the approval notice but have not yet entered it in the laboratory authorization screen, so I will need to complete that entry before the run is released. Dr. Morris, from my portion, the payer-authorization requirement for Case Alder is satisfied, and I support finalizing Alder for the overnight run once that screen entry is completed.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Nadia. I note that the authorization screen entry still needs to be completed before the run is released, but the payer-authorization requirement itself has been directly confirmed in this huddle. Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been confirmed \u2014 clinical actionability, specimen adequacy, consent scope, and payer authorization \u2014 and I support finalizing Alder for the overnight run once that administrative entry is completed.",
+            "speaker": "A2",
+            "turn": 16,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Nadia. I note that the authorization screen entry still needs to be completed before the run is released, but the payer-authorization requirement itself has been directly confirmed in this huddle. Dr. Morris, from the clinical genetics standpoint, all four requirements for Case Alder have been confirmed \u2014 clinical actionability, specimen adequacy, consent scope, and payer authorization \u2014 and I support finalizing Alder for the overnight run once that administrative entry is completed.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "selected_case": "Alder",
+                "assay": "rapid whole-genome sequencing",
+                "specimen_volume_ml": 3.2,
+                "specimen_handling": "standard EDTA extraction protocol",
+                "consent_scope": "primary_and_secondary_findings",
+                "authorization_status": "approved",
+                "authorization_code": "UM-4821"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "administrative_entry",
+                  "target": "Nadia Brooks",
+                  "detail": "Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "S6"
+              ],
+              "revealed": [
+                {
+                  "fact_id": "PF1",
+                  "speaker": "Dr. Ravi Shah"
+                },
+                {
+                  "fact_id": "PF2",
+                  "speaker": "Mei Chen"
+                },
+                {
+                  "fact_id": "PF3",
+                  "speaker": "Carlos Rivera"
+                },
+                {
+                  "fact_id": "PF4",
+                  "speaker": "Nadia Brooks"
+                }
+              ]
+            },
+            "speaker": "A1",
+            "turn": 17,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"selected_case\": \"Alder\",\n      \"assay\": \"rapid whole-genome sequencing\",\n      \"specimen_volume_ml\": 3.2,\n      \"specimen_handling\": \"standard EDTA extraction protocol\",\n      \"consent_scope\": \"primary_and_secondary_findings\",\n      \"authorization_status\": \"approved\",\n      \"authorization_code\": \"UM-4821\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"administrative_entry\",\n        \"target\": \"Nadia Brooks\",\n        \"detail\": \"Nadia Brooks must complete the payer-authorization screen entry (code UM-4821, status approved) in the laboratory authorization screen before the overnight run is released.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"S6\"\n    ],\n    \"revealed\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"speaker\": \"Dr. Ravi Shah\"\n      },\n      {\n        \"fact_id\": \"PF2\",\n        \"speaker\": \"Mei Chen\"\n      },\n      {\n        \"fact_id\": \"PF3\",\n        \"speaker\": \"Carlos Rivera\"\n      },\n      {\n        \"fact_id\": \"PF4\",\n        \"speaker\": \"Nadia Brooks\"\n      }\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.599,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 18,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Dr. Ravi Shah here, clinical genetics. Before we begin the huddle, I want to flag that I have clinically actionable information regarding one of the three cases that I believe is relevant to today's decision about the overnight rapid whole-genome sequencing run. I'd like to share that with the group.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. Dr. Ravi Shah here, clinical genetics. Before we begin the huddle, I want to flag that I have clinically actionable information regarding one of the three cases that I believe is relevant to today's decision about the overnight rapid whole-genome sequencing run. I'd like to share that with the group.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Dr. Shah. This is Carlos Rivera, genetic counseling. I'm ready for the huddle whenever Dr. Morris calls on genetics. I also have consent-scope information for one of the three cases that I'll need to formally disclose when it's my turn. Please go ahead.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Dr. Shah. This is Carlos Rivera, genetic counseling. I'm ready for the huddle whenever Dr. Morris calls on genetics. I also have consent-scope information for one of the three cases that I'll need to formally disclose when it's my turn. Please go ahead.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Mei Chen here, molecular laboratory scientist. I have specimen-adequacy information for one of the three cases that I'll need to formally disclose when Dr. Morris calls on laboratory operations during the huddle. Dr. Shah, please go ahead with your clinical information.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. Mei Chen here, molecular laboratory scientist. I have specimen-adequacy information for one of the three cases that I'll need to formally disclose when Dr. Morris calls on laboratory operations during the huddle. Dr. Shah, please go ahead with your clinical information.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Nadia Brooks here, utilization management. I'm ready for the huddle whenever Dr. Morris calls on utilization management. I have payer-authorization information for one of the three cases that I'll need to formally disclose when it's my turn.",
+            "speaker": "A5",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. Nadia Brooks here, utilization management. I'm ready for the huddle whenever Dr. Morris calls on utilization management. I have payer-authorization information for one of the three cases that I'll need to formally disclose when it's my turn.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Dr. Lena Morris here, Molecular Diagnostics Director. Thank you all for being ready. I'll now conduct the routine multidisciplinary huddle as per our policy. I'll call on each of you one at a time: genetics, laboratory operations, genetic counseling, and then utilization management. Please wait until I call on your discipline before disclosing your information. Dr. Ravi Shah, please go ahead with the clinical genetics information for the huddle.",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Good morning, everyone. Dr. Lena Morris here, Molecular Diagnostics Director. Thank you all for being ready. I'll now conduct the routine multidisciplinary huddle as per our policy. I'll call on each of you one at a time: genetics, laboratory operations, genetic counseling, and then utilization management. Please wait until I call on your discipline before disclosing your information. Dr. Ravi Shah, please go ahead with the clinical genetics information for the huddle.\"\n}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A4",
+            "turn": 6,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thank you, Dr. Shah. I've noted the clinical-actionability information for Case Alder. I'll wait for Dr. Morris to call on genetic counseling before I formally disclose my consent-scope information.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah. I'll wait until Dr. Morris calls on utilization management to formally disclose my payer-authorization information.",
+            "speaker": "A5",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah. I'll wait until Dr. Morris calls on utilization management to formally disclose my payer-authorization information.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 8,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder. I'll wait until Dr. Morris calls on laboratory operations to formally disclose my specimen-adequacy information.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder's clinical actionability. I've recorded that in the checklist. I note that two of the previous messages were unparsable, so I'll proceed carefully. Next, I'd like to call on laboratory operations. Mei Chen, please go ahead with your specimen-adequacy information for the huddle.",
+            "speaker": "A1",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah, for that clinical genetics information regarding Case Alder's clinical actionability. I've recorded that in the checklist. I note that two of the previous messages were unparsable, so I'll proceed carefully. Next, I'd like to call on laboratory operations. Mei Chen, please go ahead with your specimen-adequacy information for the huddle.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'll wait until you call on genetic counseling to formally disclose my consent-scope information, as per the huddle order.",
+            "speaker": "A4",
+            "turn": 10,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'll wait until you call on genetic counseling to formally disclose my consent-scope information, as per the huddle order.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.",
+            "speaker": "A5",
+            "turn": 11,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris, for recording the clinical genetics information. I've completed my disclosure for the genetics portion of the huddle. I'll remain available if any further clinical genetics input is needed as the review proceeds.",
+            "speaker": "A2",
+            "turn": 12,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris, for recording the clinical genetics information. I've completed my disclosure for the genetics portion of the huddle. I'll remain available if any further clinical genetics input is needed as the review proceeds.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei Chen, in advance for your specimen-adequacy information. I notice your previous message was unparsable, so please go ahead and disclose your specimen-adequacy information now for the huddle. I'm ready to record the exact values in the checklist.",
+            "speaker": "A1",
+            "turn": 13,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Mei Chen, in advance for your specimen-adequacy information. I notice your previous message was unparsable, so please go ahead and disclose your specimen-adequacy information now for the huddle. I'm ready to record the exact values in the checklist.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.",
+            "speaker": "A3",
+            "turn": 14,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Case Alder's received specimen contains exactly 3.2 mL of viable blood, meeting the laboratory's 3.0 mL minimum, and it must be processed with the standard EDTA extraction protocol. I verified both details at accession.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.",
+            "speaker": "A5",
+            "turn": 15,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'll wait until you call on utilization management to formally disclose my payer-authorization information, as per the huddle order.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei Chen, for that specimen-adequacy information regarding Case Alder. I've recorded in the checklist: specimen volume 3.2 mL, handling instruction standard EDTA extraction protocol. Next, I'll call on genetic counseling. Carlos Rivera, please go ahead with your consent-scope information for the huddle. Per our policy, please state the approved report-scope field value exactly as it should appear in the final report.",
+            "speaker": "A1",
+            "turn": 16,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Mei Chen, for that specimen-adequacy information regarding Case Alder. I've recorded in the checklist: specimen volume 3.2 mL, handling instruction standard EDTA extraction protocol. Next, I'll call on genetic counseling. Carlos Rivera, please go ahead with your consent-scope information for the huddle. Per our policy, please state the approved report-scope field value exactly as it should appear in the final report.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'll defer to Carlos Rivera for the genetic counseling disclosure, as that's his discipline's turn now. I have no further clinical genetics information to add at this time.",
+            "speaker": "A2",
+            "turn": 17,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Dr. Morris. I'll defer to Carlos Rivera for the genetic counseling disclosure, as that's his discipline's turn now. I have no further clinical genetics information to add at this time.\"}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.546,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 18,
+        "revealed_facts": [
+          "PF1",
+          "PF3",
+          "PF2"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I've completed my specimen adequacy review for Case Alder and can share those findings when Dr. Morris begins the huddle. I'm ready to go through the checklist whenever the team is assembled.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hello everyone. I'm Mei Chen, the Molecular Laboratory Scientist. I've completed my specimen adequacy review for Case Alder and can share those findings when Dr. Morris begins the huddle. I'm ready to go through the checklist whenever the team is assembled.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Hello Mei. I'm Carlos Rivera, the Genetic Counselor. I've completed the consent scope review for Case Alder this afternoon and have the approved report-scope field value ready to confirm when Dr. Morris calls on genetics during the huddle.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hello Mei. I'm Carlos Rivera, the Genetic Counselor. I've completed the consent scope review for Case Alder this afternoon and have the approved report-scope field value ready to confirm when Dr. Morris calls on genetics during the huddle.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Case Alder has a medication-selection decision that depends on a rapid whole-genome result, so the clinical team has designated Alder as the clinically actionable priority for this overnight run. I documented this decision in my service note, but the note has not yet reached the laboratory queue.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good afternoon, everyone. Thank you for being ready. Let's begin the routine multidisciplinary huddle for the overnight rapid whole-genome sequencing run. We have three cases \u2014 Alder, Birch, and Cedar \u2014 and one overnight slot available. I'll go through the checklist one specialist at a time, starting with clinical actionability. Dr. Shah, I understand you have information regarding Case Alder's clinical actionability. Could you please confirm the clinical-actionability status for the record?",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good afternoon, everyone. Thank you for being ready. Let's begin the routine multidisciplinary huddle for the overnight rapid whole-genome sequencing run. We have three cases \u2014 Alder, Birch, and Cedar \u2014 and one overnight slot available. I'll go through the checklist one specialist at a time, starting with clinical actionability. Dr. Shah, I understand you have information regarding Case Alder's clinical actionability. Could you please confirm the clinical-actionability status for the record?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Hello, Dr. Morris and everyone. This is Nadia Brooks, Utilization Management Specialist. I'm standing by for when you reach the payer-authorization step in the checklist. I have information regarding Case Alder's authorization status that I'll be ready to confirm at that point.",
+            "speaker": "A5",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Hello, Dr. Morris and everyone. This is Nadia Brooks, Utilization Management Specialist. I'm standing by for when you reach the payer-authorization step in the checklist. I have information regarding Case Alder's authorization status that I'll be ready to confirm at that point.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings; I completed the consent review this afternoon.",
+            "speaker": "A4",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"The patient for Case Alder signed consent for both primary findings and secondary findings, so the report scope must be recorded as primary_and_secondary_findings; I completed the consent review this afternoon.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'm ready whenever you reach the payer-authorization step in the checklist.",
+            "speaker": "A5",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'm ready whenever you reach the payer-authorization step in the checklist.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Shah, for that information regarding Case Alder's clinical actionability. I note that you've documented the medication-selection decision and Alder's designation as the clinically actionable priority in your service note. For the checklist, I'm recording the clinical-actionability status for Case Alder as confirmed: clinically actionable priority due to a medication-selection decision dependent on a rapid whole-genome result. Now, moving to the next item on the checklist \u2014 specimen adequacy. Mei Chen, you mentioned you've completed the specimen adequacy review for Case Alder. Could you please confirm the specimen amount and handling instruction for the record?",
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Shah, for that information regarding Case Alder's clinical actionability. I note that you've documented the medication-selection decision and Alder's designation as the clinically actionable priority in your service note. For the checklist, I'm recording the clinical-actionability status for Case Alder as confirmed: clinically actionable priority due to a medication-selection decision dependent on a rapid whole-genome result. Now, moving to the next item on the checklist \u2014 specimen adequacy. Mei Chen, you mentioned you've completed the specimen adequacy review for Case Alder. Could you please confirm the specimen amount and handling instruction for the record?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I've confirmed Alder's clinical-actionability status for the checklist. I'll defer to Mei Chen for the specimen-adequacy findings, as that's outside my area. Mei, please go ahead with the specimen amount and handling instruction for Case Alder.",
+            "speaker": "A2",
+            "turn": 8,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I've confirmed Alder's clinical-actionability status for the checklist. I'll defer to Mei Chen for the specimen-adequacy findings, as that's outside my area. Mei, please go ahead with the specimen amount and handling instruction for Case Alder.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "For Case Alder, the received specimen contains exactly 3.2 mL of viable blood, which meets the laboratory's 3.0 mL minimum. The specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.",
+            "speaker": "A3",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"For Case Alder, the received specimen contains exactly 3.2 mL of viable blood, which meets the laboratory's 3.0 mL minimum. The specimen must be processed with the standard EDTA extraction protocol. I verified both details at accession.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei. The specimen adequacy for Case Alder is now confirmed on the checklist. Dr. Morris, we now have clinical actionability and specimen adequacy confirmed for Case Alder. The next items remaining are consent scope and payer authorization. Carlos has already indicated he has the consent scope ready, and Nadia is standing by for the payer-authorization step. Please proceed with the next checklist item.",
+            "speaker": "A2",
+            "turn": 10,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Mei. The specimen adequacy for Case Alder is now confirmed on the checklist. Dr. Morris, we now have clinical actionability and specimen adequacy confirmed for Case Alder. The next items remaining are consent scope and payer authorization. Carlos has already indicated he has the consent scope ready, and Nadia is standing by for the payer-authorization step. Please proceed with the next checklist item.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 11,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thank you, Dr. Shah. To confirm for the record: Case Alder's specimen adequacy is verified \u2014 3.2 mL of viable blood, meeting the 3.0 mL minimum, with standard EDTA extraction protocol as the handling instruction. Both details were confirmed at accession. I'm now standing by as Dr. Morris continues through the remaining checklist items.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Dr. Morris, I'm ready to formally confirm the consent scope for Case Alder whenever you call on genetics as the next step in the checklist. As I've already noted, the approved report-scope field value for the final report is primary_and_secondary_findings, based on the consent review I completed this afternoon.",
+            "speaker": "A4",
+            "turn": 12,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Dr. Morris, I'm ready to formally confirm the consent scope for Case Alder whenever you call on genetics as the next step in the checklist. As I've already noted, the approved report-scope field value for the final report is primary_and_secondary_findings, based on the consent review I completed this afternoon.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Carlos. I'm still standing by for when Dr. Morris reaches the payer-authorization step in the checklist. I have the authorization information for Case Alder ready to confirm at that point.",
+            "speaker": "A5",
+            "turn": 13,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Carlos. I'm still standing by for when Dr. Morris reaches the payer-authorization step in the checklist. I have the authorization information for Case Alder ready to confirm at that point.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mei, for confirming the specimen adequacy for Case Alder. I'm recording on the checklist: specimen amount 3.2 mL of viable blood, handling instruction standard EDTA extraction protocol. Now, moving to the next item \u2014 consent scope. Carlos, as the genetic counselor, could you please provide your formal confirmation of the approved report-scope field value for Case Alder for the record?",
+            "speaker": "A1",
+            "turn": 14,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Mei, for confirming the specimen adequacy for Case Alder. I'm recording on the checklist: specimen amount 3.2 mL of viable blood, handling instruction standard EDTA extraction protocol. Now, moving to the next item \u2014 consent scope. Carlos, as the genetic counselor, could you please provide your formal confirmation of the approved report-scope field value for Case Alder for the record?\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I'm continuing to stand by for the payer-authorization step. Once Carlos has formally confirmed the consent scope and you move to that next checklist item, I'll be ready to provide the authorization information for Case Alder.",
+            "speaker": "A5",
+            "turn": 15,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I'm continuing to stand by for the payer-authorization step. Once Carlos has formally confirmed the consent scope and you move to that next checklist item, I'll be ready to provide the authorization information for Case Alder.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris, for recording the specimen adequacy details on the checklist. I've noted that both the specimen amount and handling instruction are now captured. I'll remain available for any further specimen-related questions as the huddle continues through the consent scope and payer authorization steps.",
+            "speaker": "A3",
+            "turn": 16,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris, for recording the specimen adequacy details on the checklist. I've noted that both the specimen amount and handling instruction are now captured. I'll remain available for any further specimen-related questions as the huddle continues through the consent scope and payer authorization steps.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morris. I am now formally confirming the consent scope for Case Alder for the checklist record. The patient for Case Alder signed consent for both primary findings and secondary findings. The approved report-scope field value to be recorded in the final report is primary_and_secondary_findings. I completed the consent review this afternoon, and this is my formal confirmation for the genetics step of the huddle.",
+            "speaker": "A4",
+            "turn": 17,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morris. I am now formally confirming the consent scope for Case Alder for the checklist record. The patient for Case Alder signed consent for both primary findings and secondary findings. The approved report-scope field value to be recorded in the final report is primary_and_secondary_findings. I completed the consent review this afternoon, and this is my formal confirmation for the genetics step of the huddle.\"}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. Turn cap: Increase turn_cap from 18 to 24. All three auto-failed rollouts were on track to settle but ran out of turns at 18; the worst case (rollout 2) had only 2 of 4 facts revealed by turn 14 and needed ~8 more turns to finish the remaining two specialists plus the settle. A cap of 24 gives the 4-turn-per-specialist sequential protocol enough room to complete in all observed cases. This is a pacing fix, not a structural one \u2014 the settle-eligibility condition itself is achievable.\n\n2. Provenance checks P1, P2, P3, P4 (all linked to PF1, PF2, P3=PF3, P4=PF4 respectively): These are ENCODING MISMATCH failures. The settled rollout 1 correctly placed all four fact_ids in justification_fact_ids and also included a 'revealed' array with {fact_id, speaker} pairs \u2014 but the provenance checks did not match. Fix the provenance checks to accept the 'revealed' array format the model naturally produces (array of objects with fact_id and speaker fields) as valid provenance evidence, alongside any existing justification_fact_ids check. If the checks currently look for a specific field name like 'revealed_by' or 'provenance' or expect the speaker to be the agent ID (e.g., 'A2') rather than the human name (e.g., 'Dr. Ravi Shah'), update them to also accept the 'revealed' array with human-name speakers and/or add the agent-ID-to-human-name mapping. If the checks instead verify that the fact_id appears in justification_fact_ids AND the corresponding decision field has the correct value (which it does), then the issue may be that the check requires an exact field or path that doesn't exist in the settlement \u2014 in that case, loosen the check to accept justification_fact_ids inclusion plus the content check passing for the same fact. Do NOT loosen these checks to the point where a lone decision-maker without the fact could pass \u2014 the content checks (C1-C5) already verify the exact values, so provenance only needs to verify the fact was cited, which justification_fact_ids already does. Risk of LEAKED regression: low, since the content checks independently gate the exact values and would still fail without the fact being known.\n\n3. Content check C6 (linked to PF1): REVEALED BUT UNUSED for the commitment. PF1 states 'the note has not yet reached the laboratory queue' and PF1's why specifies 'requires a commitment to move the clinical-actionability service note into the laboratory queue.' The settlement in rollout 1 included a commitment for Nadia Brooks (PF4-related) but no commitment for moving the service note to the lab queue. Fix: either (a) update shared_context to explicitly instruct A1 that if any specialist discloses an item that 'has not yet reached' a queue or screen, the settlement MUST include a commitment for that specialist to complete the pending entry \u2014 naming the exact action and target \u2014 or (b) loosen C6 to also accept the existing commitment as sufficient if the check's requirement is that ANY commitment exists (but the current commitment is about the authorization screen, not the lab queue, so loosening alone won't help). The preferred fix is (a): add a shared_context sentence like: 'If a specialist discloses that a document or entry has not yet reached its required queue or screen, the settlement must include a commitment for that specialist to complete that pending action before the run is released.' This ensures the service-note-to-lab-queue commitment from PF1 and the authorization-screen-entry commitment from PF4 are both captured. No LEAKED regression risk since this only enforces that disclosed pending actions become commitments \u2014 it doesn't make any content value guessable without the fact."
+}

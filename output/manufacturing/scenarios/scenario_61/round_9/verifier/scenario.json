@@ -1,0 +1,169 @@
+{
+  "scenario_id": "scenario_61",
+  "scenario_type": "shared_machine_campaign_scheduling",
+  "description": "An operations director must finalize the production sequence and control plan for two customer orders sharing a laser-cutting cell, with input from quality, maintenance, and logistics.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Marta",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonas",
+      "role": "Logistics Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "Laser Cell 5 is the only available cell for the released campaign of Order K, containing 320 aluminum brackets, and Order L, containing 180 stainless enclosures.",
+    "S2": "Both customer orders are released for production, and the campaign sequence must be frozen before the next shift begins.",
+    "S3": "Changing material families on Laser Cell 5 creates setup loss, so the normal planning preference is to run one material family completely before changing to the other.",
+    "S4": "During the daily campaign-freeze meeting, Elena routinely takes one report from quality, one from maintenance, and one from logistics before signing the final production plan.",
+    "S5": "The campaign-freeze checklist requires the team to record known customer, equipment, and shipping constraints; it does not require an additional inspection-turnaround estimate when the released customer file does not provide one."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The customer control plan for Order L requires dimensional scanning of exactly the first 30 stainless enclosures before the remaining units can be released; Ravi confirmed this in the current customer quality file, but the requirement has not yet been added to the internal routing."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The assist-gas regulator on Laser Cell 5 is outside its stable range for the stainless-steel thickness used by Order L; Marta's maintenance check found that replacing it before the stainless run will take exactly 2 hours, but she has not yet opened the maintenance work order."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The carrier for Order L confirmed a Friday 11:00 pickup and requires all 180 enclosures staged by exactly Friday 10:00; Jonas received the confirmation by email this morning, but the appointment has not yet been entered in the shipping board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "order_sequence": "string_or_list",
+      "maintenance_downtime_hours": "integer",
+      "dimensional_scan_required": "boolean",
+      "dimensional_scan_units": "integer",
+      "order_l_staged_units": "integer",
+      "order_l_staged_by": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The final plan must use a complete material-family sequence for the two orders.",
+    "The assist-gas regulator must be replaced before the stainless run, with exactly 2 hours of downtime.",
+    "Exactly 30 units of Order L must receive dimensional scanning before the remaining units are released.",
+    "Dimensional scanning must be explicitly required in the final plan.",
+    "All 180 units of Order L must be staged by exactly Friday 10:00.",
+    "The final plan must contain commitments for the regulator replacement, dimensional scanning, and carrier staging.",
+    "Ravi's customer quality-file finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['order_l_staged_units'] == 180 and decisions['order_l_staged_by'] == 'Friday 10:00'",
+    "C2": "decisions['maintenance_downtime_hours'] == 2 and any(c['type'] == 'maintenance' and c['target'] == 'Laser Cell 5' and c['detail'] == 'Replace assist-gas regulator before the Order L stainless run; 2 hours of downtime' for c in commitments)",
+    "C3": "decisions['dimensional_scan_required'] == True",
+    "C4": "decisions['dimensional_scan_units'] == 30",
+    "C5": "any(c['type'] == 'shipping' and c['target'] == 'Order L' and c['detail'] == '180 units staged by Friday 10:00' for c in commitments)",
+    "C6": "'PF1' in justification_fact_ids and 'PF2' in justification_fact_ids and 'PF3' in justification_fact_ids and any(c['type'] in ['maintenance', 'maintenance_action', 'maintenance_work_order'] for c in commitments) and any(c['type'] in ['quality', 'quality_action', 'routing_update', 'quality_routing_update', 'inspection_capacity'] for c in commitments) and any(c['type'] in ['logistics', 'logistics_action', 'shipping', 'shipping_board_entry', 'shipping_appointment'] for c in commitments)",
+    "C7": "decisions['order_sequence'] == ['Order K', 'Order L']"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "The customer quality file changes the inspection plan from ordinary sampling to mandatory dimensional scanning of exactly 30 Order L units before release."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C6"
+      ],
+      "why": "The maintenance finding changes the stainless-run plan from no specified outage to an exact 2-hour regulator replacement before the Order L stainless run and a matching maintenance commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C5",
+        "C6"
+      ],
+      "why": "The carrier confirmation changes the shipping plan from no recorded deadline to staging exactly 180 Order L enclosures by Friday 10:00, and requires the logistics commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

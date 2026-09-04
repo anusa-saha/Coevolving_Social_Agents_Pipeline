@@ -1,0 +1,144 @@
+{
+  "scenario_id": "scenario_75",
+  "scenario_type": "weekend_staffing_and_production_authorization",
+  "description": "An operations director must decide whether to authorize a limited Sunday run on an electronics assembly line and finalize the production quantity, inspection method, and qualified staffing plan, with input from quality engineering and shift supervision.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Monica",
+      "role": "Shift Supervisor"
+    }
+  ],
+  "shared_context": {
+    "S1": "Line 8 is available for a Sunday electronics-assembly run, and the production board currently shows a provisional run of up to 900 units.",
+    "S2": "Elena makes the binding decision on whether the Sunday run proceeds and what controls accompany it.",
+    "S3": "Sunday runs normally use an eight-hour shift, and the line's standard work instructions are otherwise current.",
+    "S4": "As part of the normal pre-shift authorization routine, Elena checks with quality engineering and shift supervision before releasing the Sunday schedule.",
+    "S5": "The authorization routine allows Elena to approve a feasible run while assigning document and board corrections as pre-run commitments; incomplete paperwork alone does not cancel an otherwise compliant run."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi received a customer deviation email on Thursday that limits this pilot run to exactly 480 units and requires 100% torque verification by one IPC-certified inspector and one independent verifier; the deviation has not yet been attached to the production order."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Monica's Friday roster check with HR confirmed that only Nia, the IPC-certified inspector, Omar, the independent verifier, and Luis, the qualified assembly operator, are available and cleared for the Sunday 06:00-14:00 shift; the roster update has not yet been entered on the production board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "run_authorized": "boolean",
+      "production_units": "integer",
+      "inspection_protocol": "string",
+      "operator_assignments": [
+        {
+          "person": "string",
+          "role": "string"
+        }
+      ]
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The Sunday run must be authorized.",
+    "The run must be limited to exactly 480 units.",
+    "Every unit must receive torque verification by an IPC-certified inspector and an independent verifier.",
+    "The staffing assignment must include exactly Nia as the IPC-certified inspector, Omar as the independent verifier, and Luis as the qualified assembly operator for the Sunday 06:00-14:00 shift.",
+    "The customer deviation must be cited as justification.",
+    "A commitment to attach the customer deviation to the production order must be recorded.",
+    "A commitment to update the Sunday roster on the production board must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['run_authorized'] == True",
+    "C2": "decisions['production_units'] == 480",
+    "C3": "'100% torque verification' in decisions['inspection_protocol'] and 'IPC-certified inspector' in decisions['inspection_protocol'] and 'independent verifier' in decisions['inspection_protocol']",
+    "C4": "len(decisions['operator_assignments']) == 3 and any(c['person'] == 'Nia' and 'IPC-certified inspector' in c['role'] for c in decisions['operator_assignments']) and any(c['person'] == 'Omar' and 'independent verifier' in c['role'] for c in decisions['operator_assignments']) and any(c['person'] == 'Luis' and 'qualified assembly operator' in c['role'] for c in decisions['operator_assignments'])",
+    "C5": "any('production order' in c['detail'] and ('attach' in c['detail'] or 'attached' in c['detail']) for c in commitments)",
+    "C6": "any('roster' in c['detail'] and 'production board' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C5",
+        "P1"
+      ],
+      "why": "The customer deviation changes the provisional 900-unit run to exactly 480 units, requires 100% torque verification by two specified roles, and creates the production-order attachment commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C6"
+      ],
+      "why": "The roster check changes the staffing assignment to Nia, Omar, and Luis in the specified roles and creates the commitment to update the production board."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

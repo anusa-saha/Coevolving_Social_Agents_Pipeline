@@ -1,0 +1,607 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.231,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Before we get too far into this review, I need to flag a compliance concern. The current design draft has 90-day report retention and ordinary application logging, but based on a consultation I had yesterday, I believe there are specific requirements around retention and audit logging for these billing and usage reports that aren't reflected in the draft yet. I haven't filed the formal compliance note against this service, but I want to make sure we address this before we get to sign-off. Let me share the details so everyone has the full picture.",
+          "speaker": "A3",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Before we get too far into this review, I need to flag a compliance concern. The current design draft has 90-day report retention and ordinary application logging, but based on a consultation I had yesterday, I believe there are specific requirements around retention and audit logging for these billing and usage reports that aren't reflected in the draft yet. I haven't filed the formal compliance note against this service, but I want to make sure we address this before we get to sign-off. Let me share the details so everyone has the full picture.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks for flagging this early, Theo. That's exactly the kind of thing we need to surface before sign-off. Go ahead and share the details \u2014 I want to make sure we understand the full scope of what compliance requires before we lock in the architecture. Since the design review checklist requires both platform engineering and compliance sign-off before I can approve the production architecture, getting this on the table now is the right call.",
+          "speaker": "A1",
+          "turn": 1,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging this early, Theo. That's exactly the kind of thing we need to surface before sign-off. Go ahead and share the details \u2014 I want to make sure we understand the full scope of what compliance requires before we lock in the architecture. Since the design review checklist requires both platform engineering and compliance sign-off before I can approve the production architecture, getting this on the table now is the right call.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something on the platform engineering side before we go further. This morning, while load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. The current design draft uses standard mode with a batch size of 200, so we'll need to update that before I can sign off on the architecture.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something on the platform engineering side before we go further. This morning, while load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. The current design draft uses standard mode with a batch size of 200, so we'll need to update that before I can sign off on the architecture.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and that every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet.",
+          "speaker": "A3",
+          "turn": 3,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and that every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Good, so we have two issues to address before sign-off. On the platform side, I need to update the architecture draft to use FIFO mode with a maximum batch size of 50 instead of standard mode with 200. On the compliance side, Theo's requirements mean we need to change retention from 90 days to 30 days and add immutable audit logging for every report download. Once I've updated the draft with the queue configuration changes, we should have Theo review the compliance aspects as well. Riley, do you want us to circulate a revised draft before the next review checkpoint, or should we work through both sets of changes together here?",
+          "speaker": "A2",
+          "turn": 4,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Good, so we have two issues to address before sign-off. On the platform side, I need to update the architecture draft to use FIFO mode with a maximum batch size of 50 instead of standard mode with 200. On the compliance side, Theo's requirements mean we need to change retention from 90 days to 30 days and add immutable audit logging for every report download. Once I've updated the draft with the queue configuration changes, we should have Theo review the compliance aspects as well. Riley, do you want us to circulate a revised draft before the next review checkpoint, or should we work through both sets of changes together here?\"}"
+        },
+        {
+          "type": "say",
+          "text": "Good work surfacing both issues. Let's work through both sets of changes together here so we can converge on a final architecture. To summarize what I'm hearing: Marta, you need FIFO mode with a max batch size of 50 instead of standard mode with 200 \u2014 that's your platform engineering sign-off condition. Theo, you need retention changed from 90 days to exactly 30 days, plus immutable audit logging for every report download capturing account and requesting user \u2014 that's your compliance sign-off condition. Both of those are clear, actionable changes. Once we've confirmed the revised configuration, I can approve the production architecture, and then we're clear for the Wednesday deployment. Marta, go ahead and walk us through the queue configuration changes, and Theo, let us know if there are any specific requirements for the immutable audit log storage that Marta needs to account for in the architecture.",
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Good work surfacing both issues. Let's work through both sets of changes together here so we can converge on a final architecture. To summarize what I'm hearing: Marta, you need FIFO mode with a max batch size of 50 instead of standard mode with 200 \u2014 that's your platform engineering sign-off condition. Theo, you need retention changed from 90 days to exactly 30 days, plus immutable audit logging for every report download capturing account and requesting user \u2014 that's your compliance sign-off condition. Both of those are clear, actionable changes. Once we've confirmed the revised configuration, I can approve the production architecture, and then we're clear for the Wednesday deployment. Marta, go ahead and walk us through the queue configuration changes, and Theo, let us know if there are any specific requirements for the immutable audit log storage that Marta needs to account for in the architecture.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Let me walk through the queue configuration changes. We're moving from standard mode to FIFO mode, which ensures report jobs are delivered in the order they were sent \u2014 critical for maintaining consistency during broker failovers. The maximum batch size drops from 200 to 50, which is the provider's documented requirement for ordered delivery in FIFO mode. I'll update the architecture draft to reflect both of these changes. Theo, while I'm making those updates, could you share the specifics on the immutable audit log storage? I need to know if there are particular storage or write-once requirements I should account for in the architecture \u2014 for example, whether the audit records need to be stored in a specific type of append-only store or if there are encryption requirements for the audit data.",
+          "speaker": "A2",
+          "turn": 6,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Let me walk through the queue configuration changes. We're moving from standard mode to FIFO mode, which ensures report jobs are delivered in the order they were sent \u2014 critical for maintaining consistency during broker failovers. The maximum batch size drops from 200 to 50, which is the provider's documented requirement for ordered delivery in FIFO mode. I'll update the architecture draft to reflect both of these changes. Theo, while I'm making those updates, could you share the specifics on the immutable audit log storage? I need to know if there are particular storage or write-once requirements I should account for in the architecture \u2014 for example, whether the audit records need to be stored in a specific type of append-only store or if there are encryption requirements for the audit data.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Good question, Marta. Theo, go ahead and share the specifics on the immutable audit log storage \u2014 whether it needs an append-only store, encryption requirements, or any other architectural constraints Marta should account for when updating the draft.",
+          "speaker": "A1",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Good question, Marta. Theo, go ahead and share the specifics on the immutable audit log storage \u2014 whether it needs an append-only store, encryption requirements, or any other architectural constraints Marta should account for when updating the draft.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Marta and Riley. To be straightforward: the compliance consultation yesterday confirmed the retention and audit record requirements I've already shared \u2014 30-day automatic purge and an immutable audit record per download capturing account and requesting user. However, I was not given specific architectural guidance on storage type, append-only mechanisms, or encryption requirements for those audit records. I don't want to invent constraints I can't substantiate. What I can confirm is that the audit record must be immutable and must contain the account and requesting user. Beyond that, I'd recommend we either consult the compliance documentation for storage specifics or I can follow up with the compliance team to get you concrete answers on append-only store and encryption requirements before you finalize the architecture draft. I don't want to block your queue configuration updates \u2014 those can proceed in parallel while I track down the storage details.",
+          "speaker": "A3",
+          "turn": 8,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Marta and Riley. To be straightforward: the compliance consultation yesterday confirmed the retention and audit record requirements I've already shared \u2014 30-day automatic purge and an immutable audit record per download capturing account and requesting user. However, I was not given specific architectural guidance on storage type, append-only mechanisms, or encryption requirements for those audit records. I don't want to invent constraints I can't substantiate. What I can confirm is that the audit record must be immutable and must contain the account and requesting user. Beyond that, I'd recommend we either consult the compliance documentation for storage specifics or I can follow up with the compliance team to get you concrete answers on append-only store and encryption requirements before you finalize the architecture draft. I don't want to block your queue configuration updates \u2014 those can proceed in parallel while I track down the storage details.\"}"
+        },
+        {
+          "type": "say",
+          "text": "I'll follow up with the compliance team right after this meeting to get concrete answers on the append-only store and encryption requirements for the audit records. I'll share those details as soon as I have them so Marta can incorporate them into the architecture draft. In the meantime, Marta, please go ahead with the FIFO mode and batch size changes \u2014 those are independent of the audit log storage question. Once I have the storage specifics, we can make sure the audit logging design meets all compliance requirements before final sign-off.",
+          "speaker": "A3",
+          "turn": 9,
+          "raw_output": "{\"type\": \"say\", \"text\": \"I'll follow up with the compliance team right after this meeting to get concrete answers on the append-only store and encryption requirements for the audit records. I'll share those details as soon as I have them so Marta can incorporate them into the architecture draft. In the meantime, Marta, please go ahead with the FIFO mode and batch size changes \u2014 those are independent of the audit log storage question. Once I have the storage specifics, we can make sure the audit logging design meets all compliance requirements before final sign-off.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Good approach, Theo. That's the right call \u2014 don't invent constraints you can't substantiate, and we'll get concrete answers from the compliance team on the storage specifics. Marta, proceed with the FIFO mode and batch size changes in parallel. Theo, once you have the storage details from the compliance team, share them with Marta so she can incorporate them into the draft. I don't want to approve the production architecture until we have both the platform engineering and compliance sign-offs fully addressed \u2014 that includes the audit log storage question. So the plan is: Marta updates the queue configuration now, Theo tracks down the audit log storage specifics, and we regroup once both are ready. That keeps us on track for Wednesday without cutting corners on compliance.",
+          "speaker": "A1",
+          "turn": 10,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Good approach, Theo. That's the right call \u2014 don't invent constraints you can't substantiate, and we'll get concrete answers from the compliance team on the storage specifics. Marta, proceed with the FIFO mode and batch size changes in parallel. Theo, once you have the storage details from the compliance team, share them with Marta so she can incorporate them into the draft. I don't want to approve the production architecture until we have both the platform engineering and compliance sign-offs fully addressed \u2014 that includes the audit log storage question. So the plan is: Marta updates the queue configuration now, Theo tracks down the audit log storage specifics, and we regroup once both are ready. That keeps us on track for Wednesday without cutting corners on compliance.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds like a solid plan. I'll get started on the FIFO mode and batch size updates to the architecture draft right away. Theo, when you hear back from the compliance team on the audit log storage specifics, just send them my way and I'll incorporate them into the same draft so we have everything in one place for the next review checkpoint.",
+          "speaker": "A2",
+          "turn": 11,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds like a solid plan. I'll get started on the FIFO mode and batch size updates to the architecture draft right away. Theo, when you hear back from the compliance team on the audit log storage specifics, just send them my way and I'll incorporate them into the same draft so we have everything in one place for the next review checkpoint.\"}"
+        },
+        {
+          "type": "say",
+          "text": "One thing I want to make sure we're all clear on: the FIFO mode and batch size of 50 are not just preferences \u2014 they're the provider's documented configuration requirements for ordered report delivery. So those changes are non-negotiable for my platform engineering sign-off. I'll have the updated draft ready for the next checkpoint, and once Theo's audit log storage details come through, I'll fold those in as well. Riley, if there's anything else you need from me before we regroup, let me know.",
+          "speaker": "A2",
+          "turn": 12,
+          "raw_output": "{\"type\": \"say\", \"text\": \"One thing I want to make sure we're all clear on: the FIFO mode and batch size of 50 are not just preferences \u2014 they're the provider's documented configuration requirements for ordered report delivery. So those changes are non-negotiable for my platform engineering sign-off. I'll have the updated draft ready for the next checkpoint, and once Theo's audit log storage details come through, I'll fold those in as well. Riley, if there's anything else you need from me before we regroup, let me know.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Agreed, Marta \u2014 your FIFO mode and batch size of 50 changes are clear and I won't hold those up. I'll reach out to the compliance team right after this meeting and share the audit log storage specifics with you as soon as I have them. Riley, I'm comfortable with the plan as stated: Marta proceeds with the queue configuration updates now, I track down the storage details, and we regroup once both are ready for final sign-off.",
+          "speaker": "A3",
+          "turn": 13,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Agreed, Marta \u2014 your FIFO mode and batch size of 50 changes are clear and I won't hold those up. I'll reach out to the compliance team right after this meeting and share the audit log storage specifics with you as soon as I have them. Riley, I'm comfortable with the plan as stated: Marta proceeds with the queue configuration updates now, I track down the storage details, and we regroup once both are ready for final sign-off.\"}"
+        }
+      ],
+      "settlement": null,
+      "settled": false,
+      "content_results": {},
+      "provenance_results": {},
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.266,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, we need to talk about the asynchronous report-generation service. It's scheduled for its first production deployment next Wednesday, and I need to make sure we get platform engineering and compliance sign-off before I can approve the production architecture. Let's start by reviewing the current design draft. Who can walk me through where we stand on the queue mode, batch size, retention, and logging decisions?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, we need to talk about the asynchronous report-generation service. It's scheduled for its first production deployment next Wednesday, and I need to make sure we get platform engineering and compliance sign-off before I can approve the production architecture. Let's start by reviewing the current design draft. Who can walk me through where we stand on the queue mode, batch size, retention, and logging decisions?\"}"
+        },
+        {
+          "type": "say",
+          "text": "Before we go further on retention and logging, I need to raise some compliance requirements that will affect the current design. The 90-day retention and ordinary logging won't meet the standards I confirmed yesterday. I'll reveal the specifics now so we can address them in this review.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Before we go further on retention and logging, I need to raise some compliance requirements that will affect the current design. The 90-day retention and ordinary logging won't meet the standards I confirmed yesterday. I'll reveal the specifics now so we can address them in this review.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something critical before we go further. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but our current design draft uses standard mode and a batch size of 200, both of which need to change.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag something critical before we go further. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but our current design draft uses standard mode and a batch size of 200, both of which need to change.\"}"
+        },
+        {
+          "type": "say",
+          "text": "That's a good point, Theo \u2014 compliance and platform engineering both need to sign off, so let's make sure we surface all the issues now. Between the queue mode and batch size changes I just flagged, and whatever compliance requirements you're about to raise, it sounds like the current design draft will need several updates before Riley can approve it. Theo, go ahead and share the compliance specifics so we can figure out the full scope of changes together.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\":\"say\",\"text\":\"That's a good point, Theo \u2014 compliance and platform engineering both need to sign off, so let's make sure we surface all the issues now. Between the queue mode and batch size changes I just flagged, and whatever compliance requirements you're about to raise, it sounds like the current design draft will need several updates before Riley can approve it. Theo, go ahead and share the compliance specifics so we can figure out the full scope of changes together.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Marta \u2014 that's a significant finding. So we need to switch from standard mode to FIFO mode and reduce the maximum batch size from 200 to exactly 50 for ordered report delivery. Theo, I'm ready to hear the compliance specifics now. You mentioned the 90-day retention and ordinary logging won't meet the standards you confirmed yesterday \u2014 please walk us through what needs to change so we can capture the full scope of updates before I approve anything.",
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "{\"type\":\"say\", \"text\": \"Thanks, Marta \u2014 that's a significant finding. So we need to switch from standard mode to FIFO mode and reduce the maximum batch size from 200 to exactly 50 for ordered report delivery. Theo, I'm ready to hear the compliance specifics now. You mentioned the 90-day retention and ordinary logging won't meet the standards you confirmed yesterday \u2014 please walk us through what needs to change so we can capture the full scope of updates before I approve anything.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and that every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet.",
+          "speaker": "A3",
+          "turn": 5,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and that every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet.\"}"
+        },
+        {
+          "type": "say",
+          "text": "So to summarize the compliance changes needed: retention must be reduced from 90 days to exactly 30 days with automatic purging, and we need to replace ordinary application logging with an immutable audit record for every report download that captures the account and requesting user. I'll file the compliance note against this service after we wrap up here. Between Marta's queue mode and batch size findings and these compliance requirements, the current design draft will need at least four updates before Riley can approve the production architecture.",
+          "speaker": "A3",
+          "turn": 6,
+          "raw_output": "{\"type\":\"say\",\"text\":\"So to summarize the compliance changes needed: retention must be reduced from 90 days to exactly 30 days with automatic purging, and we need to replace ordinary application logging with an immutable audit record for every report download that captures the account and requesting user. I'll file the compliance note against this service after we wrap up here. Between Marta's queue mode and batch size findings and these compliance requirements, the current design draft will need at least four updates before Riley can approve the production architecture.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "sign-off",
+                "target": "platform engineering",
+                "detail": "Riley will obtain platform engineering sign-off on the updated production architecture before approving deployment."
+              },
+              {
+                "type": "sign-off",
+                "target": "compliance",
+                "detail": "Riley will obtain compliance sign-off on the updated production architecture before approving deployment."
+              },
+              {
+                "type": "update",
+                "target": "architecture draft",
+                "detail": "Update the design draft to reflect FIFO queue mode, maximum batch size of 50, 30-day retention with automatic purging, and immutable audit records for every report download capturing account and requesting user."
+              },
+              {
+                "type": "follow-up",
+                "target": "Theo",
+                "detail": "Theo to file the compliance note against this service after the review wraps up."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 7,
+          "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"queue_mode\":\"FIFO\",\"maximum_batch_size\":50,\"retention_days\":30,\"immutable_download_audit\":true},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"sign-off\",\"target\":\"platform engineering\",\"detail\":\"Riley will obtain platform engineering sign-off on the updated production architecture before approving deployment.\"},{\"type\":\"sign-off\",\"target\":\"compliance\",\"detail\":\"Riley will obtain compliance sign-off on the updated production architecture before approving deployment.\"},{\"type\":\"update\",\"target\":\"architecture draft\",\"detail\":\"Update the design draft to reflect FIFO queue mode, maximum batch size of 50, 30-day retention with automatic purging, and immutable audit records for every report download capturing account and requesting user.\"},{\"type\":\"follow-up\",\"target\":\"Theo\",\"detail\":\"Theo to file the compliance note against this service after the review wraps up.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"PF1\",\"PF2\"]}}"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "sign-off",
+            "target": "platform engineering",
+            "detail": "Riley will obtain platform engineering sign-off on the updated production architecture before approving deployment."
+          },
+          {
+            "type": "sign-off",
+            "target": "compliance",
+            "detail": "Riley will obtain compliance sign-off on the updated production architecture before approving deployment."
+          },
+          {
+            "type": "update",
+            "target": "architecture draft",
+            "detail": "Update the design draft to reflect FIFO queue mode, maximum batch size of 50, 30-day retention with automatic purging, and immutable audit records for every report download capturing account and requesting user."
+          },
+          {
+            "type": "follow-up",
+            "target": "Theo",
+            "detail": "Theo to file the compliance note against this service after the review wraps up."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false,
+        "C6": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": false,
+        "P4": false
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.502,
+      "transcript": [
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important before we go any further with the design review. This morning, while I was load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documentation is clear: for ordered report delivery, we need to use FIFO mode and a maximum batch size of exactly 50. Our current design draft uses standard mode with a batch size of 200, which won't guarantee ordering. I haven't updated the architecture draft yet, but this needs to be addressed before we can sign off on the production architecture.",
+          "speaker": "A2",
+          "turn": 0,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag something important before we go any further with the design review. This morning, while I was load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documentation is clear: for ordered report delivery, we need to use FIFO mode and a maximum batch size of exactly 50. Our current design draft uses standard mode with a batch size of 200, which won't guarantee ordering. I haven't updated the architecture draft yet, but this needs to be addressed before we can sign off on the production architecture.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to disclose a compliance requirement before we proceed. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service, so this hasn't been captured in the current design draft. The draft's 90-day retention and ordinary application logging won't meet these requirements.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I need to disclose a compliance requirement before we proceed. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service, so this hasn't been captured in the current design draft. The draft's 90-day retention and ordinary application logging won't meet these requirements.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks both for flagging these issues. Marta, the ordering concern with standard mode during broker failover is a real production risk \u2014 if FIFO mode with a max batch size of 50 is what's needed for guaranteed ordering, that's a hard requirement we have to meet. Theo, the compliance requirements are equally critical \u2014 30-day automatic purge and immutable audit records for every download are non-negotiable. Both of these need to be captured in the updated design draft before I can approve the production architecture. Given that the deployment is scheduled for next Wednesday, I'd like to get the draft updated ASAP so platform engineering and compliance can sign off. Can we agree on the following changes: switch to FIFO mode, reduce max batch size to 50, reduce retention to 30 days, and add immutable audit logging for report downloads? Once those are reflected in the draft, we can move forward with the remaining sign-offs.",
+          "speaker": "A1",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks both for flagging these issues. Marta, the ordering concern with standard mode during broker failover is a real production risk \u2014 if FIFO mode with a max batch size of 50 is what's needed for guaranteed ordering, that's a hard requirement we have to meet. Theo, the compliance requirements are equally critical \u2014 30-day automatic purge and immutable audit records for every download are non-negotiable. Both of these need to be captured in the updated design draft before I can approve the production architecture. Given that the deployment is scheduled for next Wednesday, I'd like to get the draft updated ASAP so platform engineering and compliance can sign off. Can we agree on the following changes: switch to FIFO mode, reduce max batch size to 50, reduce retention to 30 days, and add immutable audit logging for report downloads? Once those are reflected in the draft, we can move forward with the remaining sign-offs.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Agreed on all four changes. I'll update the architecture draft to switch to FIFO mode, reduce the max batch size to 50, reduce retention to 30 days, and add immutable audit logging for report downloads. Once that's done, I'll circulate the updated draft for platform engineering and compliance sign-off so we can stay on track for next Wednesday's deployment.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Agreed on all four changes. I'll update the architecture draft to switch to FIFO mode, reduce the max batch size to 50, reduce retention to 30 days, and add immutable audit logging for report downloads. Once that's done, I'll circulate the updated draft for platform engineering and compliance sign-off so we can stay on track for next Wednesday's deployment.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Agreed on all four changes. Marta, when you circulate the updated draft, I'll formally file the compliance note against the service and complete the compliance sign-off so we can stay on track for next Wednesday's deployment.",
+          "speaker": "A3",
+          "turn": 4,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Agreed on all four changes. Marta, when you circulate the updated draft, I'll formally file the compliance note against the service and complete the compliance sign-off so we can stay on track for next Wednesday's deployment.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "sign-off",
+                "target": "platform engineering",
+                "detail": "Riley will approve the production architecture once platform engineering signs off on the updated draft reflecting FIFO mode, max batch size of 50, 30-day retention, and immutable audit logging for report downloads."
+              },
+              {
+                "type": "sign-off",
+                "target": "compliance",
+                "detail": "Riley will approve the production architecture once compliance signs off on the updated draft, with Theo filing the formal compliance note against the service."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"queue_mode\":\"FIFO\",\"maximum_batch_size\":50,\"retention_days\":30,\"immutable_download_audit\":true},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"sign-off\",\"target\":\"platform engineering\",\"detail\":\"Riley will approve the production architecture once platform engineering signs off on the updated draft reflecting FIFO mode, max batch size of 50, 30-day retention, and immutable audit logging for report downloads.\"},{\"type\":\"sign-off\",\"target\":\"compliance\",\"detail\":\"Riley will approve the production architecture once compliance signs off on the updated draft, with Theo filing the formal compliance note against the service.\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"S1\",\"S2\",\"S3\",\"S4\"]}}"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "sign-off",
+            "target": "platform engineering",
+            "detail": "Riley will approve the production architecture once platform engineering signs off on the updated draft reflecting FIFO mode, max batch size of 50, 30-day retention, and immutable audit logging for report downloads."
+          },
+          {
+            "type": "sign-off",
+            "target": "compliance",
+            "detail": "Riley will approve the production architecture once compliance signs off on the updated draft, with Theo filing the formal compliance note against the service."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false,
+        "C6": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": false,
+        "P4": false
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.349,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hi everyone. Before we get too far into the design review, I need to flag a couple of compliance requirements for this service that aren't reflected in the current design draft. The 90-day retention and ordinary logging won't meet the compliance standards we discussed in consultation yesterday. I'll go ahead and share the specifics now so we can address them before Riley's sign-off.",
+          "speaker": "A3",
+          "turn": 0,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Hi everyone. Before we get too far into the design review, I need to flag a couple of compliance requirements for this service that aren't reflected in the current design draft. The 90-day retention and ordinary logging won't meet the compliance standards we discussed in consultation yesterday. I'll go ahead and share the specifics now so we can address them before Riley's sign-off.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks for flagging that, Theo. That's important to hear before we proceed. Since the design review checklist requires compliance sign-off before I can approve the production architecture, we definitely need to get these requirements incorporated into the design draft. Please go ahead and share the specifics \u2014 I want to make sure we have everything documented and addressed well ahead of the Wednesday deployment.",
+          "speaker": "A1",
+          "turn": 1,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging that, Theo. That's important to hear before we proceed. Since the design review checklist requires compliance sign-off before I can approve the production architecture, we definitely need to get these requirements incorporated into the design draft. Please go ahead and share the specifics \u2014 I want to make sure we have everything documented and addressed well ahead of the Wednesday deployment.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something important on the platform side before we go further. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. The current design draft uses standard mode with a batch size of 200, so we'll need to update that before Riley's sign-off. I haven't updated the architecture draft yet.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag something important on the platform side before we go further. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. The current design draft uses standard mode with a batch size of 200, so we'll need to update that before Riley's sign-off. I haven't updated the architecture draft yet.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Theo, before you share the compliance specifics, I want to make sure we capture all the design changes in one go. Between the queue mode and batch size changes I just flagged and whatever compliance updates you're about to share, we should consolidate everything into the architecture draft before submitting for Riley's sign-off. That way we avoid multiple revision cycles. Does anyone else have pending changes to the design before we start documenting the updates?",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Theo, before you share the compliance specifics, I want to make sure we capture all the design changes in one go. Between the queue mode and batch size changes I just flagged and whatever compliance updates you're about to share, we should consolidate everything into the architecture draft before submitting for Riley's sign-off. That way we avoid multiple revision cycles. Does anyone else have pending changes to the design before we start documenting the updates?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "The compliance requirements from yesterday's consultation are: billing and usage reports must be automatically purged after exactly 30 days (not 90), and every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service.",
+          "speaker": "A3",
+          "turn": 4,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"The compliance requirements from yesterday's consultation are: billing and usage reports must be automatically purged after exactly 30 days (not 90), and every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks both. Let me make sure I have all the changes captured before we consolidate. So far we have three categories of changes:\n\n1. **Queue mode**: Switch from standard mode to FIFO mode (Marta's finding).\n2. **Batch size**: Reduce from 200 to exactly 50 (Marta's finding).\n3. **Retention**: Reduce from 90 days to exactly 30 days, with automatic purge (Theo's compliance requirement).\n4. **Audit logging**: Add immutable audit records for every report download, capturing account and requesting user (Theo's compliance requirement).\n\nMarta, you mentioned you haven't updated the architecture draft yet \u2014 can you take point on incorporating the queue mode and batch size changes? Theo, can you file the compliance note against this service so we have it on record, and coordinate with Marta on the retention and audit logging updates?\n\nBefore I can sign off on the production architecture, I'll need both platform engineering sign-off (Marta) and compliance sign-off (Theo) per the design review checklist. Once the updated draft is ready, let's circulate it for final review. We still have time before Wednesday, but let's aim to get the revised draft locked ASAP.\n\nDoes anyone else have pending changes, or are these four items the complete set?",
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks both. Let me make sure I have all the changes captured before we consolidate. So far we have three categories of changes:\\n\\n1. **Queue mode**: Switch from standard mode to FIFO mode (Marta's finding).\\n2. **Batch size**: Reduce from 200 to exactly 50 (Marta's finding).\\n3. **Retention**: Reduce from 90 days to exactly 30 days, with automatic purge (Theo's compliance requirement).\\n4. **Audit logging**: Add immutable audit records for every report download, capturing account and requesting user (Theo's compliance requirement).\\n\\nMarta, you mentioned you haven't updated the architecture draft yet \u2014 can you take point on incorporating the queue mode and batch size changes? Theo, can you file the compliance note against this service so we have it on record, and coordinate with Marta on the retention and audit logging updates?\\n\\nBefore I can sign off on the production architecture, I'll need both platform engineering sign-off (Marta) and compliance sign-off (Theo) per the design review checklist. Once the updated draft is ready, let's circulate it for final review. We still have time before Wednesday, but let's aim to get the revised draft locked ASAP.\\n\\nDoes anyone else have pending changes, or are these four items the complete set?\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Riley. I'll file the compliance note against this service right away so we have it on record, and I'll coordinate with Marta on incorporating the 30-day automatic purge and the immutable audit logging requirements into the architecture draft. Marta, once you've updated the queue mode and batch size, let me know and I'll layer in the retention and audit logging changes so we can consolidate everything in one revision. These four items are all I have on the compliance side \u2014 no additional pending changes from me.",
+          "speaker": "A3",
+          "turn": 6,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Riley. I'll file the compliance note against this service right away so we have it on record, and I'll coordinate with Marta on incorporating the 30-day automatic purge and the immutable audit logging requirements into the architecture draft. Marta, once you've updated the queue mode and batch size, let me know and I'll layer in the retention and audit logging changes so we can consolidate everything in one revision. These four items are all I have on the compliance side \u2014 no additional pending changes from me.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Sounds good, Theo. I'll start updating the architecture draft with the FIFO mode and batch size changes right away. Once those are in, I'll let you know so you can layer in the 30-day automatic purge and immutable audit logging requirements. That way we get everything consolidated into a single revision before we submit for Riley's sign-off. I don't have any additional pending changes beyond the queue mode and batch size items I already flagged.",
+          "speaker": "A2",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Sounds good, Theo. I'll start updating the architecture draft with the FIFO mode and batch size changes right away. Once those are in, I'll let you know so you can layer in the 30-day automatic purge and immutable audit logging requirements. That way we get everything consolidated into a single revision before we submit for Riley's sign-off. I don't have any additional pending changes beyond the queue mode and batch size items I already flagged.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "design_update",
+                "target": "Marta",
+                "detail": "Update architecture draft to use FIFO queue mode and maximum batch size of 50"
+              },
+              {
+                "type": "design_update",
+                "target": "Theo",
+                "detail": "Layer in 30-day automatic purge and immutable audit logging for report downloads into the architecture draft after Marta's updates"
+              },
+              {
+                "type": "compliance_filing",
+                "target": "Theo",
+                "detail": "File the compliance note against this service to document the 30-day retention and immutable audit logging requirements"
+              },
+              {
+                "type": "sign_off",
+                "target": "Marta",
+                "detail": "Provide platform engineering sign-off on the updated architecture draft before Riley's production approval"
+              },
+              {
+                "type": "sign_off",
+                "target": "Theo",
+                "detail": "Provide compliance sign-off on the updated architecture draft before Riley's production approval"
+              },
+              {
+                "type": "final_review",
+                "target": "Riley",
+                "detail": "Circulate the consolidated revised draft for final review and approve production architecture once both platform engineering and compliance sign-offs are received"
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 8,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"FIFO\",\n      \"maximum_batch_size\": 50,\n      \"retention_days\": 30,\n      \"immutable_download_audit\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"design_update\",\n        \"target\": \"Marta\",\n        \"detail\": \"Update architecture draft to use FIFO queue mode and maximum batch size of 50\"\n      },\n      {\n        \"type\": \"design_update\",\n        \"target\": \"Theo\",\n        \"detail\": \"Layer in 30-day automatic purge and immutable audit logging for report downloads into the architecture draft after Marta's updates\"\n      },\n      {\n        \"type\": \"compliance_filing\",\n        \"target\": \"Theo\",\n        \"detail\": \"File the compliance note against this service to document the 30-day retention and immutable audit logging requirements\"\n      },\n      {\n        \"type\": \"sign_off\",\n        \"target\": \"Marta\",\n        \"detail\": \"Provide platform engineering sign-off on the updated architecture draft before Riley's production approval\"\n      },\n      {\n        \"type\": \"sign_off\",\n        \"target\": \"Theo\",\n        \"detail\": \"Provide compliance sign-off on the updated architecture draft before Riley's production approval\"\n      },\n      {\n        \"type\": \"final_review\",\n        \"target\": \"Riley\",\n        \"detail\": \"Circulate the consolidated revised draft for final review and approve production architecture once both platform engineering and compliance sign-offs are received\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "design_update",
+            "target": "Marta",
+            "detail": "Update architecture draft to use FIFO queue mode and maximum batch size of 50"
+          },
+          {
+            "type": "design_update",
+            "target": "Theo",
+            "detail": "Layer in 30-day automatic purge and immutable audit logging for report downloads into the architecture draft after Marta's updates"
+          },
+          {
+            "type": "compliance_filing",
+            "target": "Theo",
+            "detail": "File the compliance note against this service to document the 30-day retention and immutable audit logging requirements"
+          },
+          {
+            "type": "sign_off",
+            "target": "Marta",
+            "detail": "Provide platform engineering sign-off on the updated architecture draft before Riley's production approval"
+          },
+          {
+            "type": "sign_off",
+            "target": "Theo",
+            "detail": "Provide compliance sign-off on the updated architecture draft before Riley's production approval"
+          },
+          {
+            "type": "final_review",
+            "target": "Riley",
+            "detail": "Circulate the consolidated revised draft for final review and approve production architecture once both platform engineering and compliance sign-offs are received"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false,
+        "C6": false
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P3": false,
+        "P4": false
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": false
+    }
+  ],
+  "pass_count": 0,
+  "gate_passed": false
+}

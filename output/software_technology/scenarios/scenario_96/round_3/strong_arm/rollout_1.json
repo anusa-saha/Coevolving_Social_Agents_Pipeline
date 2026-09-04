@@ -1,0 +1,167 @@
+{
+  "arm": "strong",
+  "temperature": 0.402,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, before I can make a binding decision on the production capacity policy for the image-processing pipeline, we need to run through the normal capacity review. I want to hear from FinOps, SRE, security, and customer support about any operational requirements or concerns with the current draft. For context, the draft has 12 baseline workers, scales out at 100 jobs in the queue, uses any available processing region, and puts all customers in a single FIFO queue. Given we're aiming to get this into production before the seasonal traffic increase, let's get moving on this review.",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright everyone, before I can make a binding decision on the production capacity policy for the image-processing pipeline, we need to run through the normal capacity review. I want to hear from FinOps, SRE, security, and customer support about any operational requirements or concerns with the current draft. For context, the draft has 12 baseline workers, scales out at 100 jobs in the queue, uses any available processing region, and puts all customers in a single FIFO queue. Given we're aiming to get this into production before the seasonal traffic increase, let's get moving on this review.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag a cost concern with the current draft. While reconciling this month's cloud invoice, I confirmed that the available compute reservation for this pipeline applies only with exactly 18 baseline workers and a monthly capacity ceiling of exactly 24,000 USD. The draft's 12-worker plan has no reservation commitment, which means we'd be paying on-demand rates instead of getting the reserved pricing. I haven't yet updated the capacity proposal to reflect this finding \u2014 the team should consider whether adjusting to 18 baseline workers to lock in the reservation makes sense before Riley makes the binding decision.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a cost concern with the current draft. While reconciling this month's cloud invoice, I confirmed that the available compute reservation for this pipeline applies only with exactly 18 baseline workers and a monthly capacity ceiling of exactly 24,000 USD. The draft's 12-worker plan has no reservation commitment, which means we'd be paying on-demand rates instead of getting the reserved pricing. I haven't yet updated the capacity proposal to reflect this finding \u2014 the team should consider whether adjusting to 18 baseline workers to lock in the reservation makes sense before Riley makes the binding decision.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to share some findings from a load investigation I ran this morning that haven't been filed in the capacity review yet. During testing of the expected burst pattern, I measured an 11-minute worker startup time. I also found that the pipeline needs exactly 6 warm workers with scale-out triggered at exactly 40 queued jobs in order to keep processing latency within our operating target. The current draft's 12 baseline workers and scale-out at 100 queued jobs don't reflect these findings \u2014 the 100-job threshold is too high and would likely cause latency violations during burst periods, especially given that 11-minute startup delay.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share some findings from a load investigation I ran this morning that haven't been filed in the capacity review yet. During testing of the expected burst pattern, I measured an 11-minute worker startup time. I also found that the pipeline needs exactly 6 warm workers with scale-out triggered at exactly 40 queued jobs in order to keep processing latency within our operating target. The current draft's 12 baseline workers and scale-out at 100 queued jobs don't reflect these findings \u2014 the 100-job threshold is too high and would likely cause latency violations during burst periods, especially given that 11-minute startup delay.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to flag a security concern with the current draft. While checking the image-processing deployment manifest for an unrelated access review, I confirmed that customer-uploaded image data must run in exactly eu-central-1 and must use the tenant-managed KMS key named tenant_kms. The current draft permits any available processing region and does not specify that KMS key, which would put us in violation of our data handling requirements. I haven't opened a formal security finding on this yet, but this needs to be addressed before Riley makes the binding decision.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a security concern with the current draft. While checking the image-processing deployment manifest for an unrelated access review, I confirmed that customer-uploaded image data must run in exactly eu-central-1 and must use the tenant-managed KMS key named tenant_kms. The current draft permits any available processing region and does not specify that KMS key, which would put us in violation of our data handling requirements. I haven't opened a formal security finding on this yet, but this needs to be addressed before Riley makes the binding decision.\"}\n```"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF4",
+      "text": "I need to flag a customer support requirement that I haven't yet added to the capacity proposal. While handling a support escalation, I confirmed that Lumen Media's production workflow requires its image jobs to use a dedicated priority queue rather than the shared FIFO queue. The current draft places all customers in a single FIFO queue, which would not meet Lumen Media's requirement. This needs to be addressed before Riley makes the binding decision on the capacity policy.",
+      "speaker": "A5",
+      "turn": 4,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to flag a customer support requirement that I haven't yet added to the capacity proposal. While handling a support escalation, I confirmed that Lumen Media's production workflow requires its image jobs to use a dedicated priority queue rather than the shared FIFO queue. The current draft places all customers in a single FIFO queue, which would not meet Lumen Media's requirement. This needs to be addressed before Riley makes the binding decision on the capacity policy.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "baseline_workers": 18,
+          "monthly_capacity_cap_usd": 24000,
+          "warm_pool_workers": 6,
+          "scale_queue_threshold": 40,
+          "processing_region": "eu-central-1",
+          "encryption_key": "tenant_kms",
+          "priority_queue_enabled": true,
+          "priority_customer": "Lumen Media"
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "cost",
+            "target": "Morgan",
+            "detail": "Set baseline workers to 18 with a monthly capacity ceiling of 24,000 USD to lock in the compute reservation and avoid on-demand rates."
+          },
+          {
+            "type": "latency",
+            "target": "Casey",
+            "detail": "Adopt 6 warm workers and scale-out at 40 queued jobs to account for the 11-minute worker startup time and keep processing latency within target during burst periods."
+          },
+          {
+            "type": "security",
+            "target": "Taylor",
+            "detail": "Restrict processing to eu-central-1 and require the tenant-managed KMS key tenant_kms for all customer-uploaded image data."
+          },
+          {
+            "type": "customer_support",
+            "target": "Jordan",
+            "detail": "Enable a dedicated priority queue for Lumen Media instead of placing all customers in a single FIFO queue."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"baseline_workers\": 18,\n      \"monthly_capacity_cap_usd\": 24000,\n      \"warm_pool_workers\": 6,\n      \"scale_queue_threshold\": 40,\n      \"processing_region\": \"eu-central-1\",\n      \"encryption_key\": \"tenant_kms\",\n      \"priority_queue_enabled\": true,\n      \"priority_customer\": \"Lumen Media\"\n    },\n    \"credited_facts\": [\"PF1\", \"PF2\", \"PF3\", \"PF4\"],\n    \"commitments\": [\n      {\n        \"type\": \"cost\",\n        \"target\": \"Morgan\",\n        \"detail\": \"Set baseline workers to 18 with a monthly capacity ceiling of 24,000 USD to lock in the compute reservation and avoid on-demand rates.\"\n      },\n      {\n        \"type\": \"latency\",\n        \"target\": \"Casey\",\n        \"detail\": \"Adopt 6 warm workers and scale-out at 40 queued jobs to account for the 11-minute worker startup time and keep processing latency within target during burst periods.\"\n      },\n      {\n        \"type\": \"security\",\n        \"target\": \"Taylor\",\n        \"detail\": \"Restrict processing to eu-central-1 and require the tenant-managed KMS key tenant_kms for all customer-uploaded image data.\"\n      },\n      {\n        \"type\": \"customer_support\",\n        \"target\": \"Jordan\",\n        \"detail\": \"Enable a dedicated priority queue for Lumen Media instead of placing all customers in a single FIFO queue.\"\n      }\n    ],\n    \"justification_fact_ids\": [\"PF1\", \"PF2\", \"PF3\", \"PF4\"]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "baseline_workers": 18,
+      "monthly_capacity_cap_usd": 24000,
+      "warm_pool_workers": 6,
+      "scale_queue_threshold": 40,
+      "processing_region": "eu-central-1",
+      "encryption_key": "tenant_kms",
+      "priority_queue_enabled": true,
+      "priority_customer": "Lumen Media"
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "commitments": [
+      {
+        "type": "cost",
+        "target": "Morgan",
+        "detail": "Set baseline workers to 18 with a monthly capacity ceiling of 24,000 USD to lock in the compute reservation and avoid on-demand rates."
+      },
+      {
+        "type": "latency",
+        "target": "Casey",
+        "detail": "Adopt 6 warm workers and scale-out at 40 queued jobs to account for the 11-minute worker startup time and keep processing latency within target during burst periods."
+      },
+      {
+        "type": "security",
+        "target": "Taylor",
+        "detail": "Restrict processing to eu-central-1 and require the tenant-managed KMS key tenant_kms for all customer-uploaded image data."
+      },
+      {
+        "type": "customer_support",
+        "target": "Jordan",
+        "detail": "Enable a dedicated priority queue for Lumen Media instead of placing all customers in a single FIFO queue."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": true,
+    "C8": false,
+    "C9": false,
+    "C10": false,
+    "C11": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3",
+    "PF4"
+  ],
+  "passed": false
+}

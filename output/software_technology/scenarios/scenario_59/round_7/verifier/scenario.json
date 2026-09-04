@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_59",
+  "scenario_type": "api_deprecation_plan",
+  "description": "A product director must approve the deprecation plan for a legacy customer API endpoint, including the shutdown date, compatibility work, rate-limit configuration, and customer communications, with input from API engineering and customer support.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Product Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "API Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "Today is June 1, and the legacy /v1/invoices endpoint is currently scheduled to be disabled on June 30.",
+    "S2": "The replacement /v2/invoices endpoint has passed the standard functional and integration test suite.",
+    "S3": "Riley makes the final decision on the deprecation plan.",
+    "S4": "As part of the normal deprecation-readiness review, API engineering and customer support each disclose their current findings in the meeting, and Riley publishes the final plan at the end; once both teams have disclosed their relevant findings, Riley may settle immediately without waiting for additional formal recommendations or clarification."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While helping an enterprise customer debug a bulk import this morning, Mina confirmed that /v2/invoices enforces a hard limit of exactly 500 requests per minute, and three existing integrations exceed that limit. An API compatibility adapter is required for those integrations and can be deployed by July 15. Mina has not filed the implementation ticket yet because she confirmed the limit during a separate customer-debugging task."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While reviewing the account renewal queue, Owen confirmed that Acme's contract requires 60 calendar days' notice before disabling an API endpoint. Acme has not received notice. The contract review finished only minutes ago, so Owen has not updated the deprecation project. Legal operations recorded that formal notice must be issued by June 2, and the earliest permitted disable date is August 1."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12
+  },
+  "settlement_schema": {
+    "decisions": {
+      "legacy_endpoint_disabled_date": "string",
+      "replacement_rate_limit_per_minute": "integer",
+      "compatibility_adapter_required": "boolean",
+      "compatibility_adapter_due_date": "string",
+      "customer_notice_due_date": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The legacy endpoint must remain available until August 1.",
+    "The replacement endpoint's configured rate limit must be exactly 500 requests per minute.",
+    "A compatibility adapter must be required.",
+    "The compatibility adapter must be due by July 15.",
+    "Formal customer notice to Acme must be due by June 2.",
+    "An API compatibility-adapter commitment must be recorded.",
+    "An Acme customer-notice commitment must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['legacy_endpoint_disabled_date'] == 'August 1'",
+    "C2": "decisions['replacement_rate_limit_per_minute'] == 500",
+    "C3": "decisions['compatibility_adapter_required'] == True",
+    "C4": "decisions['compatibility_adapter_due_date'] == 'July 15'",
+    "C5": "decisions['customer_notice_due_date'] == 'June 2'",
+    "C6": "any('adapter' in c['detail'] and ('July 15' in c['detail'] or 'implementation ticket' in c['detail'] or 'deploy' in c['detail']) for c in commitments)",
+    "C7": "any(('Acme' in c['detail'] or 'Acme' in c['target']) and ('June 2' in c['detail'] or 'June 2' in c['target']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "The exact 500-requests-per-minute limit changes the rate-limit setting, while the three over-limit integrations and stated July 15 readiness date change the plan to require an adapter with that specific due date and an adapter implementation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C5",
+        "C7"
+      ],
+      "why": "The Acme contract finding changes the shutdown date to the explicitly stated August 1 earliest date, sets formal notice to June 2, and requires a commitment identifying Acme and the June 2 notice deadline."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

@@ -1,0 +1,272 @@
+{
+  "arm": "strong",
+  "temperature": 0.259,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, we need to get the standard architecture review completed for the document-processing service before it enters production next month. We've got the draft configuration on the table \u2014 parallel queue, 8 workers, max concurrency of 50 jobs, 30-day payload retention, one shared encryption key, and no automated deletion workflow. I need verbal sign-off from backend engineering, infrastructure, data governance, and security before I can record the final configuration. Who's ready to start walking through this?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, we need to get the standard architecture review completed for the document-processing service before it enters production next month. We've got the draft configuration on the table \u2014 parallel queue, 8 workers, max concurrency of 50 jobs, 30-day payload retention, one shared encryption key, and no automated deletion workflow. I need verbal sign-off from backend engineering, infrastructure, data governance, and security before I can record the final configuration. Who's ready to start walking through this?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I need to flag a data governance issue before we proceed. During a data-retention review this afternoon, I confirmed that uploaded document payloads may be retained for exactly 7 days and require an automated deletion workflow. The current draft has 30-day retention and no automated deletion workflow, which doesn't align with this requirement. I haven't filed the governance update yet because the review was attached to a separate records-policy request, but this needs to be addressed before I can sign off.",
+      "speaker": "A4",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a data governance issue before we proceed. During a data-retention review this afternoon, I confirmed that uploaded document payloads may be retained for exactly 7 days and require an automated deletion workflow. The current draft has 30-day retention and no automated deletion workflow, which doesn't align with this requirement. I haven't filed the governance update yet because the review was attached to a separate records-policy request, but this needs to be addressed before I can sign off.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "Before we go further on infrastructure sign-off, I need to share a capacity constraint I measured this morning. The production cluster's reserved capacity supports exactly 6 workers at a maximum concurrency of 20 jobs. The current draft calls for 8 workers and a max concurrency of 50 jobs, which exceeds what the cluster can currently handle. I haven't added this note to the architecture document yet \u2014 it's still in my infrastructure worksheet \u2014 but this needs to be reconciled before I can sign off.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Before we go further on infrastructure sign-off, I need to share a capacity constraint I measured this morning. The production cluster's reserved capacity supports exactly 6 workers at a maximum concurrency of 20 jobs. The current draft calls for 8 workers and a max concurrency of 50 jobs, which exceeds what the cluster can currently handle. I haven't added this note to the architecture document yet \u2014 it's still in my infrastructure worksheet \u2014 but this needs to be reconciled before I can sign off.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF4",
+      "text": "I need to flag a security issue before I can sign off. During a security design review this morning, I confirmed that production documents for regulated tenants must use per-tenant encryption keys with quarterly key rotation. The current draft uses one shared encryption key, which doesn't meet this requirement. I haven't opened the security finding yet because the review covered several services together, but this needs to be addressed before I can give security sign-off.",
+      "speaker": "A5",
+      "turn": 3,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a security issue before I can sign off. During a security design review this morning, I confirmed that production documents for regulated tenants must use per-tenant encryption keys with quarterly key rotation. The current draft uses one shared encryption key, which doesn't meet this requirement. I haven't opened the security finding yet because the review covered several services together, but this needs to be addressed before I can give security sign-off.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag a backend engineering issue before I can sign off. While testing a downstream billing-export consumer yesterday, I confirmed that document jobs for each tenant must be processed in FIFO order with tenant_id as the partition key. The current draft uses a parallel queue, which doesn't guarantee per-tenant FIFO ordering. I haven't updated the architecture draft yet because the consumer test was part of a separate billing task, but this needs to be addressed before I can give backend engineering sign-off.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a backend engineering issue before I can sign off. While testing a downstream billing-export consumer yesterday, I confirmed that document jobs for each tenant must be processed in FIFO order with tenant_id as the partition key. The current draft uses a parallel queue, which doesn't guarantee per-tenant FIFO ordering. I haven't updated the architecture draft yet because the consumer test was part of a separate billing task, but this needs to be addressed before I can give backend engineering sign-off.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all for flagging these issues. Let me summarize what I'm hearing so we can reconcile the configuration. We have four blockers to address before anyone can sign off:\n\n1. Backend engineering (Maya): Per-tenant FIFO ordering required with tenant_id as partition key \u2014 current parallel queue doesn't guarantee this.\n2. Infrastructure (Owen): Cluster supports max 6 workers and max concurrency of 20 jobs \u2014 current draft of 8 workers and 50 concurrency exceeds capacity.\n3. Data governance (Leila): Payload retention must be 7 days with an automated deletion workflow \u2014 current 30-day retention with no automated deletion doesn't align.\n4. Security (Victor): Regulated tenants require per-tenant encryption keys with quarterly rotation \u2014 current single shared key doesn't meet this.\n\nAll four of these are hard blockers for sign-off. It sounds like the configuration needs substantial revision across every dimension. Before I settle on a revised architecture, does anyone see any conflicts between these requirements? For instance, does per-tenant FIFO ordering with 6 workers and 20 concurrency raise any throughput concerns, or are there any dependencies between the per-tenant encryption keys and the partition key ordering we need to reconcile?",
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you all for flagging these issues. Let me summarize what I'm hearing so we can reconcile the configuration. We have four blockers to address before anyone can sign off:\\n\\n1. Backend engineering (Maya): Per-tenant FIFO ordering required with tenant_id as partition key \u2014 current parallel queue doesn't guarantee this.\\n2. Infrastructure (Owen): Cluster supports max 6 workers and max concurrency of 20 jobs \u2014 current draft of 8 workers and 50 concurrency exceeds capacity.\\n3. Data governance (Leila): Payload retention must be 7 days with an automated deletion workflow \u2014 current 30-day retention with no automated deletion doesn't align.\\n4. Security (Victor): Regulated tenants require per-tenant encryption keys with quarterly rotation \u2014 current single shared key doesn't meet this.\\n\\nAll four of these are hard blockers for sign-off. It sounds like the configuration needs substantial revision across every dimension. Before I settle on a revised architecture, does anyone see any conflicts between these requirements? For instance, does per-tenant FIFO ordering with 6 workers and 20 concurrency raise any throughput concerns, or are there any dependencies between the per-tenant encryption keys and the partition key ordering we need to reconcile?\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Good question, Riley. On the backend side, I can speak to the FIFO and worker interaction. Per-tenant FIFO ordering with tenant_id as the partition key is compatible with 6 workers and 20 max concurrency \u2014 partitioned queues can still distribute across workers as long as jobs sharing the same tenant_id are routed to the same partition and processed sequentially within that partition. The throughput tradeoff is real: with 20 max concurrency instead of 50, and only 6 workers, we'll have lower parallelism, but ordering correctness takes priority. One thing I'd want to confirm with Victor: per-tenant encryption keys and tenant_id partitioning should actually align well \u2014 if we're already partitioning by tenant_id for ordering, key resolution can happen at the partition level without adding a separate lookup step. I don't see a hard conflict between any of the four requirements, but the revised architecture will need a partitioned queue model rather than a simple parallel queue, and that's the biggest structural change.",
+      "speaker": "A2",
+      "turn": 6,
+      "raw_output": "{\"type\":\"say\",\"text\": \"Good question, Riley. On the backend side, I can speak to the FIFO and worker interaction. Per-tenant FIFO ordering with tenant_id as the partition key is compatible with 6 workers and 20 max concurrency \u2014 partitioned queues can still distribute across workers as long as jobs sharing the same tenant_id are routed to the same partition and processed sequentially within that partition. The throughput tradeoff is real: with 20 max concurrency instead of 50, and only 6 workers, we'll have lower parallelism, but ordering correctness takes priority. One thing I'd want to confirm with Victor: per-tenant encryption keys and tenant_id partitioning should actually align well \u2014 if we're already partitioning by tenant_id for ordering, key resolution can happen at the partition level without adding a separate lookup step. I don't see a hard conflict between any of the four requirements, but the revised architecture will need a partitioned queue model rather than a simple parallel queue, and that's the biggest structural change.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Maya, I agree that the per-tenant encryption keys and tenant_id partitioning should align well from a data governance perspective as well \u2014 if we're already scoping processing by tenant_id, the automated deletion workflow can also operate at the tenant level, which simplifies governance. On the retention requirement specifically, the 7-day retention with automated deletion is independent of the queueing model, so it doesn't conflict with the partitioned queue approach. The key thing I need to see in the revised configuration is an explicit automated deletion workflow that enforces the 7-day limit \u2014 I can't sign off on data governance without that being clearly captured in the architecture.",
+      "speaker": "A4",
+      "turn": 7,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Maya, I agree that the per-tenant encryption keys and tenant_id partitioning should align well from a data governance perspective as well \u2014 if we're already scoping processing by tenant_id, the automated deletion workflow can also operate at the tenant level, which simplifies governance. On the retention requirement specifically, the 7-day retention with automated deletion is independent of the queueing model, so it doesn't conflict with the partitioned queue approach. The key thing I need to see in the revised configuration is an explicit automated deletion workflow that enforces the 7-day limit \u2014 I can't sign off on data governance without that being clearly captured in the architecture.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I agree with Maya and Leila \u2014 the per-tenant encryption keys align naturally with tenant_id partitioning. From a security perspective, if we're already routing jobs by tenant_id for FIFO ordering, key resolution can happen at the partition level, which means we don't need a separate lookup step and the encryption boundary maps cleanly to the processing boundary. I don't see a hard conflict between any of the four requirements. The one thing I need to see in the revised configuration is an explicit per-tenant encryption key model with quarterly rotation \u2014 not just a shared key swapped for per-tenant keys, but the rotation lifecycle captured as part of the architecture. That's the non-negotiable for my security sign-off.",
+      "speaker": "A5",
+      "turn": 8,
+      "raw_output": "{\"type\":\"say\",\"text\": \"I agree with Maya and Leila \u2014 the per-tenant encryption keys align naturally with tenant_id partitioning. From a security perspective, if we're already routing jobs by tenant_id for FIFO ordering, key resolution can happen at the partition level, which means we don't need a separate lookup step and the encryption boundary maps cleanly to the processing boundary. I don't see a hard conflict between any of the four requirements. The one thing I need to see in the revised configuration is an explicit per-tenant encryption key model with quarterly rotation \u2014 not just a shared key swapped for per-tenant keys, but the rotation lifecycle captured as part of the architecture. That's the non-negotiable for my security sign-off.\"}"
+    },
+    {
+      "type": "say",
+      "text": "From an infrastructure perspective, I'm aligned with what Maya, Leila, and Victor have described. The per-tenant partitioning model works within the capacity constraints I measured \u2014 6 workers and max concurrency of 20 jobs is sufficient for a partitioned queue where jobs sharing the same tenant_id are routed to the same partition and processed sequentially. The lower concurrency is a throughput tradeoff we'll need to accept, but it's compatible with the ordering requirement. I don't see any hard conflicts between my capacity constraint and the other three requirements. For my infrastructure sign-off, the revised configuration must explicitly reflect 6 workers and a maximum concurrency of 20 jobs \u2014 not the 8 workers and 50 concurrency in the current draft. Once Riley updates the architecture document with the reconciled numbers, I'll need to verify the capacity figures are accurately captured before I can give my sign-off.",
+      "speaker": "A3",
+      "turn": 9,
+      "raw_output": "{\"type\": \"say\", \"text\": \"From an infrastructure perspective, I'm aligned with what Maya, Leila, and Victor have described. The per-tenant partitioning model works within the capacity constraints I measured \u2014 6 workers and max concurrency of 20 jobs is sufficient for a partitioned queue where jobs sharing the same tenant_id are routed to the same partition and processed sequentially. The lower concurrency is a throughput tradeoff we'll need to accept, but it's compatible with the ordering requirement. I don't see any hard conflicts between my capacity constraint and the other three requirements. For my infrastructure sign-off, the revised configuration must explicitly reflect 6 workers and a maximum concurrency of 20 jobs \u2014 not the 8 workers and 50 concurrency in the current draft. Once Riley updates the architecture document with the reconciled numbers, I'll need to verify the capacity figures are accurately captured before I can give my sign-off.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I think we're in good shape to move forward. To summarize from the data governance side: I need the revised configuration to explicitly capture 7-day payload retention with an automated deletion workflow that operates at the tenant level, aligned with the tenant_id partitioning model Maya and Victor described. Once Riley updates the architecture document with those changes, I'm prepared to give my data governance sign-off. I don't have any additional concerns beyond what I've already raised.",
+      "speaker": "A4",
+      "turn": 10,
+      "raw_output": "{\"type\":\"say\",\"text\":\"I think we're in good shape to move forward. To summarize from the data governance side: I need the revised configuration to explicitly capture 7-day payload retention with an automated deletion workflow that operates at the tenant level, aligned with the tenant_id partitioning model Maya and Victor described. Once Riley updates the architecture document with those changes, I'm prepared to give my data governance sign-off. I don't have any additional concerns beyond what I've already raised.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I want to make sure we don't lose track of the infrastructure capacity note. The measurement from this morning is still only in my infrastructure worksheet \u2014 it hasn't been added to the architecture document yet. Riley, when you revise the configuration, please make sure the 6 workers and max concurrency of 20 jobs are explicitly captured in the architecture document itself, not just agreed upon verbally. I'll need to verify those figures are in the document before I can give my infrastructure sign-off. Other than that, I'm aligned with the direction everyone's described and I don't have any additional concerns.",
+      "speaker": "A3",
+      "turn": 11,
+      "raw_output": "{\"type\": \"say\", \"text\": \"I want to make sure we don't lose track of the infrastructure capacity note. The measurement from this morning is still only in my infrastructure worksheet \u2014 it hasn't been added to the architecture document yet. Riley, when you revise the configuration, please make sure the 6 workers and max concurrency of 20 jobs are explicitly captured in the architecture document itself, not just agreed upon verbally. I'll need to verify those figures are in the document before I can give my infrastructure sign-off. Other than that, I'm aligned with the direction everyone's described and I don't have any additional concerns.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I think we're well aligned across all four areas. To summarize from the backend engineering side: the revised configuration needs a partitioned queue model using tenant_id as the partition key to guarantee per-tenant FIFO ordering, replacing the current parallel queue. This is compatible with Owen's capacity constraints of 6 workers and max concurrency of 20, and it aligns naturally with Victor's per-tenant encryption key model and Leila's tenant-level automated deletion workflow. I don't have any additional concerns beyond what I've already raised. Riley, once you update the architecture document to reflect the partitioned queue model with tenant_id partitioning, I'll need to verify that's captured before I can give my backend engineering sign-off.",
+      "speaker": "A2",
+      "turn": 12,
+      "raw_output": "{\"type\": \"say\", \"text\": \"I think we're well aligned across all four areas. To summarize from the backend engineering side: the revised configuration needs a partitioned queue model using tenant_id as the partition key to guarantee per-tenant FIFO ordering, replacing the current parallel queue. This is compatible with Owen's capacity constraints of 6 workers and max concurrency of 20, and it aligns naturally with Victor's per-tenant encryption key model and Leila's tenant-level automated deletion workflow. I don't have any additional concerns beyond what I've already raised. Riley, once you update the architecture document to reflect the partitioned queue model with tenant_id partitioning, I'll need to verify that's captured before I can give my backend engineering sign-off.\"}"
+    },
+    {
+      "type": "say",
+      "text": "I want to make sure we don't lose track of the security finding the way Owen flagged his infrastructure note. The per-tenant encryption key requirement with quarterly rotation I confirmed this morning still hasn't been opened as a security finding yet because the design review covered several services together. Riley, when you revise the configuration, please make sure the per-tenant encryption key model with quarterly rotation is explicitly captured in the architecture document itself, not just agreed upon verbally. I'll need to verify that's in the document before I can give my security sign-off. Other than that, I'm aligned with the direction everyone's described and I don't have any additional concerns.",
+      "speaker": "A5",
+      "turn": 13,
+      "raw_output": "{\"type\":\"say\", \"text\": \"I want to make sure we don't lose track of the security finding the way Owen flagged his infrastructure note. The per-tenant encryption key requirement with quarterly rotation I confirmed this morning still hasn't been opened as a security finding yet because the design review covered several services together. Riley, when you revise the configuration, please make sure the per-tenant encryption key model with quarterly rotation is explicitly captured in the architecture document itself, not just agreed upon verbally. I'll need to verify that's in the document before I can give my security sign-off. Other than that, I'm aligned with the direction everyone's described and I don't have any additional concerns.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "queue_mode": "partitioned (per-tenant FIFO)",
+          "partition_key": "tenant_id",
+          "worker_count": 6,
+          "max_concurrency": 20,
+          "payload_retention_days": 7,
+          "deletion_automation_enabled": true,
+          "encryption_mode": "per-tenant encryption keys",
+          "key_rotation_frequency": "quarterly"
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "document_update",
+            "target": "architecture document",
+            "detail": "Update the architecture document to replace the parallel queue with a partitioned queue model using tenant_id as the partition key for per-tenant FIFO ordering."
+          },
+          {
+            "type": "document_update",
+            "target": "architecture document",
+            "detail": "Update worker count from 8 to 6 and max concurrency from 50 to 20 jobs to reflect the production cluster's measured reserved capacity."
+          },
+          {
+            "type": "document_update",
+            "target": "architecture document",
+            "detail": "Update payload retention from 30 days to 7 days and add an automated deletion workflow operating at the tenant level."
+          },
+          {
+            "type": "document_update",
+            "target": "architecture document",
+            "detail": "Replace the single shared encryption key with a per-tenant encryption key model with quarterly key rotation lifecycle captured explicitly."
+          },
+          {
+            "type": "verification_round",
+            "target": "Maya (backend engineering)",
+            "detail": "Maya to verify the partitioned queue model with tenant_id partitioning is captured in the architecture document before giving backend engineering sign-off."
+          },
+          {
+            "type": "verification_round",
+            "target": "Owen (infrastructure)",
+            "detail": "Owen to verify 6 workers and max concurrency of 20 jobs are explicitly captured in the architecture document before giving infrastructure sign-off."
+          },
+          {
+            "type": "verification_round",
+            "target": "Leila (data governance)",
+            "detail": "Leila to verify 7-day payload retention with tenant-level automated deletion workflow is explicitly captured in the architecture document before giving data governance sign-off."
+          },
+          {
+            "type": "verification_round",
+            "target": "Victor (security)",
+            "detail": "Victor to verify per-tenant encryption key model with quarterly rotation is explicitly captured in the architecture document before giving security sign-off."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 14,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"partitioned (per-tenant FIFO)\",\n      \"partition_key\": \"tenant_id\",\n      \"worker_count\": 6,\n      \"max_concurrency\": 20,\n      \"payload_retention_days\": 7,\n      \"deletion_automation_enabled\": true,\n      \"encryption_mode\": \"per-tenant encryption keys\",\n      \"key_rotation_frequency\": \"quarterly\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"document_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update the architecture document to replace the parallel queue with a partitioned queue model using tenant_id as the partition key for per-tenant FIFO ordering.\"\n      },\n      {\n        \"type\": \"document_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update worker count from 8 to 6 and max concurrency from 50 to 20 jobs to reflect the production cluster's measured reserved capacity.\"\n      },\n      {\n        \"type\": \"document_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Update payload retention from 30 days to 7 days and add an automated deletion workflow operating at the tenant level.\"\n      },\n      {\n        \"type\": \"document_update\",\n        \"target\": \"architecture document\",\n        \"detail\": \"Replace the single shared encryption key with a per-tenant encryption key model with quarterly key rotation lifecycle captured explicitly.\"\n      },\n      {\n        \"type\": \"verification_round\",\n        \"target\": \"Maya (backend engineering)\",\n        \"detail\": \"Maya to verify the partitioned queue model with tenant_id partitioning is captured in the architecture document before giving backend engineering sign-off.\"\n      },\n      {\n        \"type\": \"verification_round\",\n        \"target\": \"Owen (infrastructure)\",\n        \"detail\": \"Owen to verify 6 workers and max concurrency of 20 jobs are explicitly captured in the architecture document before giving infrastructure sign-off.\"\n      },\n      {\n        \"type\": \"verification_round\",\n        \"target\": \"Leila (data governance)\",\n        \"detail\": \"Leila to verify 7-day payload retention with tenant-level automated deletion workflow is explicitly captured in the architecture document before giving data governance sign-off.\"\n      },\n      {\n        \"type\": \"verification_round\",\n        \"target\": \"Victor (security)\",\n        \"detail\": \"Victor to verify per-tenant encryption key model with quarterly rotation is explicitly captured in the architecture document before giving security sign-off.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "queue_mode": "partitioned (per-tenant FIFO)",
+      "partition_key": "tenant_id",
+      "worker_count": 6,
+      "max_concurrency": 20,
+      "payload_retention_days": 7,
+      "deletion_automation_enabled": true,
+      "encryption_mode": "per-tenant encryption keys",
+      "key_rotation_frequency": "quarterly"
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ],
+    "commitments": [
+      {
+        "type": "document_update",
+        "target": "architecture document",
+        "detail": "Update the architecture document to replace the parallel queue with a partitioned queue model using tenant_id as the partition key for per-tenant FIFO ordering."
+      },
+      {
+        "type": "document_update",
+        "target": "architecture document",
+        "detail": "Update worker count from 8 to 6 and max concurrency from 50 to 20 jobs to reflect the production cluster's measured reserved capacity."
+      },
+      {
+        "type": "document_update",
+        "target": "architecture document",
+        "detail": "Update payload retention from 30 days to 7 days and add an automated deletion workflow operating at the tenant level."
+      },
+      {
+        "type": "document_update",
+        "target": "architecture document",
+        "detail": "Replace the single shared encryption key with a per-tenant encryption key model with quarterly key rotation lifecycle captured explicitly."
+      },
+      {
+        "type": "verification_round",
+        "target": "Maya (backend engineering)",
+        "detail": "Maya to verify the partitioned queue model with tenant_id partitioning is captured in the architecture document before giving backend engineering sign-off."
+      },
+      {
+        "type": "verification_round",
+        "target": "Owen (infrastructure)",
+        "detail": "Owen to verify 6 workers and max concurrency of 20 jobs are explicitly captured in the architecture document before giving infrastructure sign-off."
+      },
+      {
+        "type": "verification_round",
+        "target": "Leila (data governance)",
+        "detail": "Leila to verify 7-day payload retention with tenant-level automated deletion workflow is explicitly captured in the architecture document before giving data governance sign-off."
+      },
+      {
+        "type": "verification_round",
+        "target": "Victor (security)",
+        "detail": "Victor to verify per-tenant encryption key model with quarterly rotation is explicitly captured in the architecture document before giving security sign-off."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3",
+      "PF4"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": false,
+    "C8": true,
+    "C9": false,
+    "C10": false,
+    "C11": false,
+    "C12": false,
+    "C13": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF3",
+    "PF2",
+    "PF4",
+    "PF1"
+  ],
+  "passed": false
+}

@@ -1,0 +1,129 @@
+{
+  "scenario_id": "scenario_63",
+  "scenario_type": "specialty_clinic_prioritization",
+  "description": "An anticoagulation clinic director must assign the clinic's one same-day pharmacist consultation between two patients and finalize the immediate medication plan and follow-up arrangements, with input from an anticoagulation pharmacist and a primary-care transition nurse.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Renee",
+      "role": "Anticoagulation Clinic Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Malik",
+      "role": "Anticoagulation Pharmacist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Tessa",
+      "role": "Primary-Care Transition Nurse"
+    }
+  ],
+  "shared_context": {
+    "S1": "The clinic has one 45-minute same-day pharmacist consultation available at 14:00.",
+    "S2": "Patient A and Patient B both need anticoagulation follow-up after recent medication changes.",
+    "S3": "Renee makes the final consultation assignment and immediate care-plan decision.",
+    "S4": "Clinic policy requires a brief huddle with the anticoagulation pharmacist and the transition nurse before the consultation slot is closed."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient A's point-of-care INR is 5.8, and the patient started trimethoprim-sulfamethoxazole yesterday; Dr. Malik's clinical review requires holding warfarin tonight and repeating the INR tomorrow at 09:00, so Patient A needs the 14:00 pharmacist consultation."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient B's primary-care office has already reserved a nurse call for Friday at 10:00 to review the medication change, and the patient has agreed to use that call instead of a same-day specialty consultation; Tessa arranged it this morning, but it is not yet on the clinic schedule."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "same_day_consultation_assigned_to": "string",
+      "warfarin_tonight": "string",
+      "repeat_inr_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The same-day pharmacist consultation must be assigned to Patient A.",
+    "Warfarin must be held for Patient A tonight.",
+    "Patient A's repeat INR must be scheduled for tomorrow at 09:00.",
+    "Patient B's Friday 10:00 primary-care nurse call must be recorded as the alternate follow-up.",
+    "The pharmacist's INR and medication-interaction finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['same_day_consultation_assigned_to'] == 'Patient A'",
+    "C2": "decisions['warfarin_tonight'] == 'hold'",
+    "C3": "decisions['repeat_inr_time'] == 'tomorrow 09:00'",
+    "C4": "any(c['type'] == 'alternate_follow_up' and c['target'] == 'Patient B' and c['detail'] == 'primary-care nurse call Friday 10:00' for c in commitments)",
+    "C5": "any(c['type'] == 'same_day_consultation' and c['target'] == 'Patient A' and c['detail'] == '14:00 for 45 minutes' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The INR of 5.8 and trimethoprim-sulfamethoxazole interaction change the assignment to Patient A, change warfarin from continuing to holding tonight, and set the repeat INR specifically for tomorrow at 09:00."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4"
+      ],
+      "why": "The already reserved and accepted Friday 10:00 primary-care call changes Patient B's alternate follow-up from an unspecified arrangement to that exact call."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

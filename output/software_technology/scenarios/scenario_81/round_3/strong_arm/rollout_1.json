@@ -1,0 +1,141 @@
+{
+  "arm": "strong",
+  "temperature": 0.535,
+  "transcript": [
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "During a cache-invalidation rehearsal thirty minutes ago, I measured up to 90 seconds of propagation delay across regions. The production policy therefore needs a 15-second TTL, a 120-minute canary, and invalidation-lag monitoring. The rehearsal result is not yet in the deployment record.",
+      "speaker": "A3",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During a cache-invalidation rehearsal thirty minutes ago, I measured up to 90 seconds of propagation delay across regions. The production policy therefore needs a 15-second TTL, a 120-minute canary, and invalidation-lag monitoring. The rehearsal result is not yet in the deployment record.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Casey. That 90-second cross-region propagation delay is significant and clearly needs to factor into our operating settings. Before I settle the policy, I want to hear from backend engineering and SRE on their recommendations given what Casey just reported. Specifically, I'd like their take on the 15-second TTL, the 120-minute canary, and the invalidation-lag monitoring Casey is proposing. Once I have both recommendations, I'll record the agreed decisions and follow-up commitments and settle the caching policy.",
+      "speaker": "A1",
+      "turn": 1,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Casey. That 90-second cross-region propagation delay is significant and clearly needs to factor into our operating settings. Before I settle the policy, I want to hear from backend engineering and SRE on their recommendations given what Casey just reported. Specifically, I'd like their take on the 15-second TTL, the 120-minute canary, and the invalidation-lag monitoring Casey is proposing. Once I have both recommendations, I'll record the agreed decisions and follow-up commitments and settle the caching policy.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I need to flag a critical issue before we settle on any caching policy. While debugging an unrelated tenant-isolation test this morning, I discovered that the cache key omits tenant ID for the /account/profile and /billing/status routes. This means cached responses could be served to the wrong tenant \u2014 a data isolation violation. Those two routes must bypass the cache entirely until the key is corrected. I have not filed the ticket yet, but I will do so immediately after this meeting.",
+      "speaker": "A2",
+      "turn": 2,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a critical issue before we settle on any caching policy. While debugging an unrelated tenant-isolation test this morning, I discovered that the cache key omits tenant ID for the /account/profile and /billing/status routes. This means cached responses could be served to the wrong tenant \u2014 a data isolation violation. Those two routes must bypass the cache entirely until the key is corrected. I have not filed the ticket yet, but I will do so immediately after this meeting.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Riley's finding changes things significantly. If /account/profile and /billing/status can serve cached responses to the wrong tenant due to the missing tenant ID in the cache key, those two routes must bypass the cache entirely \u2014 I agree with that recommendation. For the remaining routes that are safe to cache, my SRE recommendation stands: a 15-second TTL to bound staleness given the 90-second cross-region propagation delay I measured, a 120-minute canary so we can observe behavior before full rollout, and invalidation-lag monitoring to catch propagation issues in production. I'll make sure the rehearsal result gets filed in the deployment record as part of the follow-up.",
+      "speaker": "A3",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley's finding changes things significantly. If /account/profile and /billing/status can serve cached responses to the wrong tenant due to the missing tenant ID in the cache key, those two routes must bypass the cache entirely \u2014 I agree with that recommendation. For the remaining routes that are safe to cache, my SRE recommendation stands: a 15-second TTL to bound staleness given the 90-second cross-region propagation delay I measured, a 120-minute canary so we can observe behavior before full rollout, and invalidation-lag monitoring to catch propagation issues in production. I'll make sure the rehearsal result gets filed in the deployment record as part of the follow-up.\"}\n```"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "cache_enabled": true,
+          "excluded_routes": [
+            "/account/profile",
+            "/billing/status"
+          ],
+          "cache_ttl_seconds": 15,
+          "canary_duration_minutes": 120
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "S3",
+          "S4"
+        ],
+        "commitments": [
+          {
+            "type": "ticket",
+            "target": "Riley",
+            "detail": "File ticket for cache key correction to include tenant ID on /account/profile and /billing/status routes so cache bypass can be lifted"
+          },
+          {
+            "type": "monitoring",
+            "target": "Casey",
+            "detail": "Implement invalidation-lag monitoring to catch cross-region propagation issues in production"
+          },
+          {
+            "type": "record-update",
+            "target": "Casey",
+            "detail": "File the 90-second cross-region propagation delay rehearsal result in the deployment record"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S3",
+          "S4"
+        ],
+        "revealed": []
+      },
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cache_enabled\": true,\n      \"excluded_routes\": [\"/account/profile\", \"/billing/status\"],\n      \"cache_ttl_seconds\": 15,\n      \"canary_duration_minutes\": 120\n    },\n    \"credited_facts\": [\"PF1\", \"PF2\", \"S3\", \"S4\"],\n    \"commitments\": [\n      {\n        \"type\": \"ticket\",\n        \"target\": \"Riley\",\n        \"detail\": \"File ticket for cache key correction to include tenant ID on /account/profile and /billing/status routes so cache bypass can be lifted\"\n      },\n      {\n        \"type\": \"monitoring\",\n        \"target\": \"Casey\",\n        \"detail\": \"Implement invalidation-lag monitoring to catch cross-region propagation issues in production\"\n      },\n      {\n        \"type\": \"record-update\",\n        \"target\": \"Casey\",\n        \"detail\": \"File the 90-second cross-region propagation delay rehearsal result in the deployment record\"\n      }\n    ],\n    \"justification_fact_ids\": [\"PF1\", \"PF2\", \"S3\", \"S4\"],\n    \"revealed\": []\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "cache_enabled": true,
+      "excluded_routes": [
+        "/account/profile",
+        "/billing/status"
+      ],
+      "cache_ttl_seconds": 15,
+      "canary_duration_minutes": 120
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "S3",
+      "S4"
+    ],
+    "commitments": [
+      {
+        "type": "ticket",
+        "target": "Riley",
+        "detail": "File ticket for cache key correction to include tenant ID on /account/profile and /billing/status routes so cache bypass can be lifted"
+      },
+      {
+        "type": "monitoring",
+        "target": "Casey",
+        "detail": "Implement invalidation-lag monitoring to catch cross-region propagation issues in production"
+      },
+      {
+        "type": "record-update",
+        "target": "Casey",
+        "detail": "File the 90-second cross-region propagation delay rehearsal result in the deployment record"
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "S3",
+      "S4"
+    ],
+    "revealed": []
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF2",
+    "PF1"
+  ],
+  "passed": true
+}

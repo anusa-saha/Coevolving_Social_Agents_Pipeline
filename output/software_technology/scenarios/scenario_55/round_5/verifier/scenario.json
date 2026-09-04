@@ -1,0 +1,176 @@
+{
+  "scenario_id": "scenario_55",
+  "scenario_type": "security_incident_response",
+  "description": "A security engineering manager must finalize the response classification and remediation plan for a suspicious build-system credential exposure, incorporating input from platform engineering, compliance, and customer operations.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Security Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mateo",
+      "role": "Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Hana",
+      "role": "Compliance Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leah",
+      "role": "Customer Operations Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "A deployment credential was exposed in a CI build log during yesterday's release.",
+    "S2": "The credential has been disabled, and the initial review found no confirmed unauthorized production changes.",
+    "S3": "The incident review is scheduled to close today at 4 PM.",
+    "S4": "The affected CI system is used for production deployments and stores build logs and deployment audit records in separate systems.",
+    "S5": "The incident-review routine is a short final round: platform engineering, compliance, and customer operations each give one final status update, and Riley records the binding response decision immediately after those three updates; closure does not wait for follow-up tickets or completed remediation work."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing the CI job this morning, Mateo confirmed that the exposed credential was used by exactly two production deployment jobs before it was disabled. He found this in the deployment audit records while working on a separate rollback issue and has not yet attached the records to the incident. Under the incident policy, confirmed use by production deployment jobs requires severity_level to be exactly 'SEV-1' and incident_classification to be exactly 'confirmed production credential use', not 'high' and not a descriptive compound label; the credential must also be rotated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The current audit-control policy requires security-incident evidence for deployment credentials to be stored immutably for exactly 400 days. Hana confirmed the control wording during a routine quarterly audit this afternoon but has not updated the incident checklist."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Customer operations confirmed that exactly three regulated customers had deployment jobs using this credential, and their agreements require notice within exactly 24 hours when a deployment credential accesses their environments. Leah found the account-specific clauses while preparing the weekly customer report and has not posted the list in the incident channel. The response must set customer_notification_required to true, regulated_customer_count to exactly 3, customer_notification_deadline_hours to exactly 24, and record a commitment whose detail is exactly 'exactly 24 hours'."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A2",
+      "A3",
+      "A4",
+      "A1"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "severity_level": "string",
+      "incident_classification": "string",
+      "deployment_credential_rotated": "boolean",
+      "immutable_evidence_retention_days": "integer",
+      "customer_notification_required": "boolean",
+      "regulated_customer_count": "integer",
+      "customer_notification_deadline_hours": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The incident must have severity level SEV-1.",
+    "The incident classification must be exactly confirmed production credential use.",
+    "The deployment credential must be rotated.",
+    "Incident evidence must be retained immutably for exactly 400 days.",
+    "Customer notification must be required.",
+    "The plan must identify exactly three regulated customers for notification.",
+    "The customer notification deadline must be exactly 24 hours.",
+    "A regulated-customer notification commitment with detail exactly exactly 24 hours must be recorded.",
+    "The production-use evidence must be cited as justification for the incident classification or credential rotation."
+  ],
+  "content_checks": {
+    "C1": "decisions['severity_level'] == 'SEV-1'",
+    "C2": "decisions['deployment_credential_rotated'] == True",
+    "C3": "decisions['immutable_evidence_retention_days'] == 400",
+    "C4": "decisions['customer_notification_required'] == True",
+    "C5": "decisions['regulated_customer_count'] == 3",
+    "C6": "decisions['customer_notification_deadline_hours'] == 24",
+    "C7": "any(c['type'] == 'regulated_customer_notification' and c['detail'] == 'exactly 24 hours' for c in commitments)",
+    "C8": "decisions['incident_classification'] == 'confirmed production credential use'"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C8",
+        "P1"
+      ],
+      "why": "The initial review reports no confirmed production impact; confirming exactly two production deployment jobs changes severity_level to exactly 'SEV-1', changes incident_classification to exactly 'confirmed production credential use', and requires deployment_credential_rotated to be true."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The audit-control wording changes immutable_evidence_retention_days from an unspecified ordinary period to exactly 400."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "The account review changes customer_notification_required to true, regulated_customer_count to exactly 3, customer_notification_deadline_hours to exactly 24, and requires a regulated_customer_notification commitment whose detail is exactly 'exactly 24 hours'."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

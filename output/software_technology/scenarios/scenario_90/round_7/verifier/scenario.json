@@ -1,0 +1,170 @@
+{
+  "scenario_id": "scenario_90",
+  "scenario_type": "event_architecture_approval",
+  "description": "A principal engineer must approve the production architecture for moving customer activity events onto a new event bus, deciding compatibility, replay limits, data handling, and the follow-up work required before adoption.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Principal Engineer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Maya",
+      "role": "Backend Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jon",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nadia",
+      "role": "Privacy Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The team plans to move customer activity events from the legacy queue to the new event bus during the next quarter.",
+    "S2": "Riley owns the final architecture approval.",
+    "S3": "The draft RFC proposes direct protobuf publishing, a 30-day event-retention period, unrestricted replay workers, and storage in the default US region.",
+    "S4": "The architecture review requires backend, reliability, and privacy sign-off; as part of the normal review routine, each representative gives their concrete findings and formally records any requirement that differs from the draft before Riley decides."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing an unrelated SDK issue yesterday, Maya confirmed that three named legacy consumers can only read the current Avro envelope; the migration therefore needs an Avro compatibility gateway and exactly 21 days of dual publishing, but she has not updated the RFC yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Jon's replay benchmark from this morning showed that the expected peak backlog can be recovered safely with at most 4 concurrent replay workers and exactly 14 days of retained events; the 14-day retention result is independent of Maya's dual-publishing period, and he has not posted the benchmark because he is still checking the dashboard screenshots. During this review, Jon must issue a formal reveal of this benchmark finding rather than merely describing that verification is in progress."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Nadia completed a privacy review thirty minutes ago and confirmed that activity payloads include precise location data, so events must be tokenized before entering the bus and stored in the EU region; she has not filed the review record yet. During this review, Nadia must issue a formal reveal of these two privacy requirements rather than merely describing their implications."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "compatibility_mode": "string",
+      "dual_publish_days": "integer",
+      "max_replay_workers": "integer",
+      "retention_days": "integer",
+      "payload_tokenization_required": "boolean",
+      "storage_region": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The architecture must use an Avro compatibility gateway.",
+    "Dual publishing must last exactly 21 days.",
+    "Replay concurrency must be capped at exactly 4 workers.",
+    "Event retention must be exactly 14 days.",
+    "Payloads must be tokenized before entering the event bus.",
+    "Event storage must use the EU region.",
+    "A commitment documenting the Avro compatibility gateway and 21-day dual publishing must be recorded.",
+    "A commitment documenting the 4-worker replay cap and 14-day retention must be recorded.",
+    "A commitment documenting payload tokenization and EU region storage must be recorded.",
+    "Maya's compatibility finding must be cited as a justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['compatibility_mode'] in ['Avro compatibility gateway', 'Avro compatibility gateway required before migration begins', 'avro_compatibility_gateway', 'avro_gateway']",
+    "C2": "decisions['dual_publish_days'] == 21",
+    "C3": "decisions['max_replay_workers'] == 4",
+    "C4": "decisions['retention_days'] == 14",
+    "C5": "decisions['payload_tokenization_required'] == True",
+    "C6": "decisions['storage_region'] in ['EU', 'eu']",
+    "C7": "decisions['dual_publish_days'] == 21 and any(c.get('target') == 'Maya' and '21' in c.get('detail', '') and ('Avro' in c.get('detail', '') or 'avro' in c.get('detail', '')) and ('dual' in c.get('detail', '') or 'Dual' in c.get('detail', '')) for c in commitments)",
+    "C8": "decisions['max_replay_workers'] == 4 and decisions['retention_days'] == 14 and any(c.get('target') == 'Jon' and '4' in c.get('detail', '') and ('14-day' in c.get('detail', '') or '14 days' in c.get('detail', '') or '14-day retention' in c.get('detail', '') or '14 days of retention' in c.get('detail', '')) and 'retention' in c.get('detail', '') for c in commitments)",
+    "C9": "any(c.get('target') == 'Nadia' and 'tokenization' in c.get('detail', '') and ('EU' in c.get('detail', '') or 'eu' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The draft calls for direct protobuf publishing with no coexistence period; PF1 changes the architecture to an Avro gateway, changes dual publishing to exactly 21 days, and requires a commitment documenting that migration."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C8"
+      ],
+      "why": "The draft leaves replay workers unrestricted and retains events for 30 days; PF2 changes the settings to exactly 4 workers and exactly 14 days and requires a commitment documenting those limits."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "The draft sends payloads directly to the bus and uses the default US region; PF3 changes handling to required tokenization, changes storage to the EU region, and requires a commitment documenting both privacy controls."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

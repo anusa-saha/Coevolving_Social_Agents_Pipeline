@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_56",
+  "scenario_type": "safety_incident_response",
+  "description": "A safety officer must decide when and under what controls to reopen Dock 4 after a solvent spill in the finished-goods staging area, while preserving the day's shipment plan and completing the required cleanup.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Nora",
+      "role": "Safety Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Evan",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Logistics Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "A solvent spill occurred in the finished-goods staging area beside Dock 4, and Dock 4 is currently closed.",
+    "S2": "Nora makes the final safety decision about reopening Dock 4 and the associated operating controls.",
+    "S3": "The afternoon shipping plan includes finished goods that were normally scheduled to leave through Dock 4.",
+    "S4": "The plant's shift-handoff routine requires maintenance and logistics to report relevant conditions before the safety officer releases a closed dock."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Evan's post-spill inspection found solvent in the trench drain and a damaged drain seal; maintenance policy requires the drain to be isolated and the area to remain closed for exactly 6 hours while the seal is replaced and the surface is neutralized. Evan completed the inspection after the spill, but the maintenance ticket has not yet been updated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's carrier confirmation shows that 18 finished-goods pallets must be staged at Dock 2 by 12:30 for the 14:00 pickup because Dock 4 cannot be used; she received the confirmation by email this morning but has not entered it in the shipping board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "dock4_closure_hours": "integer",
+      "drain_isolated_before_reopening": "boolean",
+      "pallets_rerouted_to_dock2": "integer",
+      "dock2_staging_deadline": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Dock 4 must remain closed for exactly 6 hours.",
+    "The trench drain must be isolated before Dock 4 reopens.",
+    "Exactly 18 pallets must be rerouted to Dock 2.",
+    "The pallets must be staged at Dock 2 by 12:30.",
+    "The settlement must record a drain-repair and neutralization commitment.",
+    "The settlement must record a Dock 2 carrier-reroute commitment.",
+    "The maintenance inspection finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['dock4_closure_hours'] == 6",
+    "C2": "decisions['drain_isolated_before_reopening'] == True",
+    "C3": "decisions['pallets_rerouted_to_dock2'] == 18",
+    "C4": "decisions['dock2_staging_deadline'] == '12:30'",
+    "C5": "any(c['type'] == 'drain_repair_and_neutralization' for c in commitments)",
+    "C6": "any(c['type'] == 'dock2_carrier_reroute' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in credited_facts"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The drain contamination and damaged seal change the closure from an unspecified spill response to exactly 6 hours, mandatory drain isolation, and a drain-repair and neutralization commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6",
+        "P2"
+      ],
+      "why": "The carrier confirmation changes the shipping plan to exactly 18 pallets at Dock 2 by the specific 12:30 staging deadline and requires a Dock 2 carrier-reroute commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 3
+}

@@ -1,0 +1,145 @@
+{
+  "scenario_id": "scenario_75",
+  "status": "accepted",
+  "rounds_taken": 9,
+  "exhausted_stage": null,
+  "stage_failure_counts": {
+    "verifier": 1,
+    "weak_arm": 0,
+    "strong_arm": 7
+  },
+  "scenario": {
+    "scenario_id": "scenario_75",
+    "scenario_type": "specialty_referral_prioritization",
+    "description": "A heart-failure clinic access coordinator must assign one newly opened next-day evaluation slot between two referrals and document the appropriate visit format and alternate follow-up, with input from a triage nurse and an authorization specialist.",
+    "agents": [
+      {
+        "agent_id": "A1",
+        "name": "Leah",
+        "role": "Heart-Failure Clinic Access Coordinator"
+      },
+      {
+        "agent_id": "A2",
+        "name": "Mateo",
+        "role": "Cardiology Triage Nurse"
+      },
+      {
+        "agent_id": "A3",
+        "name": "Rina",
+        "role": "Insurance Authorization Specialist"
+      }
+    ],
+    "shared_context": {
+      "S1": "The heart-failure clinic has one newly opened evaluation slot tomorrow at 10:00, and referrals for Patient A and Patient B are both being considered.",
+      "S2": "Leah makes the final appointment assignment and records the follow-up plan for the patient who does not receive the slot.",
+      "S3": "Patient B's referral was received two days before Patient A's referral.",
+      "S4": "The clinic's routine process is to hold a brief huddle in which the triage nurse and authorization specialist each provide a relevant update before Leah releases an appointment slot."
+    },
+    "private_facts": {
+      "PF1": {
+        "owner": "A2",
+        "text": "Patient A reported two episodes of exertional near-fainting yesterday, and the referring cardiologist instructed that Patient A receive a heart-failure clinician evaluation within 24 hours rather than a routine intake; Mateo documented the telephone triage details in his nursing work queue, but they are not yet in the referral summary."
+      },
+      "PF2": {
+        "owner": "A3",
+        "text": "Patient B's insurer has already approved an in-network video visit with the heart-failure clinic for Thursday at 14:00, and the authorization number is valid for that appointment; Rina received the approval through the payer portal, but it has not yet been attached to the referral."
+      }
+    },
+    "views": {
+      "A1": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "A2": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF1"
+      ],
+      "A3": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "PF2"
+      ]
+    },
+    "decision_maker": "A1",
+    "interaction_config": {
+      "turn_order": [
+        "A1",
+        "A2",
+        "A3"
+      ],
+      "turn_cap": 10
+    },
+    "settlement_schema": {
+      "decisions": {
+        "next_day_slot_assigned_to": "string",
+        "visit_format": "string",
+        "alternate_follow_up_day": "string",
+        "alternate_follow_up_time": "string",
+        "alternate_follow_up_format": "string"
+      },
+      "credited_facts": [
+        "fact_id"
+      ],
+      "commitments": [
+        {
+          "type": "string",
+          "target": "string",
+          "detail": "string"
+        }
+      ],
+      "justification_fact_ids": [
+        "fact_id"
+      ]
+    },
+    "acceptance_conditions": [
+      "The next-day 10:00 slot must be assigned to Patient A.",
+      "Patient A's visit must be recorded as an in-person evaluation.",
+      "Patient B's alternate follow-up must be recorded for Thursday at 14:00.",
+      "Patient B's alternate follow-up must use a video visit.",
+      "A commitment for Patient B's approved follow-up plan or authorization attachment must be recorded.",
+      "The triage finding must be cited as justification for assigning the next-day slot to Patient A."
+    ],
+    "content_checks": {
+      "C1": "decisions['next_day_slot_assigned_to'] == 'Patient A'",
+      "C2": "'in-person' in decisions['visit_format']",
+      "C3": "decisions['alternate_follow_up_day'] == 'Thursday' and decisions['alternate_follow_up_time'] == '14:00'",
+      "C4": "decisions['alternate_follow_up_format'] == 'video visit' or decisions['alternate_follow_up_format'] == 'in-network video visit' or decisions['alternate_follow_up_format'] == 'in-network video visit with the heart-failure clinic'",
+      "C5": "'video visit' in decisions['alternate_follow_up_format'] and any(c['target'] == 'Patient B' and c['type'] in ['follow-up plan', 'follow-up_plan', 'record_follow_up_plan', 'documentation'] and 'Thursday' in c['detail'] and '14:00' in c['detail'] and 'video' in c['detail'] and ('authorization' in c['detail'] or 'insurer' in c['detail'] or 'approved' in c['detail']) for c in commitments)"
+    },
+    "provenance_checks": {
+      "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+    },
+    "decisive_facts": [
+      {
+        "fact_id": "PF1",
+        "owner": "A2",
+        "flips": [
+          "C1",
+          "C2",
+          "P1"
+        ],
+        "why": "Patient B's earlier referral would otherwise support using the slot for Patient B and a routine visit; the two near-fainting episodes and 24-hour instruction change the patient assignment to Patient A and the visit format to an in-person evaluation."
+      },
+      {
+        "fact_id": "PF2",
+        "owner": "A3",
+        "flips": [
+          "C3",
+          "C4",
+          "C5"
+        ],
+        "why": "Without the approved Thursday 14:00 authorization, Patient B has no known alternate appointment, exact time, video format, or authorization-related follow-up commitment to record."
+      }
+    ],
+    "domain": "healthcare",
+    "requested_num_agents": 3
+  },
+  "timestamp": "2026-08-28T15:38:08.220746+00:00"
+}

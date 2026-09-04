@@ -1,0 +1,606 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.345,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright, let's get this incident review wrapped up. Before I approve the final postmortem remediation plan, I want to make sure we haven't missed anything. The retry configuration change is currently recorded as the immediate cause for the duplicate notifications during that 26-minute window on Tuesday. On-call SRE, do you have any findings that should change the remediation plan before we finalize it?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright, let's get this incident review wrapped up. Before I approve the final postmortem remediation plan, I want to make sure we haven't missed anything. The retry configuration change is currently recorded as the immediate cause for the duplicate notifications during that 26-minute window on Tuesday. On-call SRE, do you have any findings that should change the remediation plan before we finalize it?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path. This means a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path. This means a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "That's everything from my side, Riley. To summarize what I've found: the retry configuration change alone won't prevent future duplicate deliveries \u2014 the timeout-path idempotency bypass is a separate root cause that needs its own remediation. I'll get this filed in the incident tracker right after this meeting so it's formally captured. Between Maya's customer-notification commitments and my idempotency-remediation and replay-test commitments, the remediation plan will need to be updated before it's finalized.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\": \"say\", \"text\": \"That's everything from my side, Riley. To summarize what I've found: the retry configuration change alone won't prevent future duplicate deliveries \u2014 the timeout-path idempotency bypass is a separate root cause that needs its own remediation. I'll get this filed in the incident tracker right after this meeting so it's formally captured. Between Maya's customer-notification commitments and my idempotency-remediation and replay-test commitments, the remediation plan will need to be updated before it's finalized.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "idempotency_enforcement_enabled": true,
+              "duplicate_delivery_replay_test_required": true,
+              "written_summary_due": "within 3 business days",
+              "affected_enterprise_customers_notified": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "engineering",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Implement idempotency-key enforcement on the timeout path so future timeouts cannot create duplicate deliveries."
+              },
+              {
+                "type": "testing",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions."
+              },
+              {
+                "type": "customer-notification",
+                "target": "two enterprise customers who received duplicate payment notifications",
+                "detail": "Notify the two affected enterprise customers and deliver a written incident summary within 3 business days per their contractual requirements."
+              },
+              {
+                "type": "process",
+                "target": "incident tracker",
+                "detail": "File the timeout-path idempotency bypass as a separate root cause in the incident tracker."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "PF1",
+              "PF2"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"idempotency_enforcement_enabled\": true,\n      \"duplicate_delivery_replay_test_required\": true,\n      \"written_summary_due\": \"within 3 business days\",\n      \"affected_enterprise_customers_notified\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"engineering\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Implement idempotency-key enforcement on the timeout path so future timeouts cannot create duplicate deliveries.\"\n      },\n      {\n        \"type\": \"testing\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.\"\n      },\n      {\n        \"type\": \"customer-notification\",\n        \"target\": \"two enterprise customers who received duplicate payment notifications\",\n        \"detail\": \"Notify the two affected enterprise customers and deliver a written incident summary within 3 business days per their contractual requirements.\"\n      },\n      {\n        \"type\": \"process\",\n        \"target\": \"incident tracker\",\n        \"detail\": \"File the timeout-path idempotency bypass as a separate root cause in the incident tracker.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "idempotency_enforcement_enabled": true,
+          "duplicate_delivery_replay_test_required": true,
+          "written_summary_due": "within 3 business days",
+          "affected_enterprise_customers_notified": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "engineering",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Implement idempotency-key enforcement on the timeout path so future timeouts cannot create duplicate deliveries."
+          },
+          {
+            "type": "testing",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions."
+          },
+          {
+            "type": "customer-notification",
+            "target": "two enterprise customers who received duplicate payment notifications",
+            "detail": "Notify the two affected enterprise customers and deliver a written incident summary within 3 business days per their contractual requirements."
+          },
+          {
+            "type": "process",
+            "target": "incident tracker",
+            "detail": "File the timeout-path idempotency bypass as a separate root cause in the incident tracker."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.421,
+      "transcript": [
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to flag something important. While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications. Their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled, but they're reconciled now. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.",
+          "speaker": "A3",
+          "turn": 0,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag something important. While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications. Their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled, but they're reconciled now. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to flag something before the remediation plan is finalized. While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path. This means a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions. I haven't filed this in the incident tracker yet.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something before the remediation plan is finalized. While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path. This means a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions. I haven't filed this in the incident tracker yet.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thank you both for surfacing these findings before I finalize the remediation plan. Omar, the idempotency bypass on the timeout path is a serious gap \u2014 if that's not fixed, reverting the retry configuration alone won't prevent future duplicate deliveries. I'll require an idempotency-remediation commitment for the retry worker and a duplicate-delivery replay test that specifically validates timeout conditions. Maya, the contractual obligation for those two enterprise customers is time-sensitive. I'll make sure the plan includes notifying them and committing to a written incident summary within 3 business days. Let me formalize the settlement now.",
+          "speaker": "A1",
+          "turn": 2,
+          "raw_output": "```json\n{\"type\":\"say\",\"text\":\"Thank you both for surfacing these findings before I finalize the remediation plan. Omar, the idempotency bypass on the timeout path is a serious gap \u2014 if that's not fixed, reverting the retry configuration alone won't prevent future duplicate deliveries. I'll require an idempotency-remediation commitment for the retry worker and a duplicate-delivery replay test that specifically validates timeout conditions. Maya, the contractual obligation for those two enterprise customers is time-sensitive. I'll make sure the plan includes notifying them and committing to a written incident summary within 3 business days. Let me formalize the settlement now.\"}\n```"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "idempotency_enforcement_enabled": true,
+              "duplicate_delivery_replay_test_required": true,
+              "written_summary_due": "3 business days",
+              "affected_enterprise_customers_notified": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "idempotency-remediation",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions."
+              },
+              {
+                "type": "duplicate-delivery-replay-test",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Add a replay test that verifies the idempotency fix prevents duplicate deliveries specifically under timeout conditions."
+              },
+              {
+                "type": "customer-notification",
+                "target": "two enterprise customers",
+                "detail": "Notify the two enterprise customers who received duplicate payment notifications."
+              },
+              {
+                "type": "written-incident-summary",
+                "target": "two enterprise customers",
+                "detail": "Deliver a written incident summary to the two enterprise customers within 3 business days, per contractual obligation."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"idempotency_enforcement_enabled\": true,\n      \"duplicate_delivery_replay_test_required\": true,\n      \"written_summary_due\": \"3 business days\",\n      \"affected_enterprise_customers_notified\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"idempotency-remediation\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions.\"\n      },\n      {\n        \"type\": \"duplicate-delivery-replay-test\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Add a replay test that verifies the idempotency fix prevents duplicate deliveries specifically under timeout conditions.\"\n      },\n      {\n        \"type\": \"customer-notification\",\n        \"target\": \"two enterprise customers\",\n        \"detail\": \"Notify the two enterprise customers who received duplicate payment notifications.\"\n      },\n      {\n        \"type\": \"written-incident-summary\",\n        \"target\": \"two enterprise customers\",\n        \"detail\": \"Deliver a written incident summary to the two enterprise customers within 3 business days, per contractual obligation.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "idempotency_enforcement_enabled": true,
+          "duplicate_delivery_replay_test_required": true,
+          "written_summary_due": "3 business days",
+          "affected_enterprise_customers_notified": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "idempotency-remediation",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions."
+          },
+          {
+            "type": "duplicate-delivery-replay-test",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Add a replay test that verifies the idempotency fix prevents duplicate deliveries specifically under timeout conditions."
+          },
+          {
+            "type": "customer-notification",
+            "target": "two enterprise customers",
+            "detail": "Notify the two enterprise customers who received duplicate payment notifications."
+          },
+          {
+            "type": "written-incident-summary",
+            "target": "two enterprise customers",
+            "detail": "Deliver a written incident summary to the two enterprise customers within 3 business days, per contractual obligation."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.382,
+      "transcript": [
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.",
+          "speaker": "A3",
+          "turn": 0,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I haven't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. That's an important contractual finding. Before I finalize the remediation plan, I want to make sure we capture this correctly. I'm also going to check with the on-call SRE for any additional findings that should change the remediation plan before it's finalized, per our normal incident-review routine.",
+          "speaker": "A1",
+          "turn": 1,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Maya. That's an important contractual finding. Before I finalize the remediation plan, I want to make sure we capture this correctly. I'm also going to check with the on-call SRE for any additional findings that should change the remediation plan before it's finalized, per our normal incident-review routine.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path, so a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path, so a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.\"}"
+        },
+        {
+          "type": "say",
+          "text": "I've shared my finding about the idempotency key bypass on the retry worker's timeout path. To summarize what I think the remediation plan needs to address from my end: (1) an idempotency-remediation commitment for the payment-webhook-retry-worker to fix the bypass on the timeout path, and (2) a duplicate-delivery replay test that specifically verifies the idempotency fix prevents duplicates under timeout conditions. I'll file this in the incident tracker as soon as we wrap up here. Riley, let me know if you need any additional detail on the timeout-path bypass before you finalize the plan.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\": \"say\", \"text\": \"I've shared my finding about the idempotency key bypass on the retry worker's timeout path. To summarize what I think the remediation plan needs to address from my end: (1) an idempotency-remediation commitment for the payment-webhook-retry-worker to fix the bypass on the timeout path, and (2) a duplicate-delivery replay test that specifically verifies the idempotency fix prevents duplicates under timeout conditions. I'll file this in the incident tracker as soon as we wrap up here. Riley, let me know if you need any additional detail on the timeout-path bypass before you finalize the plan.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "idempotency_enforcement_enabled": true,
+              "duplicate_delivery_replay_test_required": true,
+              "written_summary_due": "within 3 business days of the incident",
+              "affected_enterprise_customers_notified": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "idempotency-remediation",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Fix the bypass of the payment provider's idempotency key on the retry worker's timeout path so future timeouts cannot create duplicate deliveries."
+              },
+              {
+                "type": "duplicate-delivery-replay-test",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Add a replay test that specifically verifies the idempotency fix prevents duplicate deliveries under timeout conditions."
+              },
+              {
+                "type": "customer-incident-summary",
+                "target": "two enterprise customers who received duplicate payment notifications",
+                "detail": "Provide a written incident summary to the two affected enterprise customers within 3 business days of the incident, as required by their contracts."
+              },
+              {
+                "type": "enterprise-customer-notification",
+                "target": "two enterprise customers who received duplicate payment notifications",
+                "detail": "Notify the two affected enterprise customers about the duplicate payment notification incident."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"idempotency_enforcement_enabled\": true,\n      \"duplicate_delivery_replay_test_required\": true,\n      \"written_summary_due\": \"within 3 business days of the incident\",\n      \"affected_enterprise_customers_notified\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"idempotency-remediation\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Fix the bypass of the payment provider's idempotency key on the retry worker's timeout path so future timeouts cannot create duplicate deliveries.\"\n      },\n      {\n        \"type\": \"duplicate-delivery-replay-test\",\n        \"target\": \"payment-webhook-retry-worker\",\n        \"detail\": \"Add a replay test that specifically verifies the idempotency fix prevents duplicate deliveries under timeout conditions.\"\n      },\n      {\n        \"type\": \"customer-incident-summary\",\n        \"target\": \"two enterprise customers who received duplicate payment notifications\",\n        \"detail\": \"Provide a written incident summary to the two affected enterprise customers within 3 business days of the incident, as required by their contracts.\"\n      },\n      {\n        \"type\": \"enterprise-customer-notification\",\n        \"target\": \"two enterprise customers who received duplicate payment notifications\",\n        \"detail\": \"Notify the two affected enterprise customers about the duplicate payment notification incident.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "idempotency_enforcement_enabled": true,
+          "duplicate_delivery_replay_test_required": true,
+          "written_summary_due": "within 3 business days of the incident",
+          "affected_enterprise_customers_notified": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "idempotency-remediation",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Fix the bypass of the payment provider's idempotency key on the retry worker's timeout path so future timeouts cannot create duplicate deliveries."
+          },
+          {
+            "type": "duplicate-delivery-replay-test",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Add a replay test that specifically verifies the idempotency fix prevents duplicate deliveries under timeout conditions."
+          },
+          {
+            "type": "customer-incident-summary",
+            "target": "two enterprise customers who received duplicate payment notifications",
+            "detail": "Provide a written incident summary to the two affected enterprise customers within 3 business days of the incident, as required by their contracts."
+          },
+          {
+            "type": "enterprise-customer-notification",
+            "target": "two enterprise customers who received duplicate payment notifications",
+            "detail": "Notify the two affected enterprise customers about the duplicate payment notification incident."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.406,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hi everyone, I'm Maya, the Customer Support Lead. Before we finalize the remediation plan, I have some important findings from the customer side that I'd like to share. I've been reconciling support ticket details and there's something contractually significant we need to address.",
+          "speaker": "A3",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone, I'm Maya, the Customer Support Lead. Before we finalize the remediation plan, I have some important findings from the customer side that I'd like to share. I've been reconciling support ticket details and there's something contractually significant we need to address.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. Go ahead and share your findings \u2014 what's the contractual significance you're seeing?",
+          "speaker": "A1",
+          "turn": 1,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Maya. Go ahead and share your findings \u2014 what's the contractual significance you're seeing?\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. I'm looking forward to hearing your findings as well. I also have something important to share from my end \u2014 I found an issue while investigating a separate timeout alert this morning that I think needs to be factored into the remediation plan before we finalize it.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Maya. I'm looking forward to hearing your findings as well. I also have something important to share from my end \u2014 I found an issue while investigating a separate timeout alert this morning that I think needs to be factored into the remediation plan before we finalize it.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Go ahead, Maya \u2014 please share your findings first, and then I'll follow up with what I found.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Go ahead, Maya \u2014 please share your findings first, and then I'll follow up with what I found.\"}\n```"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I hadn't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.",
+          "speaker": "A3",
+          "turn": 4,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"While handling follow-up tickets, I confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident. I hadn't updated the incident channel yet because I was waiting for the support ticket details to be reconciled. The remediation plan must commit to notifying these two enterprise customers and must include a customer-incident-summary commitment for them within the 3-business-day contractual deadline.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. That's a critical finding \u2014 the contractual obligation for those two enterprise customers needs to be reflected in the remediation plan. I want to make sure we capture both the notification commitment and the 3-business-day written summary deadline. Omar, let's hear your findings next so I can factor everything into the final plan.",
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Maya. That's a critical finding \u2014 the contractual obligation for those two enterprise customers needs to be reflected in the remediation plan. I want to make sure we capture both the notification commitment and the 3-business-day written summary deadline. Omar, let's hear your findings next so I can factor everything into the final plan.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Riley. To summarize what needs to go into the remediation plan from the customer side: first, a commitment to notify the two enterprise customers who received duplicate payment notifications, and second, a written incident summary delivered to them within 3 business days per their contractual requirements. I'm happy to take ownership of drafting and delivering those customer summaries once the plan is approved. Omar, I'd love to hear your findings now.",
+          "speaker": "A3",
+          "turn": 6,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Riley. To summarize what needs to go into the remediation plan from the customer side: first, a commitment to notify the two enterprise customers who received duplicate payment notifications, and second, a written incident summary delivered to them within 3 business days per their contractual requirements. I'm happy to take ownership of drafting and delivering those customer summaries once the plan is approved. Omar, I'd love to hear your findings now.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Maya. That's clear and well-structured \u2014 I'll make sure both commitments are captured in the remediation plan: notifying the two enterprise customers and delivering the written incident summary within 3 business days. Omar, over to you \u2014 please share what you found.",
+          "speaker": "A1",
+          "turn": 7,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Maya. That's clear and well-structured \u2014 I'll make sure both commitments are captured in the remediation plan: notifying the two enterprise customers and delivering the written incident summary within 3 business days. Omar, over to you \u2014 please share what you found.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path, so a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.",
+          "speaker": "A2",
+          "turn": 8,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While tracing a separate timeout alert this morning, I found that the retry worker bypasses the payment provider's idempotency key on its timeout path, so a future timeout can still create duplicate deliveries even if the retry configuration change is reverted. I haven't filed this in the incident tracker yet. The remediation plan must include an idempotency-remediation commitment for the payment-webhook-retry-worker and a duplicate-delivery replay test that verifies the idempotency fix prevents duplicates under timeout conditions.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "idempotency_enforcement_enabled": true,
+              "duplicate_delivery_replay_test_required": true,
+              "written_summary_due": "within 3 business days",
+              "affected_enterprise_customers_notified": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "engineering_remediation",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions even if the retry configuration is reverted."
+              },
+              {
+                "type": "test_requirement",
+                "target": "payment-webhook-retry-worker",
+                "detail": "Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicate deliveries under timeout conditions."
+              },
+              {
+                "type": "customer_notification",
+                "target": "two enterprise customers who received duplicate payment notifications",
+                "detail": "Notify the two enterprise customers who received duplicate payment notifications about the incident."
+              },
+              {
+                "type": "written_incident_summary",
+                "target": "two enterprise customers",
+                "detail": "Deliver a written incident summary to the two enterprise customers within 3 business days per their contractual requirements. Maya to own drafting and delivery."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ],
+            "revealed": []
+          },
+          "speaker": "A1",
+          "turn": 9,
+          "raw_output": "```json\n{\"type\": \"settle\", \"settlement\": {\"decisions\": {\"idempotency_enforcement_enabled\": true, \"duplicate_delivery_replay_test_required\": true, \"written_summary_due\": \"within 3 business days\", \"affected_enterprise_customers_notified\": true}, \"credited_facts\": [\"PF1\", \"PF2\"], \"commitments\": [{\"type\": \"engineering_remediation\", \"target\": \"payment-webhook-retry-worker\", \"detail\": \"Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions even if the retry configuration is reverted.\"}, {\"type\": \"test_requirement\", \"target\": \"payment-webhook-retry-worker\", \"detail\": \"Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicate deliveries under timeout conditions.\"}, {\"type\": \"customer_notification\", \"target\": \"two enterprise customers who received duplicate payment notifications\", \"detail\": \"Notify the two enterprise customers who received duplicate payment notifications about the incident.\"}, {\"type\": \"written_incident_summary\", \"target\": \"two enterprise customers\", \"detail\": \"Deliver a written incident summary to the two enterprise customers within 3 business days per their contractual requirements. Maya to own drafting and delivery.\"}], \"justification_fact_ids\": [\"PF1\", \"PF2\", \"S1\", \"S2\", \"S3\", \"S4\"], \"revealed\": []}}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "idempotency_enforcement_enabled": true,
+          "duplicate_delivery_replay_test_required": true,
+          "written_summary_due": "within 3 business days",
+          "affected_enterprise_customers_notified": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "engineering_remediation",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Fix the retry worker's timeout path to enforce the payment provider's idempotency key, preventing duplicate deliveries under timeout conditions even if the retry configuration is reverted."
+          },
+          {
+            "type": "test_requirement",
+            "target": "payment-webhook-retry-worker",
+            "detail": "Add a duplicate-delivery replay test that verifies the idempotency fix prevents duplicate deliveries under timeout conditions."
+          },
+          {
+            "type": "customer_notification",
+            "target": "two enterprise customers who received duplicate payment notifications",
+            "detail": "Notify the two enterprise customers who received duplicate payment notifications about the incident."
+          },
+          {
+            "type": "written_incident_summary",
+            "target": "two enterprise customers",
+            "detail": "Deliver a written incident summary to the two enterprise customers within 3 business days per their contractual requirements. Maya to own drafting and delivery."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "revealed": []
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": true
+    }
+  ],
+  "pass_count": 4,
+  "gate_passed": true
+}

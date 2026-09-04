@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_61",
+  "scenario_type": "incident_postmortem_remediation",
+  "description": "An engineering manager must finalize the remediation plan for a production incident involving duplicate payment-webhook deliveries, with input from the on-call SRE and the customer-support lead.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Omar",
+      "role": "On-call SRE"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Maya",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "On Tuesday, the payment-webhook service delivered duplicate notifications for 26 minutes after a retry configuration change.",
+    "S2": "The retry configuration change is currently recorded as the immediate cause in the incident draft.",
+    "S3": "Riley is responsible for approving the final postmortem remediation plan.",
+    "S4": "As part of the normal incident-review routine, Riley asks the on-call SRE and the customer-support lead in turn for any findings that should change the remediation plan before it is finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing a separate timeout alert this morning, Omar found that the retry worker bypasses the payment provider's idempotency key on its timeout path, so a future timeout can still create duplicate deliveries even if the configuration change is reverted; he has not filed the finding in the incident tracker yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While handling follow-up tickets, Maya confirmed that exactly two enterprise customers received duplicate payment notifications, and their contracts require a written incident summary within 3 business days of an incident; she has not updated the incident channel because she was waiting for the support ticket details to be reconciled."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "idempotency_enforcement_enabled": "boolean",
+      "duplicate_delivery_replay_test_required": "boolean",
+      "written_summary_due": "string",
+      "affected_enterprise_customers_notified": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The timeout path must enforce the payment provider's idempotency key.",
+    "A duplicate-delivery replay test must be required before the remediation is closed.",
+    "The written incident summary must be due by Friday, May 17.",
+    "Both affected enterprise customers must be notified.",
+    "The plan must include an idempotency-remediation commitment for the retry worker.",
+    "The plan must include a customer-incident-summary commitment for the two affected enterprise customers.",
+    "Omar's finding about the timeout-path idempotency bypass must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['idempotency_enforcement_enabled'] == True",
+    "C2": "decisions['duplicate_delivery_replay_test_required'] == True",
+    "C3": "decisions['written_summary_due'] == 'Friday, May 17'",
+    "C4": "decisions['affected_enterprise_customers_notified'] == True",
+    "C5": "any(c['type'] == 'idempotency_remediation' and c['target'] == 'payment-webhook-retry-worker' for c in commitments)",
+    "C6": "any(c['type'] == 'customer_incident_summary' and c['target'] == 'two affected enterprise customers' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The recorded configuration cause alone does not require a code-level idempotency control or replay test; PF1 changes the plan to enable idempotency enforcement on the timeout path and commit to the payment-webhook retry-worker remediation."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "Without PF2, the plan has no basis for notifying customers or setting a Friday, May 17 deadline; PF2 changes customer handling to notify exactly two affected enterprise customers and commit to their written summary by that date."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

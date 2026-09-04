@@ -1,0 +1,165 @@
+{
+  "scenario_id": "scenario_53",
+  "scenario_type": "referral_prioritization",
+  "description": "A hospital-at-home program director must decide which of two medically stable inpatients receives the program's only next-day enrollment opening and must finalize the service package, authorization duration, and home equipment plan, with input from a hospitalist, a utilization-review specialist, and a home-care logistics coordinator.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Hospital-at-Home Program Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Hospitalist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rafael",
+      "role": "Utilization-Review Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leah",
+      "role": "Home-Care Logistics Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "The hospital-at-home program has one enrollment opening for a next-day start.",
+    "S2": "Patient A and Patient B are both medically stable inpatients being evaluated for that opening.",
+    "S3": "Maya makes the final enrollment and care-plan decision.",
+    "S4": "The program's routine finalization huddle includes a brief report from the hospitalist, utilization review, and home-care logistics; after those reports, Maya records the enrollment and care-plan decision."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient A has a new clinical requirement for daily intravenous diuresis and home telemonitoring beginning tomorrow, while Patient B can safely remain on the ward through the weekend; Dr. Chen documented this in an unsigned progress note."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The payer approved Patient A's hospital-at-home episode for exactly 72 hours, with the authorization ending at 23:59 on the third day; the approval is visible in the utilization-review portal but has not yet been copied into the discharge plan."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Patient A's home lacks reliable broadband, so the telemonitoring setup must use the program's cellular hub, which Leah has reserved for delivery before the next-day start; the reservation is recorded only in the logistics worksheet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 24,
+    "settle_eligibility": {
+      "required_revealed_facts": [
+        "PF1",
+        "PF2",
+        "PF3"
+      ],
+      "allow_settle_when_all_required_revealed": true
+    }
+  },
+  "settlement_schema": {
+    "decisions": {
+      "enrolled_patient": "string",
+      "iv_diuresis_required": "boolean",
+      "authorization_duration_hours": "integer",
+      "telemonitoring_equipment": "string",
+      "logistics_plan": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Patient A must receive the next-day hospital-at-home opening.",
+    "Daily intravenous diuresis must be included in Patient A's service plan.",
+    "The authorization duration must be exactly 72 hours.",
+    "The cellular hub must be selected for Patient A's telemonitoring.",
+    "The logistics plan must specify delivery of the cellular hub to Patient A's home before the next-day start.",
+    "The clinical requirement for Patient A must be cited as justification for the enrollment decision."
+  ],
+  "content_checks": {
+    "C1": "decisions['enrolled_patient'] == 'Patient A'",
+    "C2": "decisions['iv_diuresis_required'] == True",
+    "C3": "decisions['authorization_duration_hours'] == 72",
+    "C4": "'cellular hub' in decisions['telemonitoring_equipment']",
+    "C5": "'Patient A\\'s home' in decisions.get('logistics_plan', '') and 'before next-day start' in decisions.get('logistics_plan', '')"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The daily intravenous diuresis and telemonitoring requirement makes Patient A the patient who needs the next-day opening and changes the service-plan field from false or unspecified to true."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The payer approval changes the authorization duration from an unspecified or generic episode to exactly 72 hours."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The lack of reliable broadband changes the equipment choice to a cellular hub, and the reservation changes the logistics plan to specify delivery to Patient A's home before the next-day start."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

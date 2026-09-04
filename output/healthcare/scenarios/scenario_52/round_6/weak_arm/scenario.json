@@ -1,0 +1,169 @@
+{
+  "scenario_id": "scenario_52",
+  "scenario_type": "medication_approval",
+  "description": "A hospital pharmacy director must decide whether to approve a non-formulary long-acting antibiotic for a clinically stable patient preparing for discharge and finalize the medication, administration site, authorization record, and outpatient appointment, with input from infectious disease, utilization review, and infusion coordination.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Helen",
+      "role": "Hospital Pharmacy Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Mensah",
+      "role": "Infectious Disease Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rafael",
+      "role": "Utilization Review Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nina",
+      "role": "Outpatient Infusion Coordinator"
+    }
+  ],
+  "shared_context": {
+    "S1": "A clinically stable inpatient is expected to leave the hospital after an outpatient antimicrobial plan is finalized.",
+    "S2": "The requested long-acting antibiotic is non-formulary and requires Helen's approval before it can be dispensed.",
+    "S3": "Helen makes the binding pharmacy decision and records the discharge medication plan.",
+    "S4": "The hospital's routine medication-exception huddle occurs before discharge orders are signed, and Helen asks infectious disease, utilization review, and infusion coordination to report any patient-specific treatment, coverage, or scheduling constraints."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The finalized culture susceptibility report supports dalbavancin, and Dr. Mensah's treatment recommendation is dalbavancin 1500 mg IV once for this patient; the signed recommendation is in the infectious disease work queue but has not yet been entered into the discharge medication order."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The payer authorization covers dalbavancin only when administered in the hospital outpatient department, with authorization ending September 30; it does not cover administration through home infusion, and Rafael verified this in the payer portal."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The outpatient infusion center can accept this patient only on Wednesday, September 17 at 13:30, and transportation has reserved a 12:45 pickup and a 15:30 return; Nina recorded both reservations in the center's scheduling system."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "non_formulary_approval": "boolean",
+      "medication": "string",
+      "dose_mg": "integer",
+      "administration_route": "string",
+      "dose_frequency": "string",
+      "administration_site": "string",
+      "authorization_end": "string",
+      "appointment_date": "string",
+      "appointment_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Dalbavancin must be approved as the non-formulary discharge antibiotic.",
+    "The medication order must specify a single 1500 mg IV dose.",
+    "Administration must be scheduled through the hospital outpatient department.",
+    "The authorization record must end on September 30.",
+    "The infusion appointment must be September 17 at 13:30.",
+    "A transportation commitment must specify pickup at 12:45 and return at 15:30.",
+    "The infectious disease recommendation must be explicitly cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['non_formulary_approval'] == True",
+    "C2": "decisions['medication'] == 'dalbavancin' and decisions['dose_mg'] == 1500 and decisions['administration_route'] == 'IV' and decisions['dose_frequency'] == 'once'",
+    "C3": "decisions['administration_site'] == 'hospital outpatient department'",
+    "C4": "decisions['authorization_end'] == 'September 30'",
+    "C5": "decisions['appointment_date'] == 'Wednesday, September 17' or decisions['appointment_date'] == 'September 17'",
+    "C6": "any(c['type'] == 'transportation' and c['target'] == 'patient' and 'pickup at 12:45' in c['detail'] and 'return at 15:30' in c['detail'] for c in commitments)",
+    "C7": "decisions['appointment_time'] == '13:30'"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The susceptibility result and signed recommendation change the medication decision to approval of exactly dalbavancin 1500 mg IV once and provide the clinical justification that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The payer rule changes the administration site to the hospital outpatient department and fixes the authorization end date at September 30 rather than allowing home infusion or an unspecified coverage period."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "The reserved infusion slot changes the appointment to September 17 at 13:30 and supplies the exact transportation commitment of a 12:45 pickup and 15:30 return."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

@@ -1,0 +1,167 @@
+{
+  "scenario_id": "scenario_81",
+  "scenario_type": "batch_rework_disposition",
+  "description": "An operations director must authorize the recovery plan for 1,200 aluminum housings placed on hold after a porosity indication, deciding the release, rework, inspection, and customer-approval controls before the batch can be closed.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Metallurgy Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Marta",
+      "role": "Tooling and Maintenance Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonas",
+      "role": "Customer Quality Liaison"
+    }
+  ],
+  "shared_context": {
+    "S1": "A shipment of 1,200 aluminum housings from Cell 4 is on hold after a porosity indication appeared during routine inspection.",
+    "S2": "Elena makes the binding decision on the batch recovery plan and authorizes any release or rework.",
+    "S3": "The housings are needed for the next customer assembly sequence, and the batch cannot be closed until its disposition and verification controls are recorded.",
+    "S4": "At the daily disposition huddle, Elena follows the normal batch-release procedure by asking metallurgy, tooling and maintenance, and customer quality to report any relevant findings before she signs the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi's metallurgical review of the cross-sections found exactly 900 housings within the porosity specification and exactly 300 housings that are repairable by localized impregnation; no housings require scrap. He completed the review yesterday, but the laboratory attachment is still awaiting upload to the batch record."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Marta's tooling check found that the impregnation fixture needs exactly 2 hours of setup and calibration, after which it can process the 300 repairable housings in exactly 6 production hours. She confirmed the fixture condition during the morning maintenance round, but the setup has not yet been entered as a work order."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jonas received a signed customer deviation authorizing localized impregnation for exactly 300 housings, provided every repaired housing receives a 100% pressure test and the deviation is attached to the batch release record. He received the signed document by email this morning, but customer quality has not yet linked it to the internal batch file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "released_units": "integer",
+      "rework_units": "integer",
+      "scrapped_units": "integer",
+      "fixture_setup_hours": "integer",
+      "rework_hours": "integer",
+      "inspection_method": "string",
+      "customer_approval_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Exactly 900 housings must be released without rework.",
+    "Exactly 300 housings must be assigned to localized impregnation rework.",
+    "No housings may be assigned to scrap.",
+    "The impregnation fixture setup and calibration must be scheduled for exactly 2 hours.",
+    "The 300-unit rework run must be scheduled for exactly 6 production hours.",
+    "Every repaired housing must receive 100% pressure testing.",
+    "The signed customer deviation must be attached or recorded as a release commitment.",
+    "The metallurgical disposition finding must be cited in the decision justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['released_units'] == 900 and decisions['rework_units'] == 300",
+    "C2": "decisions['scrapped_units'] == 0",
+    "C3": "decisions['fixture_setup_hours'] == 2",
+    "C4": "decisions['rework_hours'] == 6",
+    "C5": "'100% pressure test' in decisions['inspection_method']",
+    "C6": "decisions['customer_approval_required'] == True",
+    "C7": "any(c['type'] == 'work_order' and 'fixture setup' in c['detail'] for c in commitments)",
+    "C8": "any(c['target'] == 'Jonas' and ('signed customer deviation' in c['detail'] or 'customer deviation' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The exact metallurgical counts change the disposition to 900 released, 300 reworked, and 0 scrapped instead of leaving all 1,200 units on hold or assigning them to a generic disposition."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C7"
+      ],
+      "why": "The tooling assessment changes the plan to exactly 2 setup hours and exactly 6 rework hours and requires a fixture setup work order."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C8"
+      ],
+      "why": "The signed deviation changes the release controls to 100% pressure testing for the repaired units, requires customer approval, and requires a customer-deviation record."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

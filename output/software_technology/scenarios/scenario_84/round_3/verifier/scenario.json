@@ -1,0 +1,175 @@
+{
+  "scenario_id": "scenario_84",
+  "scenario_type": "architecture_decision",
+  "description": "A tech lead must approve the production architecture and operating limits for an asynchronous enterprise invoice-generation service, with input from backend engineering, site reliability engineering, and privacy compliance.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Maya",
+      "role": "Staff Backend Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jon",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leila",
+      "role": "Privacy Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The team is preparing the enterprise invoice-generation service for production use next month.",
+    "S2": "The current design draft uses synchronous rendering, three retry attempts, a 60-minute queue-age objective, processing in us-east-1, and 90-day invoice-payload retention.",
+    "S3": "Riley owns the binding architecture decision for the production design.",
+    "S4": "Before approving, Riley follows a fixed review routine: Riley asks backend engineering, SRE, and privacy compliance for their requirements in turn, summarizes the answers, and records the binding decision immediately after the final response."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing an unrelated billing-idempotency change this morning, Maya confirmed that invoice jobs must use a durable outbox and exactly five retry attempts; three retries can lose invoices during the partner-tax-service's documented outage pattern. She has not updated the architecture draft yet. The architecture_mode field must be recorded with the exact phrase 'durable outbox' in its value."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a load test for another billing endpoint yesterday, Jon measured that invoices older than exactly 15 minutes miss the enterprise portal's freshness objective, so the production queue-age limit must be exactly 15 minutes and needs queue-age alerting. He recorded the result in his local test notes but has not added it to the review ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Leila confirmed with privacy counsel 20 minutes ago that invoice payloads for these tenants must be processed in exactly eu-central-1 and retained for exactly 30 days; the data-processing addendum also requires a privacy-review commitment. She was still waiting for the written counsel confirmation before editing the draft."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "architecture_mode": "string",
+      "retry_attempts": "integer",
+      "max_queue_age_minutes": "integer",
+      "processing_region": "string",
+      "payload_retention_days": "integer",
+      "queue_age_alerting_enabled": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The service must use a queue-based architecture with a durable outbox.",
+    "Invoice jobs must have exactly five retry attempts.",
+    "The maximum queue age must be exactly 15 minutes.",
+    "Invoice payloads must be processed in exactly eu-central-1.",
+    "Invoice payloads must be retained for exactly 30 days.",
+    "Queue-age alerting must be enabled.",
+    "An outbox-reconciliation commitment, a queue-age-alert commitment, and a privacy-review commitment must be recorded.",
+    "The architecture decision must cite the backend idempotency finding, the queue-freshness measurement, and the privacy counsel confirmation."
+  ],
+  "content_checks": {
+    "C1": "'durable outbox' in decisions['architecture_mode']",
+    "C2": "decisions['retry_attempts'] == 5",
+    "C3": "decisions['max_queue_age_minutes'] == 15",
+    "C4": "decisions['processing_region'] == 'eu-central-1'",
+    "C5": "decisions['payload_retention_days'] == 30",
+    "C6": "decisions['queue_age_alerting_enabled'] == True",
+    "C7": "any('outbox' in c['detail'] for c in commitments)",
+    "C8": "any('queue-age' in c['detail'] and ('alert' in c['detail'] or 'alerting' in c['detail']) for c in commitments)",
+    "C9": "any('privacy-review' in c['type'] or 'privacy-review' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in justification_fact_ids",
+    "P3": "'PF3' in revealed and 'PF3' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The architecture_mode value changes from the public synchronous-rendering draft to a value containing the exact phrase 'durable outbox', retry attempts change from 3 to exactly 5, and an outbox-reconciliation commitment is added."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C6",
+        "C8",
+        "P2"
+      ],
+      "why": "The queue-age limit changes from 60 to exactly 15 minutes, queue-age alerting changes from unspecified to enabled, and a queue-age-alert commitment is added."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C9",
+        "P3"
+      ],
+      "why": "The processing region changes from us-east-1 to exactly eu-central-1, retention changes from 90 to exactly 30 days, and a privacy-review commitment is added."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

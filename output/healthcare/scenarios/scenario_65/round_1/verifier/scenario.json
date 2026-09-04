@@ -1,0 +1,193 @@
+{
+  "scenario_id": "scenario_65",
+  "scenario_type": "medication_formulary_approval",
+  "description": "A pharmacy director must finalize a nonformulary medication exception and discharge dispensing plan for a patient whose treatment is being transitioned from the hospital to outpatient care, with input from infectious disease, clinical pharmacy, payer authorization, and nursing.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Marisol",
+      "role": "Pharmacy Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Patel",
+      "role": "Infectious Disease Physician"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Evan",
+      "role": "Clinical Pharmacist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Renee",
+      "role": "Payer Authorization Specialist"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Tasha",
+      "role": "Outpatient Transition Nurse"
+    }
+  ],
+  "shared_context": {
+    "S1": "A medically stable patient is expected to leave the hospital Friday after completing the inpatient portion of treatment.",
+    "S2": "The prescribed outpatient medication is not on the hospital's standard formulary, so a pharmacy exception and a discharge dispensing plan are required.",
+    "S3": "The patient currently receives treatment through the hospital pharmacy, and the outpatient plan must be finalized before discharge orders are released.",
+    "S4": "Marisol makes the final formulary and dispensing decision.",
+    "S5": "The pharmacy's routine pre-discharge huddle includes infectious disease, clinical pharmacy, payer authorization, and the transition nurse, and Marisol completes the decision after each service reports relevant information."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The finalized susceptibility report for the patient's isolate shows that tedizolid is the only practical oral option for the outpatient course; the result was released to Dr. Patel's laboratory inbox this morning and has not yet been attached to the medication exception."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "After reviewing the patient's current medication list and treatment response, the clinical pharmacy recommendation is tedizolid 200 mg by mouth once daily for exactly 6 days; Evan entered this recommendation in the pharmacist work queue but it is not yet in the discharge prescription."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The patient's payer will cover tedizolid only after a nonformulary exception is approved for exactly 6 tablets, and Renee has confirmed that the exception request must be submitted through the payer portal before the prescription can be paid."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "The patient's caregiver cannot come to the hospital during the day and has confirmed a home delivery window of 07:30 Friday; the transition nurse must arrange pharmacist counseling by telephone at 08:00 Friday before the caregiver gives the first dose."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "formulary_exception_approved": "boolean",
+      "outpatient_medication": "string",
+      "dose_mg": "integer",
+      "frequency": "string",
+      "course_days": "integer",
+      "covered_tablets": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The nonformulary exception must be approved.",
+    "Tedizolid must be selected as the outpatient medication.",
+    "The prescription must specify 200 mg once daily for exactly 6 days.",
+    "The plan must specify coverage for exactly 6 tablets.",
+    "A payer portal exception submission must be committed.",
+    "A 07:30 Friday home delivery and 08:00 Friday pharmacist counseling must be committed.",
+    "The susceptibility result must be cited as justification and attributed to the infectious disease physician."
+  ],
+  "content_checks": {
+    "C1": "decisions['formulary_exception_approved'] == True",
+    "C2": "decisions['outpatient_medication'] == 'tedizolid'",
+    "C3": "decisions['dose_mg'] == 200 and decisions['frequency'] == 'once daily' and decisions['course_days'] == 6",
+    "C4": "decisions['covered_tablets'] == 6",
+    "C5": "any(c['type'] == 'payer_exception_submission' and c['target'] == 'Payer Portal' for c in commitments)",
+    "C6": "any(c['type'] == 'medication_delivery' and c['target'] == 'Caregiver' and c['detail'] == '07:30 Friday delivery' for c in commitments)",
+    "C7": "any(c['type'] == 'pharmacist_counseling' and c['target'] == 'Caregiver' and c['detail'] == '08:00 Friday telephone counseling before first dose' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "P1"
+      ],
+      "why": "The susceptibility report changes the outpatient medication choice from an unspecified or standard alternative to tedizolid and supplies the clinical justification for that choice."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The pharmacist's review changes the prescription to exactly 200 mg once daily for 6 days rather than leaving dose, frequency, or duration at a generic default."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "why": "The payer rule changes the decision to an approved exception, fixes coverage at exactly 6 tablets, and requires a payer-portal submission."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C6",
+        "C7"
+      ],
+      "why": "The caregiver's confirmed availability changes the discharge plan to a 07:30 Friday delivery and an 08:00 Friday counseling call before the first dose."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 5
+}

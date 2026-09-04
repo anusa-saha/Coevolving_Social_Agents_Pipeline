@@ -1,0 +1,137 @@
+{
+  "scenario_id": "scenario_81",
+  "scenario_type": "production_cache_rollout",
+  "description": "A data platform lead must approve the production operating policy for enabling response caching on the customer-profile API, including route exclusions, cache lifetime, canary duration, and follow-up work, with input from a backend engineer and an SRE.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Data Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Riley",
+      "role": "Senior Backend Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "Site Reliability Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The customer-profile API is scheduled for a production performance change during Thursday's normal deployment window.",
+    "S2": "Morgan makes the final call on the production caching policy.",
+    "S3": "The caching implementation passed the planned staging load test and reduced median response time by 38 percent.",
+    "S4": "As part of the deployment routine, Morgan asks backend engineering and SRE to review the final operating settings before approving the change."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While debugging an unrelated tenant-isolation test this morning, Riley found that the cache key omits tenant ID for the /account/profile and /billing/status routes; those two routes must bypass the cache until the key is corrected, and Riley has not filed the ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a cache-invalidation rehearsal thirty minutes ago, Casey measured up to 90 seconds of propagation delay across regions; the production policy therefore needs a 15-second TTL, a 120-minute canary, and invalidation-lag monitoring, but the rehearsal result is not yet in the deployment record."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "cache_enabled": "boolean",
+      "excluded_routes": "array of strings",
+      "cache_ttl_seconds": "integer",
+      "canary_duration_minutes": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Caching must be enabled for the production change.",
+    "The /account/profile and /billing/status routes must be excluded from caching.",
+    "The cache TTL must be exactly 15 seconds.",
+    "The canary must run for exactly 120 minutes.",
+    "A cache-key remediation commitment must be recorded.",
+    "An invalidation-lag monitoring commitment must be recorded.",
+    "Riley's tenant-isolation finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['cache_enabled'] == True",
+    "C2": "decisions['excluded_routes'] == ['/account/profile', '/billing/status']",
+    "C3": "decisions['cache_ttl_seconds'] == 15",
+    "C4": "decisions['canary_duration_minutes'] == 120",
+    "C5": "any(c['type'] == 'cache_key_remediation' for c in commitments)",
+    "C6": "any(c['type'] == 'invalidation_lag_monitoring' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The staging result provides no route-specific warning; PF1 changes the exclusion list to exactly /account/profile and /billing/status and adds the cache-key remediation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The 90-second invalidation measurement changes the policy to an exact 15-second TTL, an exact 120-minute canary, and an invalidation-lag monitoring commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

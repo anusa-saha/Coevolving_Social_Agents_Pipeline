@@ -1,0 +1,156 @@
+{
+  "scenario_id": "scenario_64",
+  "scenario_type": "industrial_waste_disposition",
+  "description": "An environmental compliance manager must authorize the disposal plan for 14 drums of spent coolant accumulated beside the machining area, including the treatment route, shipment configuration, and packaging controls, with input from laboratory quality, waste logistics, and warehouse supervision.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Environmental Compliance Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Laboratory Quality Specialist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Megan",
+      "role": "Waste Logistics Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Tomas",
+      "role": "Warehouse Supervisor"
+    }
+  ],
+  "shared_context": {
+    "S1": "Fourteen 55-gallon drums of spent coolant from the machining area are staged for removal, and the disposal vendor has not yet received an authorization.",
+    "S2": "Elena has authority to approve the disposal route and shipment controls.",
+    "S3": "The drums are currently labeled as spent coolant and are stored on spill pallets in the waste staging area.",
+    "S4": "The site's waste-authorization routine requires Elena to conduct a round-robin review with laboratory quality, waste logistics, and warehouse supervision before approving the removal plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi's laboratory analysis found 2.4% chlorinated solvent in the spent coolant; the site's waste matrix sends any batch at or above 1.0% to hazardous-liquid treatment rather than ordinary coolant recycling. He completed the analysis yesterday, but the result has not yet been attached to the waste authorization."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Megan confirmed with the disposal contractor that its tanker permit allows no more than 8 of these drums on one load, so the 14 drums must be shipped as one load of 8 and a second load of 6. She received the permit condition in the contractor's service email, but has not entered it in the transport booking system."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Tomas's warehouse inspection found active seepage at the base of exactly 4 drums; each of those drums must be placed in a UN-rated overpack before movement, while the other 10 may remain on their existing spill pallets. He recorded the inspection on the shift clipboard, but the waste file has not been updated."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "waste_route": "string",
+      "drums_authorized": "integer",
+      "first_load_drums": "integer",
+      "second_load_drums": "integer",
+      "overpack_drums": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The spent coolant must be sent to hazardous-liquid treatment.",
+    "Exactly 14 drums must be authorized for removal.",
+    "The shipment must be split into a first load of 8 drums and a second load of 6 drums.",
+    "Exactly 4 leaking drums must receive UN-rated overpacks before movement.",
+    "A two-load transport booking and manifest preparation must be committed.",
+    "The chlorinated-solvent laboratory finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['waste_route'] == 'hazardous-liquid treatment'",
+    "C2": "decisions['drums_authorized'] == 14",
+    "C3": "decisions['first_load_drums'] == 8 and decisions['second_load_drums'] == 6",
+    "C4": "decisions['overpack_drums'] == 4",
+    "C5": "any(c['type'] == 'transport_booking_and_manifest' and c['target'] == '14 drums' and c['detail'] == 'two loads: 8 and 6 drums' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The exact 2.4% chlorinated-solvent result exceeds the site's exact 1.0% routing threshold, changing the disposal choice from ordinary coolant recycling to hazardous-liquid treatment and supplying the required cited justification."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C5"
+      ],
+      "why": "The contractor's exact 8-drum load limit changes the shipment from one unspecified removal to loads of exactly 8 and 6 drums, which are the two required shipment quantities and require a split-load logistics commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4"
+      ],
+      "why": "The inspection's exact count of 4 actively seeping drums changes the packaging decision from leaving all drums on spill pallets to assigning exactly 4 drums to UN-rated overpacks."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

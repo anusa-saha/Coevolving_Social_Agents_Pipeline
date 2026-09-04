@@ -1,0 +1,161 @@
+{
+  "scenario_id": "scenario_94",
+  "scenario_type": "home_oxygen_coordination",
+  "description": "A durable medical equipment coordinator must assign the hospital's only immediately available home oxygen concentrator to one of two medically ready patients and finalize the alternate oxygen plan, authorization details, and caregiver teaching arrangement.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Durable Medical Equipment Coordinator"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Chen",
+      "role": "Respiratory Therapist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Luis",
+      "role": "Utilization Management Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Nora",
+      "role": "Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "Patients R and S are medically ready for discharge tomorrow and both currently need home oxygen arrangements.",
+    "S2": "The hospital has one immediately available home oxygen concentrator.",
+    "S3": "Maya makes the final equipment assignment and discharge-equipment plan.",
+    "S4": "The department's standard equipment huddle requires Maya to ask respiratory therapy, utilization management, and social work for relevant updates before the plan is finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Patient R's discharge order requires continuous oxygen at exactly 4 L/min, including overnight; a concentrator is the only immediately available device that can reliably provide that continuous flow in the home. Dr. Chen verified the order during today's respiratory assessment, but the updated equipment note is not yet signed."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Patient S's payer has approved authorization O2-4471 for a portable-cylinder set, and the contracted supplier confirmed delivery to S's home at exactly 13:00 tomorrow. Luis received the confirmation directly from the payer and supplier, but the authorization portal has not synchronized it."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Patient R's brother confirmed that he will be at R's home tomorrow from 18:00 to 18:30 and will participate in oxygen-safety teaching; Nora received this confirmation by text and has not entered the caregiver appointment yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "concentrator_assigned_to": "string",
+      "concentrator_flow_lpm": "integer",
+      "alternate_plan_for_nonrecipient": "string",
+      "alternate_delivery_time": "string",
+      "alternate_authorization_status": "string",
+      "alternate_authorization_code": "string",
+      "caregiver_training_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The concentrator must be assigned to Patient R.",
+    "The concentrator flow must be documented as exactly 4 L/min.",
+    "Patient S's alternate plan must use a portable-cylinder set delivered at exactly 13:00 tomorrow.",
+    "Patient S's alternate authorization must be documented as approved with code O2-4471.",
+    "A caregiver oxygen-safety teaching commitment for Patient R must be scheduled for exactly 18:00 tomorrow.",
+    "The respiratory finding requiring the concentrator must be cited as justification for the assignment."
+  ],
+  "content_checks": {
+    "C1": "decisions['concentrator_assigned_to'] == 'Patient R'",
+    "C2": "decisions['concentrator_flow_lpm'] == 4",
+    "C3": "decisions['alternate_plan_for_nonrecipient'] == 'portable-cylinder set' and decisions['alternate_delivery_time'] == '13:00 tomorrow'",
+    "C4": "decisions['alternate_authorization_status'] == 'approved' and decisions['alternate_authorization_code'] == 'O2-4471'",
+    "C5": "decisions['caregiver_training_time'] == '18:00 tomorrow'",
+    "C6": "any(c['type'] == 'oxygen_safety_teaching' and c['target'] == 'Patient R caregiver' and c['detail'] == '18:00 tomorrow') for c in commitments"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "Patient R's exact continuous requirement of 4 L/min changes the assignment from an unresolved choice to R and changes the concentrator setting to exactly 4 L/min."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "Patient S's confirmed portable-cylinder delivery at exactly 13:00 tomorrow and authorization O2-4471 change S's alternate plan from unspecified to an approved, time-specific arrangement."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The brother's confirmed availability changes caregiver teaching from an unspecified follow-up to a commitment for Patient R at exactly 18:00 tomorrow."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

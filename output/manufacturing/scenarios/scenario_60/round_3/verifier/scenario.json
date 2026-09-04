@@ -1,0 +1,164 @@
+{
+  "scenario_id": "scenario_60",
+  "scenario_type": "capacity_and_heat_treatment_decision",
+  "description": "A supply chain director must decide which of two customer orders to run in Furnace 2 during an overnight utility demand-response window and finalize the load, cooldown, inspection, and staging controls, with input from quality, utilities, and warehouse logistics.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Supply Chain Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Marta",
+      "role": "Utilities Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jon",
+      "role": "Warehouse Logistics Supervisor"
+    }
+  ],
+  "shared_context": {
+    "S1": "Furnace 2 is available for one overnight load during the utility company's demand-response window from 18:00 to 06:00.",
+    "S2": "The pending heat-treatment orders are Order Delta for alloy housings and Order Echo for actuator rings.",
+    "S3": "The normal planning rule gives priority to the order with the earlier customer promise date, but either order could be scheduled in the available furnace window.",
+    "S4": "Elena makes the binding schedule decision, and the plant's pre-event planning policy requires a roundtable status check with quality, utilities, and warehouse logistics before the schedule is released.",
+    "S5": "During the demand-response window, the utility company requires Furnace 2 to operate at no more than 420 kilograms, and any subsequent restart requires a 2-hour cool-down."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi reviewed the furnace qualification log this afternoon and confirmed that the current Furnace 2 recipe is approved for Order Delta but not for Order Echo; running Echo would require a separate 4-hour recipe requalification. The qualification result has not yet been entered on the production board. The same qualification log requires exactly 6 witness coupons for an approved Order Delta run."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Marta confirmed in the utility company's event notice that Furnace 2 must be limited to a 420-kilogram load during the demand-response window and requires a 2-hour cool-down before any restart. She received the revised notice by email this morning but has not updated the utilities work order."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jon's warehouse audit found that the 300 finished housings in Order Delta must be staged in Zone C, where the lot-specific traceability racks are located, and that a dedicated forklift booking is required at 05:00 for transfer from the furnace. The audit was completed after the shift packet was printed."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "order_scheduled": "string",
+      "furnace_load_kg": "integer",
+      "cooldown_hours": "integer",
+      "witness_coupons": "integer",
+      "staging_zone": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Order Delta must be scheduled because the current Furnace 2 recipe is qualified for it and not for Order Echo.",
+    "The Furnace 2 load field must record exactly 420 kilograms, the applicable demand-response limit.",
+    "The furnace must have a 2-hour cool-down before restart.",
+    "Six witness coupons must be produced for the Order Delta run.",
+    "Order Delta must be staged in Zone C.",
+    "A 05:00 dedicated forklift booking must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['order_scheduled'] == 'Order Delta'",
+    "C2": "decisions['furnace_load_kg'] == 420",
+    "C3": "decisions['cooldown_hours'] == 2",
+    "C4": "decisions['witness_coupons'] == 6",
+    "C5": "decisions['staging_zone'] == 'Zone C'",
+    "C6": "any(c['type'] == 'dedicated_forklift_booking' and c['target'] == 'Order Delta' and c['detail'] == '05:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "P1"
+      ],
+      "why": "The qualification review changes the schedulable order from either pending order to exactly Order Delta, and its six-coupon requirement changes the inspection count from an unspecified run to exactly 6 witness coupons."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3"
+      ],
+      "why": "The utility notice changes the furnace plan to an exact 420-kilogram recorded limit and an exact 2-hour cool-down."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The warehouse audit changes the staging assignment to Zone C and adds the exact 05:00 dedicated forklift booking for Order Delta."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

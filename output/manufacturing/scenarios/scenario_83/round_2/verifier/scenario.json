@@ -1,0 +1,163 @@
+{
+  "scenario_id": "scenario_83",
+  "scenario_type": "capacity_recovery_decision",
+  "description": "A plant manager must decide how to restore palletizing capacity after a robotic palletizer stops, and must finalize the repair, shipment staging, and energy-isolation controls for an urgent outbound order.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Plant Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Maintenance Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Logistics Coordinator"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Caleb",
+      "role": "Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Robotic palletizer P-4 stopped during the morning shift, and the finished-goods warehouse has a manual palletizing station available as a temporary alternative.",
+    "S2": "The plant manager makes the binding decision on the recovery method and the controls attached to it.",
+    "S3": "An urgent outbound order is scheduled for the end of the week, and production, maintenance, logistics, and safety normally review recovery plans together before work begins.",
+    "S4": "Mara follows the plant's routine recovery-plan review by asking maintenance, logistics, and safety to report any operational, shipment, or isolation requirements before she settles the plan. Each specialist records a newly confirmed requirement in the formal review by using the review's fact-reveal action, rather than only mentioning it informally."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas's inspection found a damaged gearbox bearing in P-4; the replacement seal is stocked on site, and the repair requires exactly 6 hours with exactly 6 lockout points. He completed the inspection this morning, but the maintenance report is still awaiting his supervisor's signoff."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya confirmed from the carrier booking and warehouse count that exactly 800 pallets must be staged by Friday at 15:00; the manual station can complete only 240 pallets per shift, so it cannot meet this shipment requirement within the remaining two shifts. She has not entered the confirmed count into the recovery board yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Caleb's safety review confirmed that P-4's repair requires an authorized electrician to verify zero energy at all six lockout points and record that verification before maintenance starts; the requirement is not yet attached to the work order because the incident review remains open."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "palletizing_method": "string",
+      "repair_duration_hours": "integer",
+      "lockout_points": "integer",
+      "shipment_pallets": "integer",
+      "staging_deadline": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "P-4 must be repaired rather than relying on manual palletizing.",
+    "The repair plan must allocate exactly 6 hours.",
+    "The isolation plan must identify exactly 6 lockout points.",
+    "The shipment plan must stage exactly 800 pallets.",
+    "The shipment plan must use a Friday 15:00 staging deadline.",
+    "A zero-energy verification commitment must be recorded before the repair."
+  ],
+  "content_checks": {
+    "C1": "decisions['palletizing_method'] == 'P-4 gearbox repair' or decisions['palletizing_method'] == 'Parallel manual station during repair, then P-4 resumed upon repair completion' or decisions['palletizing_method'] == 'Dual-track: repair P-4 and run manual station in parallel'",
+    "C2": "decisions['repair_duration_hours'] == 6",
+    "C3": "decisions['lockout_points'] == 6",
+    "C4": "decisions['shipment_pallets'] == 800",
+    "C5": "decisions['staging_deadline'] == 'Friday 15:00' or decisions['staging_deadline'] == 'Friday at 15:00'",
+    "C6": "any(c['type'] == 'zero_energy_verification' or c['type'] == 'isolation_control' or c['type'] == 'safety' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The damaged bearing and stocked seal change the recovery method to repairing P-4, set the repair duration to exactly 6 hours, and set the isolation count to exactly 6 lockout points."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5"
+      ],
+      "why": "The confirmed order changes the plan from an unspecified recovery quantity to exactly 800 pallets due Friday at 15:00, while the manual station's 240-pallet-per-shift capacity rules out manual-only recovery."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6"
+      ],
+      "why": "The safety review changes the repair plan by requiring a recorded authorized-electrician zero-energy verification commitment before work begins."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

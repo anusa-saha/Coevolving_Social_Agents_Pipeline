@@ -1,0 +1,149 @@
+{
+  "scenario_id": "scenario_80",
+  "scenario_type": "on_call_staffing",
+  "description": "An engineering manager must publish a four-week incident-commander rotation for the platform team, assigning a primary and backup for each week after the normal scheduling review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Theo",
+      "role": "Senior Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rina",
+      "role": "Backend Tech Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The next incident-commander rotation covers four weeks, beginning on the first Monday of next month.",
+    "S2": "Each week must have one primary incident commander and one different backup, and Maya publishes the binding schedule.",
+    "S3": "The team's scheduling template uses primary order A1, A2, A3, A1 and backup order A2, A3, A1, A2 for weeks 1 through 4.",
+    "S4": "When a template assignee is unavailable, the next available person in roster order A1, A2, A3 is used; a backup that conflicts with the resulting primary is replaced by the next person in that same roster order.",
+    "S5": "Before Maya publishes the rotation, the team follows its normal practice of confirming leave, qualification, and handoff requirements in the scheduling review."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Theo's approved leave record covers all of week 2. He noticed it while processing an unrelated leave request this morning, but the scheduling spreadsheet has not been updated yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Rina confirmed with the incident-response coordinator today that the week 4 database exercise requires her to be the primary incident commander and Theo to be the backup because they are the only pair qualified for that exercise; she has not added the qualification note to the scheduling review yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "week1_primary": "string",
+      "week1_backup": "string",
+      "week2_primary": "string",
+      "week2_backup": "string",
+      "week3_primary": "string",
+      "week3_backup": "string",
+      "week4_primary": "string",
+      "week4_backup": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The published schedule must assign A1 primary and A2 backup in week 1.",
+    "Because A2 is unavailable in week 2, the schedule must assign A3 primary and A1 backup in week 2.",
+    "The standard week 3 template assignment must remain A3 primary and A1 backup.",
+    "The week 4 exercise must assign A3 primary and A2 backup.",
+    "The schedule must contain a leave-update commitment for A2's week 2 absence.",
+    "The schedule must contain a qualification-handoff commitment for the week 4 exercise.",
+    "Both private facts must be cited in the manager's justification and revealed by their owners."
+  ],
+  "content_checks": {
+    "C1": "decisions['week1_primary'] == 'A1'",
+    "C2": "decisions['week1_backup'] == 'A2'",
+    "C3": "decisions['week2_primary'] == 'A3'",
+    "C4": "decisions['week2_backup'] == 'A1'",
+    "C5": "decisions['week3_primary'] == 'A3'",
+    "C6": "decisions['week3_backup'] == 'A1'",
+    "C7": "decisions['week4_primary'] == 'A3'",
+    "C8": "decisions['week4_backup'] == 'A2'",
+    "C9": "any(c['type'] == 'leave_update' and c['target'] == 'A2' for c in commitments)",
+    "C10": "any(c['type'] == 'qualification_handoff' and c['target'] == 'week4' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "C9",
+        "P1"
+      ],
+      "why": "Theo's week 2 leave changes the primary from the template's A2 to A3, changes the conflicting backup from A3 to A1, and requires the A2 leave-update commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C7",
+        "C8",
+        "C10",
+        "P2"
+      ],
+      "why": "The week 4 exercise qualification changes the primary to A3 and the backup to A2, and requires the week 4 qualification-handoff commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

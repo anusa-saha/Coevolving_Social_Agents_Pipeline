@@ -1,0 +1,195 @@
+{
+  "scenario_id": "scenario_71",
+  "scenario_type": "maintenance_and_production_contingency",
+  "description": "A maintenance manager must finalize the repair and weekend operating plan for a failed plant-air compressor, including backup certification, air-quality work, and the start of a customer campaign, with input from facilities, production scheduling, environmental health and safety, and quality.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Maintenance Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Leon",
+      "role": "Facilities Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Production Scheduling Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Gareth",
+      "role": "Environmental Health and Safety Specialist"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Noelle",
+      "role": "Quality Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Compressor C-1 is unavailable after a failure, and Compressor C-2 is the plant's available backup air source.",
+    "S2": "The next customer campaign is scheduled for the weekend and depends on the compressed-air system.",
+    "S3": "Maya makes the binding maintenance and operating-plan decision before the weekend work order is released.",
+    "S4": "The plant's pre-shutdown huddle requires facilities, production scheduling, environmental health and safety, and quality to state any open constraint before Maya records the final plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Leon's failure assessment identified a burned motor winding in C-1. A replacement motor is in the plant stores, and the maintenance estimate for changing it is exactly 10 hours; he confirmed the parts and estimate this morning but has not entered them in the CMMS work order."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's customer schedule requires the campaign to begin at exactly Saturday 06:00 with full air pressure; if the compressor repair is not complete by then, the campaign must be moved to Sunday 08:00. She confirmed this in the customer scheduling portal today but has not copied it into the plant shutdown plan."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Gareth's compliance review found that C-2's receiver inspection certificate expires Friday at 18:00. The required inspection takes exactly 2 hours and must be completed before C-2 can be used over the weekend; he received the inspection status from the certified inspector today but has not updated the equipment compliance board."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Noelle's latest air-quality sample showed C-2's outlet dew point at -32 degrees Celsius, while the campaign specification requires at most -40 degrees Celsius. Replacing the dryer desiccant takes exactly 3 hours, followed by a dew-point verification before campaign release; she received the laboratory result this afternoon but has not uploaded it to the campaign quality record."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 24
+  },
+  "settlement_schema": {
+    "decisions": {
+      "compressor_repair": "string",
+      "repair_start": "string",
+      "repair_duration_hours": "integer",
+      "backup_receiver_inspection_required": "boolean",
+      "backup_receiver_inspection_hours": "integer",
+      "dryer_desiccant_replaced": "boolean",
+      "desiccant_replacement_hours": "integer",
+      "campaign_start": "string",
+      "dew_point_verified_before_release": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The settlement must specify the C-1 motor replacement and its exact 10-hour duration.",
+    "The settlement must include a facilities commitment assigning Leon the C-1 repair work.",
+    "C-2's receiver inspection must be required for exactly 2 hours.",
+    "C-2's dryer desiccant must be replaced for exactly 3 hours.",
+    "The campaign plan must preserve the Saturday 06:00 start requirement rather than selecting the Sunday fallback.",
+    "The settlement must include a production-scheduling commitment assigning Priya the campaign timing update.",
+    "Dew point must be verified before campaign release.",
+    "The final plan must include commitments for C-2 receiver inspection and dryer-desiccant replacement.",
+    "Leon's motor-failure assessment must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['compressor_repair'] == 'C-1 motor replacement' and decisions['repair_duration_hours'] == 10 and 'PF1' in credited_facts",
+    "C2": "decisions['repair_duration_hours'] == 10 and any(c.get('type') == 'facilities_repair' and c.get('target') == 'Leon' and c.get('detail') == 'Replace C-1 motor' for c in commitments)",
+    "C3": "decisions['backup_receiver_inspection_required'] == True and decisions['backup_receiver_inspection_hours'] == 2",
+    "C4": "decisions['dryer_desiccant_replaced'] == True and decisions['desiccant_replacement_hours'] == 3",
+    "C5": "'PF2' in credited_facts and decisions['campaign_start'] == 'Saturday 06:00'",
+    "C6": "decisions['dew_point_verified_before_release'] == True",
+    "C7": "any(c.get('type') == 'production_schedule_update' and c.get('target') == 'Priya' and c.get('detail') == 'Update campaign timing to Saturday 06:00' for c in commitments)",
+    "C8": "any(c.get('type') == 'receiver_inspection' and c.get('target') == 'Gareth' and c.get('detail') == 'Complete C-2 receiver inspection for 2 hours' for c in commitments)",
+    "C9": "any(c.get('type') == 'desiccant_replacement_and_verification' and c.get('target') == 'Noelle' and c.get('detail') == 'Replace C-2 dryer desiccant for 3 hours and verify dew point before release' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The burned winding and stocked replacement motor change the repair plan to a C-1 motor replacement with an exact 10-hour duration and require Leon's repair commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5"
+      ],
+      "why": "The customer portal requirement changes the campaign plan from an unspecified weekend start or Sunday fallback to preserving the exact Saturday 06:00 start."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C3",
+        "C8"
+      ],
+      "why": "The expiring C-2 certificate changes the backup plan to a required exactly 2-hour receiver inspection and requires a commitment assigned to Gareth."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C4",
+        "C6",
+        "C9"
+      ],
+      "why": "The -32-degree-Celsius dew point versus the at-most -40-degree-Celsius specification changes the plan to exactly 3 hours of desiccant replacement, pre-release verification, and a commitment assigned to Noelle."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 5
+}

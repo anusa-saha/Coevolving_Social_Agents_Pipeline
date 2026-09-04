@@ -1,0 +1,147 @@
+{
+  "arm": "strong",
+  "temperature": 0.261,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright, let's get started. We're here to review the final operating settings for the customer-profile API caching change before I approve it for Thursday's deployment window. The staging load test results looked strong \u2014 38 percent reduction in median response time \u2014 but I want to hear from both backend engineering and SRE on the final operating settings before I settle the policy. Backend engineering, can you walk us through your recommendation?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Alright, let's get started. We're here to review the final operating settings for the customer-profile API caching change before I approve it for Thursday's deployment window. The staging load test results looked strong \u2014 38 percent reduction in median response time \u2014 but I want to hear from both backend engineering and SRE on the final operating settings before I settle the policy. Backend engineering, can you walk us through your recommendation?\"}\n```"
+    },
+    {
+      "type": " ",
+      "speaker": "A3",
+      "turn": 1,
+      "raw_output": "{\"type\":\" \"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "Before we approve the caching change, I need to flag a serious issue I found this morning. While debugging an unrelated tenant-isolation test, I discovered that the cache key omits the tenant ID for the /account/profile and /billing/status routes. That means one tenant could potentially receive another tenant's cached data on those routes. My recommendation is that those two routes must bypass the cache entirely until the key is corrected. I haven't filed the ticket yet, but I will after this meeting.",
+      "speaker": "A2",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Before we approve the caching change, I need to flag a serious issue I found this morning. While debugging an unrelated tenant-isolation test, I discovered that the cache key omits the tenant ID for the /account/profile and /billing/status routes. That means one tenant could potentially receive another tenant's cached data on those routes. My recommendation is that those two routes must bypass the cache entirely until the key is corrected. I haven't filed the ticket yet, but I will after this meeting.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I need to share something I found just thirty minutes ago. During a cache-invalidation rehearsal, I measured up to 90 seconds of propagation delay across regions. Because of that, my SRE recommendation is that the production policy needs a 15-second TTL, a 120-minute canary, and invalidation-lag monitoring. I should note that this rehearsal result is not yet in the deployment record.",
+      "speaker": "A3",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to share something I found just thirty minutes ago. During a cache-invalidation rehearsal, I measured up to 90 seconds of propagation delay across regions. Because of that, my SRE recommendation is that the production policy needs a 15-second TTL, a 120-minute canary, and invalidation-lag monitoring. I should note that this rehearsal result is not yet in the deployment record.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Casey. That invalidation delay is important context. From my side, the tenant-isolation issue is a hard blocker for caching on /account/profile and /billing/status \u2014 those routes absolutely cannot go through the cache until the key is fixed, regardless of TTL or canary settings. For any other routes the caching change covers, Casey's 15-second TTL and 120-minute canary sound reasonable to me, but I'd want to hear if Morgan wants to scope this deployment to exclude the two affected routes or hold the entire caching change until the key is corrected. I'll file the ticket for the cache key fix right after this meeting either way.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Casey. That invalidation delay is important context. From my side, the tenant-isolation issue is a hard blocker for caching on /account/profile and /billing/status \u2014 those routes absolutely cannot go through the cache until the key is fixed, regardless of TTL or canary settings. For any other routes the caching change covers, Casey's 15-second TTL and 120-minute canary sound reasonable to me, but I'd want to hear if Morgan wants to scope this deployment to exclude the two affected routes or hold the entire caching change until the key is corrected. I'll file the ticket for the cache key fix right after this meeting either way.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "cache_enabled": true,
+          "excluded_routes": [
+            "/account/profile",
+            "/billing/status"
+          ],
+          "cache_ttl_seconds": 15,
+          "canary_duration_minutes": 120
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "S3",
+          "S4"
+        ],
+        "commitments": [
+          {
+            "type": "ticket",
+            "target": "Riley",
+            "detail": "File ticket for cache key fix to include tenant ID on /account/profile and /billing/status routes"
+          },
+          {
+            "type": "monitoring",
+            "target": "Casey",
+            "detail": "Add invalidation-lag monitoring to detect cross-region propagation delays during canary and ongoing production operation"
+          },
+          {
+            "type": "record-update",
+            "target": "Casey",
+            "detail": "Update deployment record with the cache-invalidation rehearsal result showing up to 90 seconds of propagation delay across regions"
+          }
+        ],
+        "justification_fact_ids": [
+          "S3",
+          "S4",
+          "PF1",
+          "PF2"
+        ],
+        "revealed": []
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cache_enabled\": true,\n      \"excluded_routes\": [\"/account/profile\", \"/billing/status\"],\n      \"cache_ttl_seconds\": 15,\n      \"canary_duration_minutes\": 120\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"S3\",\n      \"S4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"ticket\",\n        \"target\": \"Riley\",\n        \"detail\": \"File ticket for cache key fix to include tenant ID on /account/profile and /billing/status routes\"\n      },\n      {\n        \"type\": \"monitoring\",\n        \"target\": \"Casey\",\n        \"detail\": \"Add invalidation-lag monitoring to detect cross-region propagation delays during canary and ongoing production operation\"\n      },\n      {\n        \"type\": \"record-update\",\n        \"target\": \"Casey\",\n        \"detail\": \"Update deployment record with the cache-invalidation rehearsal result showing up to 90 seconds of propagation delay across regions\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "cache_enabled": true,
+      "excluded_routes": [
+        "/account/profile",
+        "/billing/status"
+      ],
+      "cache_ttl_seconds": 15,
+      "canary_duration_minutes": 120
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "S3",
+      "S4"
+    ],
+    "commitments": [
+      {
+        "type": "ticket",
+        "target": "Riley",
+        "detail": "File ticket for cache key fix to include tenant ID on /account/profile and /billing/status routes"
+      },
+      {
+        "type": "monitoring",
+        "target": "Casey",
+        "detail": "Add invalidation-lag monitoring to detect cross-region propagation delays during canary and ongoing production operation"
+      },
+      {
+        "type": "record-update",
+        "target": "Casey",
+        "detail": "Update deployment record with the cache-invalidation rehearsal result showing up to 90 seconds of propagation delay across regions"
+      }
+    ],
+    "justification_fact_ids": [
+      "S3",
+      "S4",
+      "PF1",
+      "PF2"
+    ],
+    "revealed": []
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2"
+  ],
+  "passed": true
+}

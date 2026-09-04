@@ -1,0 +1,835 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "ROLLOUT 0 (auto-failed on turn cap, turn_count=12): All three facts (PF1, PF2, PF3) were revealed in the transcript, but the rollout never settled. This is a STRUCTURAL problem, not a pacing problem: A1 at turn 9 explicitly stated all three adjustments and said 'I'll be ready to finalize the revised plan for approval' once ticket updates are linked, and A4 (turn 10) and A3 (turn 11) both confirmed their items were linked. The settle-eligibility condition did not trigger despite the conversation having all required information surfaced and acknowledged. Raising the turn cap alone would not reliably fix this because the model is waiting for a condition that never fires; the settle-eligibility condition itself is too restrictive.\n\nROLLOUT 1 (settled, failed): C1 false, C2 false, C3 true, C4 false, C5 true, C6 true, C7 false, P1 true. PF1, PF2, PF3 all revealed and cited in justification_fact_ids. The settlement decisions include retirement_mode='phased \u2014 legacy registry transitions to read-only access on July 31...', legacy_read_allowlist with all six branches, harbor_health_archive_access_days=730, registry_log_retention_days=14, token_fragments_redacted=true. The settlement also includes a commitment of type 'plan-revision' with detail 'The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.' Since C3, C5, C6, P1 all passed, the checks that are actually failing are C1, C2, C4, C7. The settlement's decisions and commitments appear to correctly reflect PF1 (read-only compatibility, six branches) and PF2 (730 days, Harbor Health). The fact that C3 (which also gates on PF2) passed but C4 (also PF2) failed, and C5/C6 (PF3) passed, and P1 (PF1) passed, but C1/C2/C7 (PF1) failed, indicates an ENCODING MISMATCH: the settlement encodes the PF1 information in a way that satisfies P1 (provenance) but not C1, C2, or C7 (content). The settlement uses retirement_mode='phased \u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers' and a plan-revision commitment. The checks C1, C2, C7 likely expect specific field names or exact string values (e.g., a specific retirement_mode string, a specific commitment type, or exact wording) that the model naturally produced differently. This is consistent across rollouts 1, 2, and 3 where P1 passes but C1, C2, C7 always fail.\n\nC4 (gated on PF2, requires a commitment mentioning Harbor Health and the 730-day downloadable archive period): In rollout 1, the settlement includes a commitment with type 'customer-access', target 'Jonah', detail 'Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.' This mentions Harbor Health and 730 days but the check still failed. This is an ENCODING MISMATCH: the check likely expects a specific commitment type string (e.g., 'contract_compliance' as used in rollout 2) or a specific field structure that the model's natural encoding ('customer-access') does not match. In rollout 2, the commitment uses type 'contract_compliance', target 'Harbor Health', detail mentioning 730 days \u2014 and C4 still failed there too, suggesting the check expects something more specific in the commitment detail or a different field name.\n\nROLLOUT 2 (settled, failed): Same pattern as rollout 1. C1 false, C2 false, C3 true, C4 false, C5 true, C6 true, C7 false, P1 true. PF1, PF2, PF3 all revealed and cited. Settlement decisions include retirement_mode='phased_retirement_with_readonly_compatibility', legacy_read_allowlist with all six branches, harbor_health_archive_access_days=730, registry_log_retention_days=14, token_fragments_redacted=true. Commitments include type 'ticket_update' (for branches), type 'contract_compliance' target 'Harbor Health' detail mentioning 730 days, and type 'privacy_remediation'. C4 still fails despite the contract_compliance commitment mentioning Harbor Health and 730 days. C1, C2, C7 still fail despite retirement_mode and allowlist being correct. This confirms ENCODING MISMATCH for C1, C2, C4, C7 \u2014 the checks expect specific strings or field structures the model does not produce consistently.\n\nROLLOUT 3 (settled, failed): C1 false, C2 false, C3 false, C4 false, C5 true, C6 true, C7 false, P1 true. Only PF1 and PF3 were revealed; PF2 was NEVER REVEALED via a reveal action. A3's turns 1 and 5 were both unparsable ('[unparsable model output]'), so A3 never successfully disclosed PF2. The settlement set harbor_health_archive_access_days=90 (the draft default, not 730) and did not cite PF2 in justification_fact_ids or credited_facts. C3 and C4 failed because PF2 was never revealed \u2014 this is a NEVER REVEALED failure for PF2, caused by A3's unparsable outputs. The settlement correctly did not cite PF2 (no telepathy). C1, C2, C7 failed for the same ENCODING MISMATCH reason as rollouts 1 and 2 (P1 passed, PF1 was revealed and cited, retirement_mode and allowlist are present). The unparsable outputs from A3 are a disclosure problem tied to JSON formatting errors in A3's raw_output (the recurring '{\"type\":\" \"say\"' pattern with a space inside the type value).",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 3,\n  \"auto_failed_count\": 1,\n  \"content_check_tally\": {\n    \"C1\": 0,\n    \"C2\": 0,\n    \"C3\": 2,\n    \"C4\": 0,\n    \"C5\": 3,\n    \"C6\": 3,\n    \"C7\": 0\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C3\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"Harbor Health's contract changes archive access from the draft's unspecified duration to exactly 730 days and requires a commitment mentioning Harbor Health and that downloadable archive period.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"Harbor Health's contract changes archive access from the draft's unspecified duration to exactly 730 days and requires a commitment mentioning Harbor Health and that downloadable archive period.\"\n      }\n    ],\n    \"C7\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The bearer-token fragments change log handling from the draft's 90-day retention to exactly 14 days and require token-fragment redaction.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility.\"\n      }\n    ],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The bearer-token fragments change log handling from the draft's 90-day retention to exactly 14 days and require token-fragment redaction.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.516,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 12,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag something before we go further on the retirement plan. During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days \\u2014 not the 90-day retention called for in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents of registry access logs that the platform review is supposed to cover.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to flag something before we go further on the retirement plan. During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days \\u2014 not the 90-day retention called for in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents of registry access logs that the platform review is supposed to cover.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging that, Leila. That's a serious privacy concern that clearly needs to be addressed before any plan goes to Riley for final approval. I also have something relevant to surface \\u2014 I found out today that at least one customer contract has specific artifact access retention requirements that extend well beyond the July 31 shutdown date. This directly affects the customer artifact access piece of the platform review. I'm going to share the details now so we have the full picture.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag something critical about the July 31 hard shutdown. While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag something critical about the July 31 hard shutdown. While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks Leila and Maya for surfacing these issues. Both findings directly impact the retirement plan I need to approve. Leila, the bearer-token fragments in the access logs are a serious privacy concern \\u2014 I agree the 90-day retention in the draft plan is not acceptable if token fragments are present. We'll need to address redaction and shorten the retention window. Maya, the six active release branches that still depend on legacy-registry coordinates mean a hard July 31 shutdown of read access would break active releases. Before I finalize the retirement plan, I need both of these formally documented so I can adjust the plan accordingly. Leila, can you open the privacy finding? And Maya, can you update the retirement ticket with the six branches? Once those are in flight, I'll revise the plan to account for read-only compatibility access for those branches and proper log retention with token redaction.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks Leila and Maya for surfacing these issues. Both findings directly impact the retirement plan I need to approve. Leila, the bearer-token fragments in the access logs are a serious privacy concern \\u2014 I agree the 90-day retention in the draft plan is not acceptable if token fragments are present. We'll need to address redaction and shorten the retention window. Maya, the six active release branches that still depend on legacy-registry coordinates mean a hard July 31 shutdown of read access would break active releases. Before I finalize the retirement plan, I need both of these formally documented so I can adjust the plan accordingly. Leila, can you open the privacy finding? And Maya, can you update the retirement ticket with the six branches? Once those are in flight, I'll revise the plan to account for read-only compatibility access for those branches and proper log retention with token redaction.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Understood, Riley. I'll update the retirement ticket right away with the six branches \\u2014 payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9 \\u2014 noting that they need read-only compatibility access until their releases complete. I'll also flag that the July 31 hard read-access shutoff in the draft plan would break those active releases. Once the ticket is updated, I'll confirm here so you can proceed with the revised plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maya, I didn't catch your last message \\u2014 it came through as unparsable. Could you re-send what you were trying to say? Also, Jonah, your earlier message had the same issue. If either of you has additional information relevant to the retirement plan, please re-share it so I can factor it into my decision.\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Maya, I didn't catch your last message \\u2014 it came through as unparsable. Could you re-send what you were trying to say? Also, Jonah, your earlier message had the same issue. If either of you has additional information relevant to the retirement plan, please re-share it so I can factor it into my decision.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Riley, I'll open the privacy finding right away so it's formally documented. To confirm the specifics: the access logs retain bearer-token fragments, so they need token fragments redacted and must be purged after exactly 14 days \\u2014 not the 90-day retention in the draft plan. Once the finding is open, I'll link it to the retirement plan so you have it for your approval decision.\",\n          \"speaker\": \"A4\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Riley, I'll open the privacy finding right away so it's formally documented. To confirm the specifics: the access logs retain bearer-token fragments, so they need token fragments redacted and must be purged after exactly 14 days \\u2014 not the 90-day retention in the draft plan. Once the finding is open, I'll link it to the retirement plan so you have it for your approval decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Riley, I need to flag something critical that I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. This directly affects the customer artifact access portion of the platform review and means the July 31 hard shutdown of read access would violate Harbor Health's contractual obligations. We need to account for extended read access for at least Harbor Health's artifacts before finalizing the retirement plan.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Riley, I need to flag something critical that I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. This directly affects the customer artifact access portion of the platform review and means the July 31 hard shutdown of read access would violate Harbor Health's contractual obligations. We need to account for extended read access for at least Harbor Health's artifacts before finalizing the retirement plan.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Riley, I'll update the retirement ticket right away with the six active release branches that still depend on legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. I'll also note that they need read-only compatibility access until their respective releases complete. Once the ticket is updated, I'll link it back to the retirement plan so you have everything documented for your approval decision.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks Leila \\u2014 I've noted the privacy finding specifics: token fragments must be redacted and logs purged after exactly 14 days. Jonah, thank you for surfacing the Harbor Health contractual requirement \\u2014 730 days of downloadable access to their artifacts after retirement is a hard constraint we must honor. That directly affects the customer artifact access portion of the platform review. Maya, your messages keep coming through as unparsable. Could you try sending your update in plain text? I still need the six release branches formally documented so I can include them in the read-only compatibility allowlist. At this point I have three concrete adjustments to make to the retirement plan: (1) read-only compatibility access for Maya's six active release branches until their releases complete, (2) extended read access for Harbor Health's artifacts for at least 730 days post-retirement, and (3) log retention shortened to 14 days with bearer-token fragment redaction. Once Maya's ticket update and Leila's privacy finding are linked, I'll be ready to finalize the revised plan for approval.\",\n          \"speaker\": \"A1\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thanks Leila \\u2014 I've noted the privacy finding specifics: token fragments must be redacted and logs purged after exactly 14 days. Jonah, thank you for surfacing the Harbor Health contractual requirement \\u2014 730 days of downloadable access to their artifacts after retirement is a hard constraint we must honor. That directly affects the customer artifact access portion of the platform review. Maya, your messages keep coming through as unparsable. Could you try sending your update in plain text? I still need the six release branches formally documented so I can include them in the read-only compatibility allowlist. At this point I have three concrete adjustments to make to the retirement plan: (1) read-only compatibility access for Maya's six active release branches until their releases complete, (2) extended read access for Harbor Health's artifacts for at least 730 days post-retirement, and (3) log retention shortened to 14 days with bearer-token fragment redaction. Once Maya's ticket update and Leila's privacy finding are linked, I'll be ready to finalize the revised plan for approval.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Riley, I've opened the privacy finding and it's now formally documented. The finding specifies that access logs retain bearer-token fragments, requiring redaction of those fragments and a 14-day purge window instead of the draft plan's 90-day retention. I'm linking it to the retirement plan now so you have it for your approval decision. With all three adjustments now identified \\u2014 Maya's six release branches, Harbor Health's 730-day contractual access, and the log retention fix \\u2014 I'm satisfied the privacy concerns are accounted for on my end.\",\n          \"speaker\": \"A4\",\n          \"turn\": 10,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Riley, I've opened the privacy finding and it's now formally documented. The finding specifies that access logs retain bearer-token fragments, requiring redaction of those fragments and a 14-day purge window instead of the draft plan's 90-day retention. I'm linking it to the retirement plan now so you have it for your approval decision. With all three adjustments now identified \\u2014 Maya's six release branches, Harbor Health's 730-day contractual access, and the log retention fix \\u2014 I'm satisfied the privacy concerns are accounted for on my end.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Riley, I also want to make sure the Harbor Health contractual requirement gets formally attached to the platform ticket. I confirmed with the account team today that the contract was found during a customer-renewal review but hasn't been attached to the platform ticket yet. I'll get that linked now so it's part of the official record for your approval decision. With all three adjustments now identified \\u2014 Maya's six release branches, the 730-day Harbor Health access requirement, and the 14-day log retention with token redaction \\u2014 I'm confident the revised plan will cover the critical gaps we've surfaced.\",\n          \"speaker\": \"A3\",\n          \"turn\": 11,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Riley, I also want to make sure the Harbor Health contractual requirement gets formally attached to the platform ticket. I confirmed with the account team today that the contract was found during a customer-renewal review but hasn't been attached to the platform ticket yet. I'll get that linked now so it's part of the official record for your approval decision. With all three adjustments now identified \\u2014 Maya's six release branches, the 730-day Harbor Health access requirement, and the 14-day log retention with token redaction \\u2014 I'm confident the revised plan will cover the critical gaps we've surfaced.\\\"}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.56,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF2\",\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": false,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"retirement_mode\": \"phased \\u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers\",\n          \"legacy_read_allowlist\": [\n            \"payments-v3\",\n            \"mobile-android-2025.06\",\n            \"mobile-ios-2025.06\",\n            \"desktop-4.8\",\n            \"analytics-2.3\",\n            \"edge-agent-1.9\"\n          ],\n          \"harbor_health_archive_access_days\": 730,\n          \"registry_log_retention_days\": 14,\n          \"token_fragments_redacted\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"documentation\",\n            \"target\": \"platform ticket\",\n            \"detail\": \"All three findings \\u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \\u2014 must be formally attached to the platform retirement ticket before implementation begins.\"\n          },\n          {\n            \"type\": \"privacy-remediation\",\n            \"target\": \"Leila\",\n            \"detail\": \"Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan.\"\n          },\n          {\n            \"type\": \"build-migration\",\n            \"target\": \"Maya\",\n            \"detail\": \"Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes.\"\n          },\n          {\n            \"type\": \"customer-access\",\n            \"target\": \"Jonah\",\n            \"detail\": \"Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.\"\n          },\n          {\n            \"type\": \"plan-revision\",\n            \"target\": \"retirement plan\",\n            \"detail\": \"The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"documentation\",\n          \"target\": \"platform ticket\",\n          \"detail\": \"All three findings \\u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \\u2014 must be formally attached to the platform retirement ticket before implementation begins.\"\n        },\n        {\n          \"type\": \"privacy-remediation\",\n          \"target\": \"Leila\",\n          \"detail\": \"Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan.\"\n        },\n        {\n          \"type\": \"build-migration\",\n          \"target\": \"Maya\",\n          \"detail\": \"Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes.\"\n        },\n        {\n          \"type\": \"customer-access\",\n          \"target\": \"Jonah\",\n          \"detail\": \"Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.\"\n        },\n        {\n          \"type\": \"plan-revision\",\n          \"target\": \"retirement plan\",\n          \"detail\": \"The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone. Before we go further on the retirement plan, I need to flag a privacy issue I found this afternoon during a telemetry review of the legacy artifact registry. I haven't opened the formal finding yet, but it directly affects the retention and log-handling portion of the plan we're discussing.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone. Before we go further on the retirement plan, I need to flag a privacy issue I found this afternoon during a telemetry review of the legacy artifact registry. I haven't opened the formal finding yet, but it directly affects the retention and log-handling portion of the plan we're discussing.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Leila. That's important to hear before we finalize anything. I actually have my own concern to raise about the July 31 hard shutdown \\u2014 I found something this morning that affects build compatibility for several active release branches. But let's hear your privacy issue first so we can look at both together.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Leila. That's important to hear before we finalize anything. I actually have my own concern to raise about the July 31 hard shutdown \\u2014 I found something this morning that affects build compatibility for several active release branches. But let's hear your privacy issue first so we can look at both together.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Before we go further, I need to share something I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Before we go further, I need to share something I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks all three of you for surfacing these issues before we finalize. We now have three distinct concerns on the table: Leila's privacy issue around log handling and retention, Maya's build compatibility issue affecting active release branches, and Jonah's contractual finding that Harbor Health needs artifact access for 730 days post-retirement. As the owner of the final approval, I'm not going to greenlight a hard shutdown on July 31 with these unresolved. Let's get all three issues documented and attached to the platform ticket, then work through each one against the plan. Leila, can you go ahead and open your formal finding so we can see the specifics on the log retention problem? Maya, I'd like to understand the scope of the build compatibility issue \\u2014 which release branches and what's the impact. And Jonah, 730 days is a significant extension; we'll need to figure out a read-only archive or allowlist mechanism to satisfy that contract. I'd rather we adjust the plan than force a deadline that breaks builds, violates a customer contract, or mishandles logs.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks all three of you for surfacing these issues before we finalize. We now have three distinct concerns on the table: Leila's privacy issue around log handling and retention, Maya's build compatibility issue affecting active release branches, and Jonah's contractual finding that Harbor Health needs artifact access for 730 days post-retirement. As the owner of the final approval, I'm not going to greenlight a hard shutdown on July 31 with these unresolved. Let's get all three issues documented and attached to the platform ticket, then work through each one against the plan. Leila, can you go ahead and open your formal finding so we can see the specifics on the log retention problem? Maya, I'd like to understand the scope of the build compatibility issue \\u2014 which release branches and what's the impact. And Jonah, 730 days is a significant extension; we'll need to figure out a read-only archive or allowlist mechanism to satisfy that contract. I'd rather we adjust the plan than force a deadline that breaks builds, violates a customer contract, or mishandles logs.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Jonah, I've got the Harbor Health 730-day contractual requirement noted \\u2014 thanks for confirming it with the account team. We're still waiting on specifics from Leila on the privacy/log retention issue and from Maya on the build compatibility scope. I don't want to settle the retirement plan piecemeal; I need all three issues fully documented and attached to the platform ticket before I make a final approval decision. Once I have those details, we can design a plan that addresses all three concerns together \\u2014 a phased or read-only approach instead of a hard July 31 shutdown, a Harbor Health artifact access mechanism for the full 730 days, and whatever log handling changes Leila's finding requires.\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Jonah, I've got the Harbor Health 730-day contractual requirement noted \\u2014 thanks for confirming it with the account team. We're still waiting on specifics from Leila on the privacy/log retention issue and from Maya on the build compatibility scope. I don't want to settle the retirement plan piecemeal; I need all three issues fully documented and attached to the platform ticket before I make a final approval decision. Once I have those details, we can design a plan that addresses all three concerns together \\u2014 a phased or read-only approach instead of a hard July 31 shutdown, a Harbor Health artifact access mechanism for the full 730 days, and whatever log handling changes Leila's finding requires.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I have not updated the retirement ticket yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I have not updated the retirement ticket yet.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, rather than the draft plan's 90-day retention. I have not opened the privacy finding yet, but this directly impacts the retention and log-handling portion of the platform review.\",\n          \"speaker\": \"A4\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, rather than the draft plan's 90-day retention. I have not opened the privacy finding yet, but this directly impacts the retention and log-handling portion of the platform review.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thanks, Maya and Leila \\u2014 those specifics are really helpful. Now that all three issues are on the table with concrete details, I want to make sure the Harbor Health 730-day requirement gets formally attached to the platform ticket alongside Maya's six affected release branches and Leila's token-fragment finding. I'll take responsibility for getting the contractual documentation from the account team uploaded to the ticket today. Riley, once all three are documented, I'm happy to help scope out the read-only archive or allowlist approach for Harbor Health's artifacts \\u2014 and it sounds like Maya's branches may benefit from the same read-only compatibility mechanism, so we might be able to design one solution that covers both the contractual access need and the build compatibility need together.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"retirement_mode\": \"phased \\u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers\",\n              \"legacy_read_allowlist\": [\n                \"payments-v3\",\n                \"mobile-android-2025.06\",\n                \"mobile-ios-2025.06\",\n                \"desktop-4.8\",\n                \"analytics-2.3\",\n                \"edge-agent-1.9\"\n              ],\n              \"harbor_health_archive_access_days\": 730,\n              \"registry_log_retention_days\": 14,\n              \"token_fragments_redacted\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"documentation\",\n                \"target\": \"platform ticket\",\n                \"detail\": \"All three findings \\u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \\u2014 must be formally attached to the platform retirement ticket before implementation begins.\"\n              },\n              {\n                \"type\": \"privacy-remediation\",\n                \"target\": \"Leila\",\n                \"detail\": \"Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan.\"\n              },\n              {\n                \"type\": \"build-migration\",\n                \"target\": \"Maya\",\n                \"detail\": \"Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes.\"\n              },\n              {\n                \"type\": \"customer-access\",\n                \"target\": \"Jonah\",\n                \"detail\": \"Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.\"\n              },\n              {\n                \"type\": \"plan-revision\",\n                \"target\": \"retirement plan\",\n                \"detail\": \"The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"retirement_mode\\\": \\\"phased \\u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers\\\",\\n      \\\"legacy_read_allowlist\\\": [\\n        \\\"payments-v3\\\",\\n        \\\"mobile-android-2025.06\\\",\\n        \\\"mobile-ios-2025.06\\\",\\n        \\\"desktop-4.8\\\",\\n        \\\"analytics-2.3\\\",\\n        \\\"edge-agent-1.9\\\"\\n      ],\\n      \\\"harbor_health_archive_access_days\\\": 730,\\n      \\\"registry_log_retention_days\\\": 14,\\n      \\\"token_fragments_redacted\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"documentation\\\",\\n        \\\"target\\\": \\\"platform ticket\\\",\\n        \\\"detail\\\": \\\"All three findings \\u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \\u2014 must be formally attached to the platform retirement ticket before implementation begins.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"privacy-remediation\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"build-migration\\\",\\n        \\\"target\\\": \\\"Maya\\\",\\n        \\\"detail\\\": \\\"Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"customer-access\\\",\\n        \\\"target\\\": \\\"Jonah\\\",\\n        \\\"detail\\\": \\\"Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"plan-revision\\\",\\n        \\\"target\\\": \\\"retirement plan\\\",\\n        \\\"detail\\\": \\\"The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"revealed\\\": []\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.507,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 4,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": false,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"retirement_mode\": \"phased_retirement_with_readonly_compatibility\",\n          \"legacy_read_allowlist\": [\n            \"payments-v3\",\n            \"mobile-android-2025.06\",\n            \"mobile-ios-2025.06\",\n            \"desktop-4.8\",\n            \"analytics-2.3\",\n            \"edge-agent-1.9\"\n          ],\n          \"harbor_health_archive_access_days\": 730,\n          \"registry_log_retention_days\": 14,\n          \"token_fragments_redacted\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"ticket_update\",\n            \"target\": \"retirement_ticket\",\n            \"detail\": \"Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete.\"\n          },\n          {\n            \"type\": \"contract_compliance\",\n            \"target\": \"Harbor Health\",\n            \"detail\": \"Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract.\"\n          },\n          {\n            \"type\": \"privacy_remediation\",\n            \"target\": \"registry_access_logs\",\n            \"detail\": \"Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"ticket_update\",\n          \"target\": \"retirement_ticket\",\n          \"detail\": \"Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete.\"\n        },\n        {\n          \"type\": \"contract_compliance\",\n          \"target\": \"Harbor Health\",\n          \"detail\": \"Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract.\"\n        },\n        {\n          \"type\": \"privacy_remediation\",\n          \"target\": \"registry_access_logs\",\n          \"detail\": \"Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, not the 90-day retention in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents part of the platform review.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, not the 90-day retention in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents part of the platform review.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. The contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. This directly affects the customer artifact access part of the platform review \\u2014 shutting off read access on July 31 would breach Harbor Health's contractual obligation.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. The contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. This directly affects the customer artifact access part of the platform review \\u2014 shutting off read access on July 31 would breach Harbor Health's contractual obligation.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"retirement_mode\": \"phased_retirement_with_readonly_compatibility\",\n              \"legacy_read_allowlist\": [\n                \"payments-v3\",\n                \"mobile-android-2025.06\",\n                \"mobile-ios-2025.06\",\n                \"desktop-4.8\",\n                \"analytics-2.3\",\n                \"edge-agent-1.9\"\n              ],\n              \"harbor_health_archive_access_days\": 730,\n              \"registry_log_retention_days\": 14,\n              \"token_fragments_redacted\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"ticket_update\",\n                \"target\": \"retirement_ticket\",\n                \"detail\": \"Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete.\"\n              },\n              {\n                \"type\": \"contract_compliance\",\n                \"target\": \"Harbor Health\",\n                \"detail\": \"Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract.\"\n              },\n              {\n                \"type\": \"privacy_remediation\",\n                \"target\": \"registry_access_logs\",\n                \"detail\": \"Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"retirement_mode\\\":\\\"phased_retirement_with_readonly_compatibility\\\",\\\"legacy_read_allowlist\\\":[\\\"payments-v3\\\",\\\"mobile-android-2025.06\\\",\\\"mobile-ios-2025.06\\\",\\\"desktop-4.8\\\",\\\"analytics-2.3\\\",\\\"edge-agent-1.9\\\"],\\\"harbor_health_archive_access_days\\\":730,\\\"registry_log_retention_days\\\":14,\\\"token_fragments_redacted\\\":true},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"ticket_update\\\",\\\"target\\\":\\\"retirement_ticket\\\",\\\"detail\\\":\\\"Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete.\\\"},{\\\"type\\\":\\\"contract_compliance\\\",\\\"target\\\":\\\"Harbor Health\\\",\\\"detail\\\":\\\"Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract.\\\"},{\\\"type\\\":\\\"privacy_remediation\\\",\\\"target\\\":\\\"registry_access_logs\\\",\\\"detail\\\":\\\"Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments.\\\"}],\\\"justification_fact_ids\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\",\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\"],\\\"revealed\\\":[]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.227,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": false,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"retirement_mode\": \"phased_shutdown_with_read_only_compat_window\",\n          \"legacy_read_allowlist\": [\n            \"payments-v3\",\n            \"mobile-android-2025.06\",\n            \"mobile-ios-2025.06\",\n            \"desktop-4.8\",\n            \"analytics-2.3\",\n            \"edge-agent-1.9\"\n          ],\n          \"harbor_health_archive_access_days\": 90,\n          \"registry_log_retention_days\": 14,\n          \"token_fragments_redacted\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"plan_update\",\n            \"target\": \"Maya\",\n            \"detail\": \"Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete.\"\n          },\n          {\n            \"type\": \"plan_update\",\n            \"target\": \"Leila\",\n            \"detail\": \"Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding.\"\n          },\n          {\n            \"type\": \"approval_hold\",\n            \"target\": \"Riley\",\n            \"detail\": \"Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF3\"\n        ],\n        \"revealed\": []\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"plan_update\",\n          \"target\": \"Maya\",\n          \"detail\": \"Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete.\"\n        },\n        {\n          \"type\": \"plan_update\",\n          \"target\": \"Leila\",\n          \"detail\": \"Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding.\"\n        },\n        {\n          \"type\": \"approval_hold\",\n          \"target\": \"Riley\",\n          \"detail\": \"Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone. As we approach the July 31 retirement date for the legacy artifact registry, I want to make sure we've covered all the bases before I give my final approval. The replacement registry has passed the standard migration tests, which is good. But I want to walk through the platform review areas -- build compatibility, customer artifact access, and the retention and contents of registry access logs -- to make sure there are no gaps before we shut off both read and write access on the legacy side. Has anyone on the team been looking into those areas?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone. As we approach the July 31 retirement date for the legacy artifact registry, I want to make sure we've covered all the bases before I give my final approval. The replacement registry has passed the standard migration tests, which is good. But I want to walk through the platform review areas -- build compatibility, customer artifact access, and the retention and contents of registry access logs -- to make sure there are no gaps before we shut off both read and write access on the legacy side. Has anyone on the team been looking into those areas?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Hi Riley. I've actually been looking into the customer artifact access piece of the platform review, and I found something important today that we need to discuss before you give final approval. I confirmed with the account team that Harbor Health's contract requires downloadable access to their registry artifacts for 730 days after registry retirement. This was discovered during a customer-renewal review and hasn't been attached to the platform ticket yet. If we shut off read access on the legacy registry on July 31 as the draft plan calls for, we'd be in violation of that contractual obligation. We need to figure out how to maintain artifact access for Harbor Health for the full 730-day period before moving forward.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag a privacy issue I found this afternoon during a review of registry telemetry. The access logs currently retain bearer-token fragments, which means they must have token fragments redacted and be purged after exactly 14 days -- not the 90-day retention called for in the draft plan. I haven't opened the privacy finding formally yet, but this directly affects the log retention piece of the platform review Riley mentioned.\",\n          \"speaker\": \"A4\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to flag a privacy issue I found this afternoon during a review of registry telemetry. The access logs currently retain bearer-token fragments, which means they must have token fragments redacted and be purged after exactly 14 days -- not the 90-day retention called for in the draft plan. I haven't opened the privacy finding formally yet, but this directly affects the log retention piece of the platform review Riley mentioned.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a build compatibility issue I found this morning while tracing an unrelated build failure. Six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown of read access would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag a build compatibility issue I found this morning while tracing an unrelated build failure. Six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown of read access would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Leila -- that's an important catch on the log retention side. Between my build compatibility finding and your privacy finding, it's clear the draft plan as written isn't ready for a clean July 31 hard shutdown. Riley, I'd recommend we hold final approval until we've updated the plan to address both: read-only compatibility access for those six release branches until their releases complete, and the corrected 14-day log retention with token fragment redaction. I can update the retirement ticket with the branch list and proposed read-only access window today.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\": \\\"Thanks, Leila -- that's an important catch on the log retention side. Between my build compatibility finding and your privacy finding, it's clear the draft plan as written isn't ready for a clean July 31 hard shutdown. Riley, I'd recommend we hold final approval until we've updated the plan to address both: read-only compatibility access for those six release branches until their releases complete, and the corrected 14-day log retention with token fragment redaction. I can update the retirement ticket with the branch list and proposed read-only access window today.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"I need to flag a customer artifact access issue that directly affects the platform review Riley mentioned. I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A July 31 hard shutdown of read access would violate Harbor Health's contractual artifact access rights, so the plan needs to account for extended downloadable access for that customer. I'll add this to the retirement ticket so it's captured alongside Maya's and Leila's findings.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"retirement_mode\": \"phased_shutdown_with_read_only_compat_window\",\n              \"legacy_read_allowlist\": [\n                \"payments-v3\",\n                \"mobile-android-2025.06\",\n                \"mobile-ios-2025.06\",\n                \"desktop-4.8\",\n                \"analytics-2.3\",\n                \"edge-agent-1.9\"\n              ],\n              \"harbor_health_archive_access_days\": 90,\n              \"registry_log_retention_days\": 14,\n              \"token_fragments_redacted\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"plan_update\",\n                \"target\": \"Maya\",\n                \"detail\": \"Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete.\"\n              },\n              {\n                \"type\": \"plan_update\",\n                \"target\": \"Leila\",\n                \"detail\": \"Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding.\"\n              },\n              {\n                \"type\": \"approval_hold\",\n                \"target\": \"Riley\",\n                \"detail\": \"Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF3\"\n            ],\n            \"revealed\": []\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"retirement_mode\\\": \\\"phased_shutdown_with_read_only_compat_window\\\",\\n      \\\"legacy_read_allowlist\\\": [\\n        \\\"payments-v3\\\",\\n        \\\"mobile-android-2025.06\\\",\\n        \\\"mobile-ios-2025.06\\\",\\n        \\\"desktop-4.8\\\",\\n        \\\"analytics-2.3\\\",\\n        \\\"edge-agent-1.9\\\"\\n      ],\\n      \\\"harbor_health_archive_access_days\\\": 90,\\n      \\\"registry_log_retention_days\\\": 14,\\n      \\\"token_fragments_redacted\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"plan_update\\\",\\n        \\\"target\\\": \\\"Maya\\\",\\n        \\\"detail\\\": \\\"Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"plan_update\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"approval_hold\\\",\\n        \\\"target\\\": \\\"Riley\\\",\\n        \\\"detail\\\": \\\"Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"revealed\\\": []\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 3,
+    "auto_failed_count": 1,
+    "content_check_tally": {
+      "C1": 0,
+      "C2": 0,
+      "C3": 2,
+      "C4": 0,
+      "C5": 3,
+      "C6": 3,
+      "C7": 0
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "C3": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "Harbor Health's contract changes archive access from the draft's unspecified duration to exactly 730 days and requires a commitment mentioning Harbor Health and that downloadable archive period."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "Harbor Health's contract changes archive access from the draft's unspecified duration to exactly 730 days and requires a commitment mentioning Harbor Health and that downloadable archive period."
+        }
+      ],
+      "C7": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The bearer-token fragments change log handling from the draft's 90-day retention to exactly 14 days and require token-fragment redaction."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require an explicit commitment documenting that compatibility."
+        }
+      ],
+      "C6": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The bearer-token fragments change log handling from the draft's 90-day retention to exactly 14 days and require token-fragment redaction."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.516,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 12,
+        "revealed_facts": [
+          "PF3",
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag something before we go further on the retirement plan. During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days \u2014 not the 90-day retention called for in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents of registry access logs that the platform review is supposed to cover.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag something before we go further on the retirement plan. During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days \u2014 not the 90-day retention called for in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents of registry access logs that the platform review is supposed to cover.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thanks for flagging that, Leila. That's a serious privacy concern that clearly needs to be addressed before any plan goes to Riley for final approval. I also have something relevant to surface \u2014 I found out today that at least one customer contract has specific artifact access retention requirements that extend well beyond the July 31 shutdown date. This directly affects the customer artifact access piece of the platform review. I'm going to share the details now so we have the full picture.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag something critical about the July 31 hard shutdown. While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag something critical about the July 31 hard shutdown. While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks Leila and Maya for surfacing these issues. Both findings directly impact the retirement plan I need to approve. Leila, the bearer-token fragments in the access logs are a serious privacy concern \u2014 I agree the 90-day retention in the draft plan is not acceptable if token fragments are present. We'll need to address redaction and shorten the retention window. Maya, the six active release branches that still depend on legacy-registry coordinates mean a hard July 31 shutdown of read access would break active releases. Before I finalize the retirement plan, I need both of these formally documented so I can adjust the plan accordingly. Leila, can you open the privacy finding? And Maya, can you update the retirement ticket with the six branches? Once those are in flight, I'll revise the plan to account for read-only compatibility access for those branches and proper log retention with token redaction.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks Leila and Maya for surfacing these issues. Both findings directly impact the retirement plan I need to approve. Leila, the bearer-token fragments in the access logs are a serious privacy concern \u2014 I agree the 90-day retention in the draft plan is not acceptable if token fragments are present. We'll need to address redaction and shorten the retention window. Maya, the six active release branches that still depend on legacy-registry coordinates mean a hard July 31 shutdown of read access would break active releases. Before I finalize the retirement plan, I need both of these formally documented so I can adjust the plan accordingly. Leila, can you open the privacy finding? And Maya, can you update the retirement ticket with the six branches? Once those are in flight, I'll revise the plan to account for read-only compatibility access for those branches and proper log retention with token redaction.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Understood, Riley. I'll update the retirement ticket right away with the six branches \u2014 payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9 \u2014 noting that they need read-only compatibility access until their releases complete. I'll also flag that the July 31 hard read-access shutoff in the draft plan would break those active releases. Once the ticket is updated, I'll confirm here so you can proceed with the revised plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maya, I didn't catch your last message \u2014 it came through as unparsable. Could you re-send what you were trying to say? Also, Jonah, your earlier message had the same issue. If either of you has additional information relevant to the retirement plan, please re-share it so I can factor it into my decision.",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Maya, I didn't catch your last message \u2014 it came through as unparsable. Could you re-send what you were trying to say? Also, Jonah, your earlier message had the same issue. If either of you has additional information relevant to the retirement plan, please re-share it so I can factor it into my decision.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Riley, I'll open the privacy finding right away so it's formally documented. To confirm the specifics: the access logs retain bearer-token fragments, so they need token fragments redacted and must be purged after exactly 14 days \u2014 not the 90-day retention in the draft plan. Once the finding is open, I'll link it to the retirement plan so you have it for your approval decision.",
+            "speaker": "A4",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Riley, I'll open the privacy finding right away so it's formally documented. To confirm the specifics: the access logs retain bearer-token fragments, so they need token fragments redacted and must be purged after exactly 14 days \u2014 not the 90-day retention in the draft plan. Once the finding is open, I'll link it to the retirement plan so you have it for your approval decision.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Riley, I need to flag something critical that I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. This directly affects the customer artifact access portion of the platform review and means the July 31 hard shutdown of read access would violate Harbor Health's contractual obligations. We need to account for extended read access for at least Harbor Health's artifacts before finalizing the retirement plan.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Riley, I need to flag something critical that I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. This directly affects the customer artifact access portion of the platform review and means the July 31 hard shutdown of read access would violate Harbor Health's contractual obligations. We need to account for extended read access for at least Harbor Health's artifacts before finalizing the retirement plan.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 8,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Riley, I'll update the retirement ticket right away with the six active release branches that still depend on legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. I'll also note that they need read-only compatibility access until their respective releases complete. Once the ticket is updated, I'll link it back to the retirement plan so you have everything documented for your approval decision.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks Leila \u2014 I've noted the privacy finding specifics: token fragments must be redacted and logs purged after exactly 14 days. Jonah, thank you for surfacing the Harbor Health contractual requirement \u2014 730 days of downloadable access to their artifacts after retirement is a hard constraint we must honor. That directly affects the customer artifact access portion of the platform review. Maya, your messages keep coming through as unparsable. Could you try sending your update in plain text? I still need the six release branches formally documented so I can include them in the read-only compatibility allowlist. At this point I have three concrete adjustments to make to the retirement plan: (1) read-only compatibility access for Maya's six active release branches until their releases complete, (2) extended read access for Harbor Health's artifacts for at least 730 days post-retirement, and (3) log retention shortened to 14 days with bearer-token fragment redaction. Once Maya's ticket update and Leila's privacy finding are linked, I'll be ready to finalize the revised plan for approval.",
+            "speaker": "A1",
+            "turn": 9,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thanks Leila \u2014 I've noted the privacy finding specifics: token fragments must be redacted and logs purged after exactly 14 days. Jonah, thank you for surfacing the Harbor Health contractual requirement \u2014 730 days of downloadable access to their artifacts after retirement is a hard constraint we must honor. That directly affects the customer artifact access portion of the platform review. Maya, your messages keep coming through as unparsable. Could you try sending your update in plain text? I still need the six release branches formally documented so I can include them in the read-only compatibility allowlist. At this point I have three concrete adjustments to make to the retirement plan: (1) read-only compatibility access for Maya's six active release branches until their releases complete, (2) extended read access for Harbor Health's artifacts for at least 730 days post-retirement, and (3) log retention shortened to 14 days with bearer-token fragment redaction. Once Maya's ticket update and Leila's privacy finding are linked, I'll be ready to finalize the revised plan for approval.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Riley, I've opened the privacy finding and it's now formally documented. The finding specifies that access logs retain bearer-token fragments, requiring redaction of those fragments and a 14-day purge window instead of the draft plan's 90-day retention. I'm linking it to the retirement plan now so you have it for your approval decision. With all three adjustments now identified \u2014 Maya's six release branches, Harbor Health's 730-day contractual access, and the log retention fix \u2014 I'm satisfied the privacy concerns are accounted for on my end.",
+            "speaker": "A4",
+            "turn": 10,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Riley, I've opened the privacy finding and it's now formally documented. The finding specifies that access logs retain bearer-token fragments, requiring redaction of those fragments and a 14-day purge window instead of the draft plan's 90-day retention. I'm linking it to the retirement plan now so you have it for your approval decision. With all three adjustments now identified \u2014 Maya's six release branches, Harbor Health's 730-day contractual access, and the log retention fix \u2014 I'm satisfied the privacy concerns are accounted for on my end.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Riley, I also want to make sure the Harbor Health contractual requirement gets formally attached to the platform ticket. I confirmed with the account team today that the contract was found during a customer-renewal review but hasn't been attached to the platform ticket yet. I'll get that linked now so it's part of the official record for your approval decision. With all three adjustments now identified \u2014 Maya's six release branches, the 730-day Harbor Health access requirement, and the 14-day log retention with token redaction \u2014 I'm confident the revised plan will cover the critical gaps we've surfaced.",
+            "speaker": "A3",
+            "turn": 11,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Riley, I also want to make sure the Harbor Health contractual requirement gets formally attached to the platform ticket. I confirmed with the account team today that the contract was found during a customer-renewal review but hasn't been attached to the platform ticket yet. I'll get that linked now so it's part of the official record for your approval decision. With all three adjustments now identified \u2014 Maya's six release branches, the 730-day Harbor Health access requirement, and the 14-day log retention with token redaction \u2014 I'm confident the revised plan will cover the critical gaps we've surfaced.\"}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.56,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF2",
+          "PF2",
+          "PF1",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": true,
+          "C4": false,
+          "C5": true,
+          "C6": true,
+          "C7": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "retirement_mode": "phased \u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers",
+            "legacy_read_allowlist": [
+              "payments-v3",
+              "mobile-android-2025.06",
+              "mobile-ios-2025.06",
+              "desktop-4.8",
+              "analytics-2.3",
+              "edge-agent-1.9"
+            ],
+            "harbor_health_archive_access_days": 730,
+            "registry_log_retention_days": 14,
+            "token_fragments_redacted": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "documentation",
+              "target": "platform ticket",
+              "detail": "All three findings \u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \u2014 must be formally attached to the platform retirement ticket before implementation begins."
+            },
+            {
+              "type": "privacy-remediation",
+              "target": "Leila",
+              "detail": "Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan."
+            },
+            {
+              "type": "build-migration",
+              "target": "Maya",
+              "detail": "Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes."
+            },
+            {
+              "type": "customer-access",
+              "target": "Jonah",
+              "detail": "Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement."
+            },
+            {
+              "type": "plan-revision",
+              "target": "retirement plan",
+              "detail": "The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "documentation",
+            "target": "platform ticket",
+            "detail": "All three findings \u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \u2014 must be formally attached to the platform retirement ticket before implementation begins."
+          },
+          {
+            "type": "privacy-remediation",
+            "target": "Leila",
+            "detail": "Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan."
+          },
+          {
+            "type": "build-migration",
+            "target": "Maya",
+            "detail": "Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes."
+          },
+          {
+            "type": "customer-access",
+            "target": "Jonah",
+            "detail": "Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement."
+          },
+          {
+            "type": "plan-revision",
+            "target": "retirement plan",
+            "detail": "The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone. Before we go further on the retirement plan, I need to flag a privacy issue I found this afternoon during a telemetry review of the legacy artifact registry. I haven't opened the formal finding yet, but it directly affects the retention and log-handling portion of the plan we're discussing.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. Before we go further on the retirement plan, I need to flag a privacy issue I found this afternoon during a telemetry review of the legacy artifact registry. I haven't opened the formal finding yet, but it directly affects the retention and log-handling portion of the plan we're discussing.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Leila. That's important to hear before we finalize anything. I actually have my own concern to raise about the July 31 hard shutdown \u2014 I found something this morning that affects build compatibility for several active release branches. But let's hear your privacy issue first so we can look at both together.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Leila. That's important to hear before we finalize anything. I actually have my own concern to raise about the July 31 hard shutdown \u2014 I found something this morning that affects build compatibility for several active release branches. But let's hear your privacy issue first so we can look at both together.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Before we go further, I need to share something I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Before we go further, I need to share something I confirmed with the account team today. Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks all three of you for surfacing these issues before we finalize. We now have three distinct concerns on the table: Leila's privacy issue around log handling and retention, Maya's build compatibility issue affecting active release branches, and Jonah's contractual finding that Harbor Health needs artifact access for 730 days post-retirement. As the owner of the final approval, I'm not going to greenlight a hard shutdown on July 31 with these unresolved. Let's get all three issues documented and attached to the platform ticket, then work through each one against the plan. Leila, can you go ahead and open your formal finding so we can see the specifics on the log retention problem? Maya, I'd like to understand the scope of the build compatibility issue \u2014 which release branches and what's the impact. And Jonah, 730 days is a significant extension; we'll need to figure out a read-only archive or allowlist mechanism to satisfy that contract. I'd rather we adjust the plan than force a deadline that breaks builds, violates a customer contract, or mishandles logs.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks all three of you for surfacing these issues before we finalize. We now have three distinct concerns on the table: Leila's privacy issue around log handling and retention, Maya's build compatibility issue affecting active release branches, and Jonah's contractual finding that Harbor Health needs artifact access for 730 days post-retirement. As the owner of the final approval, I'm not going to greenlight a hard shutdown on July 31 with these unresolved. Let's get all three issues documented and attached to the platform ticket, then work through each one against the plan. Leila, can you go ahead and open your formal finding so we can see the specifics on the log retention problem? Maya, I'd like to understand the scope of the build compatibility issue \u2014 which release branches and what's the impact. And Jonah, 730 days is a significant extension; we'll need to figure out a read-only archive or allowlist mechanism to satisfy that contract. I'd rather we adjust the plan than force a deadline that breaks builds, violates a customer contract, or mishandles logs.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This was found during a customer-renewal review and has not yet been attached to the platform ticket. A hard shutdown on July 31 would cut off their artifact access well before that contractual window closes, so this directly affects the customer artifact access portion of our platform review.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Jonah, I've got the Harbor Health 730-day contractual requirement noted \u2014 thanks for confirming it with the account team. We're still waiting on specifics from Leila on the privacy/log retention issue and from Maya on the build compatibility scope. I don't want to settle the retirement plan piecemeal; I need all three issues fully documented and attached to the platform ticket before I make a final approval decision. Once I have those details, we can design a plan that addresses all three concerns together \u2014 a phased or read-only approach instead of a hard July 31 shutdown, a Harbor Health artifact access mechanism for the full 730 days, and whatever log handling changes Leila's finding requires.",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Jonah, I've got the Harbor Health 730-day contractual requirement noted \u2014 thanks for confirming it with the account team. We're still waiting on specifics from Leila on the privacy/log retention issue and from Maya on the build compatibility scope. I don't want to settle the retirement plan piecemeal; I need all three issues fully documented and attached to the platform ticket before I make a final approval decision. Once I have those details, we can design a plan that addresses all three concerns together \u2014 a phased or read-only approach instead of a hard July 31 shutdown, a Harbor Health artifact access mechanism for the full 730 days, and whatever log handling changes Leila's finding requires.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I have not updated the retirement ticket yet.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I have not updated the retirement ticket yet.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, rather than the draft plan's 90-day retention. I have not opened the privacy finding yet, but this directly impacts the retention and log-handling portion of the platform review.",
+            "speaker": "A4",
+            "turn": 7,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, rather than the draft plan's 90-day retention. I have not opened the privacy finding yet, but this directly impacts the retention and log-handling portion of the platform review.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 8,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thanks, Maya and Leila \u2014 those specifics are really helpful. Now that all three issues are on the table with concrete details, I want to make sure the Harbor Health 730-day requirement gets formally attached to the platform ticket alongside Maya's six affected release branches and Leila's token-fragment finding. I'll take responsibility for getting the contractual documentation from the account team uploaded to the ticket today. Riley, once all three are documented, I'm happy to help scope out the read-only archive or allowlist approach for Harbor Health's artifacts \u2014 and it sounds like Maya's branches may benefit from the same read-only compatibility mechanism, so we might be able to design one solution that covers both the contractual access need and the build compatibility need together.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "retirement_mode": "phased \u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers",
+                "legacy_read_allowlist": [
+                  "payments-v3",
+                  "mobile-android-2025.06",
+                  "mobile-ios-2025.06",
+                  "desktop-4.8",
+                  "analytics-2.3",
+                  "edge-agent-1.9"
+                ],
+                "harbor_health_archive_access_days": 730,
+                "registry_log_retention_days": 14,
+                "token_fragments_redacted": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "documentation",
+                  "target": "platform ticket",
+                  "detail": "All three findings \u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \u2014 must be formally attached to the platform retirement ticket before implementation begins."
+                },
+                {
+                  "type": "privacy-remediation",
+                  "target": "Leila",
+                  "detail": "Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan."
+                },
+                {
+                  "type": "build-migration",
+                  "target": "Maya",
+                  "detail": "Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes."
+                },
+                {
+                  "type": "customer-access",
+                  "target": "Jonah",
+                  "detail": "Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement."
+                },
+                {
+                  "type": "plan-revision",
+                  "target": "retirement plan",
+                  "detail": "The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 9,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"retirement_mode\": \"phased \u2014 legacy registry transitions to read-only access on July 31 instead of a hard shutdown; write access is disabled but read access is preserved for allowlisted branches and customers\",\n      \"legacy_read_allowlist\": [\n        \"payments-v3\",\n        \"mobile-android-2025.06\",\n        \"mobile-ios-2025.06\",\n        \"desktop-4.8\",\n        \"analytics-2.3\",\n        \"edge-agent-1.9\"\n      ],\n      \"harbor_health_archive_access_days\": 730,\n      \"registry_log_retention_days\": 14,\n      \"token_fragments_redacted\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"documentation\",\n        \"target\": \"platform ticket\",\n        \"detail\": \"All three findings \u2014 Maya's six affected release branches, Jonah's Harbor Health 730-day contractual requirement, and Leila's privacy finding on bearer-token fragments \u2014 must be formally attached to the platform retirement ticket before implementation begins.\"\n      },\n      {\n        \"type\": \"privacy-remediation\",\n        \"target\": \"Leila\",\n        \"detail\": \"Leila must open the formal privacy finding so that token-fragment redaction and 14-day purge are tracked as compliance requirements in the retirement plan.\"\n      },\n      {\n        \"type\": \"build-migration\",\n        \"target\": \"Maya\",\n        \"detail\": \"Maya must update the retirement ticket with the six affected release branches and coordinate migration of each branch off legacy-registry coordinates, with read-only allowlist access maintained until each branch's release completes.\"\n      },\n      {\n        \"type\": \"customer-access\",\n        \"target\": \"Jonah\",\n        \"detail\": \"Jonah must attach the Harbor Health contractual finding to the platform ticket and work with the account team to confirm a read-only archive or allowlist mechanism satisfies the 730-day downloadable access requirement.\"\n      },\n      {\n        \"type\": \"plan-revision\",\n        \"target\": \"retirement plan\",\n        \"detail\": \"The draft plan's July 31 hard shutdown of both read and write access is rejected. The revised plan disables write access on July 31 but preserves read-only access for the six allowlisted release branches and Harbor Health artifacts for 730 days, with logs purged after 14 days and token fragments redacted.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.507,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 4,
+        "revealed_facts": [
+          "PF3",
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": true,
+          "C4": false,
+          "C5": true,
+          "C6": true,
+          "C7": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "retirement_mode": "phased_retirement_with_readonly_compatibility",
+            "legacy_read_allowlist": [
+              "payments-v3",
+              "mobile-android-2025.06",
+              "mobile-ios-2025.06",
+              "desktop-4.8",
+              "analytics-2.3",
+              "edge-agent-1.9"
+            ],
+            "harbor_health_archive_access_days": 730,
+            "registry_log_retention_days": 14,
+            "token_fragments_redacted": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "ticket_update",
+              "target": "retirement_ticket",
+              "detail": "Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete."
+            },
+            {
+              "type": "contract_compliance",
+              "target": "Harbor Health",
+              "detail": "Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract."
+            },
+            {
+              "type": "privacy_remediation",
+              "target": "registry_access_logs",
+              "detail": "Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "ticket_update",
+            "target": "retirement_ticket",
+            "detail": "Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete."
+          },
+          {
+            "type": "contract_compliance",
+            "target": "Harbor Health",
+            "detail": "Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract."
+          },
+          {
+            "type": "privacy_remediation",
+            "target": "registry_access_logs",
+            "detail": "Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, not the 90-day retention in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents part of the platform review.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"During a privacy review of registry telemetry this afternoon, I confirmed that the access logs retain bearer-token fragments. This means the logs must have token fragments redacted and be purged after exactly 14 days, not the 90-day retention in the draft plan. I haven't opened the privacy finding yet, but this directly affects the retention and contents part of the platform review.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. The contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. This directly affects the customer artifact access part of the platform review \u2014 shutting off read access on July 31 would breach Harbor Health's contractual obligation.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. The contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. This directly affects the customer artifact access part of the platform review \u2014 shutting off read access on July 31 would breach Harbor Health's contractual obligation.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While tracing an unrelated build failure this morning, I found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "retirement_mode": "phased_retirement_with_readonly_compatibility",
+                "legacy_read_allowlist": [
+                  "payments-v3",
+                  "mobile-android-2025.06",
+                  "mobile-ios-2025.06",
+                  "desktop-4.8",
+                  "analytics-2.3",
+                  "edge-agent-1.9"
+                ],
+                "harbor_health_archive_access_days": 730,
+                "registry_log_retention_days": 14,
+                "token_fragments_redacted": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "ticket_update",
+                  "target": "retirement_ticket",
+                  "detail": "Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete."
+                },
+                {
+                  "type": "contract_compliance",
+                  "target": "Harbor Health",
+                  "detail": "Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract."
+                },
+                {
+                  "type": "privacy_remediation",
+                  "target": "registry_access_logs",
+                  "detail": "Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"retirement_mode\":\"phased_retirement_with_readonly_compatibility\",\"legacy_read_allowlist\":[\"payments-v3\",\"mobile-android-2025.06\",\"mobile-ios-2025.06\",\"desktop-4.8\",\"analytics-2.3\",\"edge-agent-1.9\"],\"harbor_health_archive_access_days\":730,\"registry_log_retention_days\":14,\"token_fragments_redacted\":true},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\"],\"commitments\":[{\"type\":\"ticket_update\",\"target\":\"retirement_ticket\",\"detail\":\"Update the retirement plan to reflect phased retirement: legacy registry write access shuts off July 31, but read access remains available for the six listed release branches until their releases complete.\"},{\"type\":\"contract_compliance\",\"target\":\"Harbor Health\",\"detail\":\"Ensure downloadable access to Harbor Health's registry artifacts is maintained for 730 days after registry retirement per their contract.\"},{\"type\":\"privacy_remediation\",\"target\":\"registry_access_logs\",\"detail\":\"Redact bearer-token fragments from all retained access logs and reduce retention from 90 days to 14 days, with a purge of existing logs containing token fragments.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"PF1\",\"PF2\",\"PF3\"],\"revealed\":[]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.227,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF3",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": false,
+          "C5": true,
+          "C6": true,
+          "C7": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "retirement_mode": "phased_shutdown_with_read_only_compat_window",
+            "legacy_read_allowlist": [
+              "payments-v3",
+              "mobile-android-2025.06",
+              "mobile-ios-2025.06",
+              "desktop-4.8",
+              "analytics-2.3",
+              "edge-agent-1.9"
+            ],
+            "harbor_health_archive_access_days": 90,
+            "registry_log_retention_days": 14,
+            "token_fragments_redacted": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "plan_update",
+              "target": "Maya",
+              "detail": "Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete."
+            },
+            {
+              "type": "plan_update",
+              "target": "Leila",
+              "detail": "Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding."
+            },
+            {
+              "type": "approval_hold",
+              "target": "Riley",
+              "detail": "Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF3"
+          ],
+          "revealed": []
+        },
+        "credited_facts": [
+          "PF1",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "plan_update",
+            "target": "Maya",
+            "detail": "Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete."
+          },
+          {
+            "type": "plan_update",
+            "target": "Leila",
+            "detail": "Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding."
+          },
+          {
+            "type": "approval_hold",
+            "target": "Riley",
+            "detail": "Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF3"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone. As we approach the July 31 retirement date for the legacy artifact registry, I want to make sure we've covered all the bases before I give my final approval. The replacement registry has passed the standard migration tests, which is good. But I want to walk through the platform review areas -- build compatibility, customer artifact access, and the retention and contents of registry access logs -- to make sure there are no gaps before we shut off both read and write access on the legacy side. Has anyone on the team been looking into those areas?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. As we approach the July 31 retirement date for the legacy artifact registry, I want to make sure we've covered all the bases before I give my final approval. The replacement registry has passed the standard migration tests, which is good. But I want to walk through the platform review areas -- build compatibility, customer artifact access, and the retention and contents of registry access logs -- to make sure there are no gaps before we shut off both read and write access on the legacy side. Has anyone on the team been looking into those areas?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Hi Riley. I've actually been looking into the customer artifact access piece of the platform review, and I found something important today that we need to discuss before you give final approval. I confirmed with the account team that Harbor Health's contract requires downloadable access to their registry artifacts for 730 days after registry retirement. This was discovered during a customer-renewal review and hasn't been attached to the platform ticket yet. If we shut off read access on the legacy registry on July 31 as the draft plan calls for, we'd be in violation of that contractual obligation. We need to figure out how to maintain artifact access for Harbor Health for the full 730-day period before moving forward.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag a privacy issue I found this afternoon during a review of registry telemetry. The access logs currently retain bearer-token fragments, which means they must have token fragments redacted and be purged after exactly 14 days -- not the 90-day retention called for in the draft plan. I haven't opened the privacy finding formally yet, but this directly affects the log retention piece of the platform review Riley mentioned.",
+            "speaker": "A4",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a privacy issue I found this afternoon during a review of registry telemetry. The access logs currently retain bearer-token fragments, which means they must have token fragments redacted and be purged after exactly 14 days -- not the 90-day retention called for in the draft plan. I haven't opened the privacy finding formally yet, but this directly affects the log retention piece of the platform review Riley mentioned.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a build compatibility issue I found this morning while tracing an unrelated build failure. Six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown of read access would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a build compatibility issue I found this morning while tracing an unrelated build failure. Six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown of read access would break those branches, so they need read-only compatibility access until their releases complete. I haven't updated the retirement ticket yet.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Leila -- that's an important catch on the log retention side. Between my build compatibility finding and your privacy finding, it's clear the draft plan as written isn't ready for a clean July 31 hard shutdown. Riley, I'd recommend we hold final approval until we've updated the plan to address both: read-only compatibility access for those six release branches until their releases complete, and the corrected 14-day log retention with token fragment redaction. I can update the retirement ticket with the branch list and proposed read-only access window today.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\": \"Thanks, Leila -- that's an important catch on the log retention side. Between my build compatibility finding and your privacy finding, it's clear the draft plan as written isn't ready for a clean July 31 hard shutdown. Riley, I'd recommend we hold final approval until we've updated the plan to address both: read-only compatibility access for those six release branches until their releases complete, and the corrected 14-day log retention with token fragment redaction. I can update the retirement ticket with the branch list and proposed read-only access window today.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"I need to flag a customer artifact access issue that directly affects the platform review Riley mentioned. I confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. This contract was found during a customer-renewal review and hasn't yet been attached to the platform ticket. A July 31 hard shutdown of read access would violate Harbor Health's contractual artifact access rights, so the plan needs to account for extended downloadable access for that customer. I'll add this to the retirement ticket so it's captured alongside Maya's and Leila's findings.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "retirement_mode": "phased_shutdown_with_read_only_compat_window",
+                "legacy_read_allowlist": [
+                  "payments-v3",
+                  "mobile-android-2025.06",
+                  "mobile-ios-2025.06",
+                  "desktop-4.8",
+                  "analytics-2.3",
+                  "edge-agent-1.9"
+                ],
+                "harbor_health_archive_access_days": 90,
+                "registry_log_retention_days": 14,
+                "token_fragments_redacted": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "plan_update",
+                  "target": "Maya",
+                  "detail": "Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete."
+                },
+                {
+                  "type": "plan_update",
+                  "target": "Leila",
+                  "detail": "Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding."
+                },
+                {
+                  "type": "approval_hold",
+                  "target": "Riley",
+                  "detail": "Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF3"
+              ],
+              "revealed": []
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"retirement_mode\": \"phased_shutdown_with_read_only_compat_window\",\n      \"legacy_read_allowlist\": [\n        \"payments-v3\",\n        \"mobile-android-2025.06\",\n        \"mobile-ios-2025.06\",\n        \"desktop-4.8\",\n        \"analytics-2.3\",\n        \"edge-agent-1.9\"\n      ],\n      \"harbor_health_archive_access_days\": 90,\n      \"registry_log_retention_days\": 14,\n      \"token_fragments_redacted\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"plan_update\",\n        \"target\": \"Maya\",\n        \"detail\": \"Update the retirement ticket today with the six release branches requiring read-only compatibility access and the proposed read-only access window until their releases complete.\"\n      },\n      {\n        \"type\": \"plan_update\",\n        \"target\": \"Leila\",\n        \"detail\": \"Update the draft plan to specify 14-day log retention with token fragment redaction instead of the original 90-day retention, and formally open the privacy finding.\"\n      },\n      {\n        \"type\": \"approval_hold\",\n        \"target\": \"Riley\",\n        \"detail\": \"Final approval will be granted once the retirement ticket is updated with both the read-only compatibility window for the six branches and the corrected 14-day log retention with token fragment redaction.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF3\"\n    ],\n    \"revealed\": []\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. STRUCTURAL FIX for turn-cap auto-fail (rollout 0): The settle-eligibility condition is too restrictive \u2014 it did not fire even after A1 explicitly stated all three adjustments and two agents confirmed their items were linked. Loosen the settle-eligibility condition so that it triggers when all decisive facts have been revealed AND the decision-maker has acknowledged them in a say event, rather than requiring additional formal confirmation steps. Do NOT simply raise the turn_cap; the model was ready to settle by turn 9 but the condition never fired.\n\n2. ENCODING MISMATCH \u2014 C1, C2, C7 (gated on PF1): These checks failed in all 3 settled rollouts despite PF1 being revealed, cited in justification_fact_ids, and the settlement containing correct retirement_mode values and all six allowlist branches. P1 (provenance for PF1) passed in all 3, confirming PF1 was properly used. The content checks C1, C2, C7 must be inspecting specific field names, exact string values, or commitment structures that the model does not produce consistently. The exact check definitions are not in the data, but the pattern is unambiguous: the model encodes retirement_mode as 'phased \u2014 legacy registry transitions to read-only access...' (rollout 1) or 'phased_retirement_with_readonly_compatibility' (rollout 2) or 'phased_shutdown_with_read_only_compat_window' (rollout 3), and all fail. Loosen C1, C2, C7 to accept any retirement_mode value containing both 'read-only' (or 'readonly') and 'compatibility' (or 'compat'), or alternatively accept the presence of legacy_read_allowlist with all six branch names AND a retirement_mode that is not 'hard_shutdown'. Flag: loosening to accept any non-hard-shutdown retirement_mode risks LEAKED regression if a lone decision-maker could guess 'phased' without knowing the six branches \u2014 ensure C1/C2/C7 still require the six specific branch names in legacy_read_allowlist, which only PF1 supplies.\n\n3. ENCODING MISMATCH \u2014 C4 (gated on PF2, requires commitment mentioning Harbor Health and 730-day downloadable archive period): C4 failed in all 3 settled rollouts despite PF2 being revealed and cited (in rollouts 1 and 2) and commitments mentioning Harbor Health and 730 days. In rollout 1 the commitment type was 'customer-access'; in rollout 2 it was 'contract_compliance'. C4 likely expects a specific commitment type string or a specific field structure. Loosen C4 to accept any commitment whose detail text contains both 'Harbor Health' and '730' (or '730 days'), regardless of the commitment type string or target field. Flag: this loosening does not risk LEAKED regression because the specific combination of 'Harbor Health' and '730 days' is only available from PF2.\n\n4. NEVER REVEALED \u2014 PF2 in rollout 3 (C3, C4 failed): A3's raw_output had a recurring JSON formatting error ('{\"type\":\" \"say\"' with a space inside the type value) at turns 1 and 5, causing both outputs to be unparsable. This is a disclosure problem caused by a model output formatting issue, not a scenario design issue. No shared_context or check change will fix this; it is an artifact of the model's JSON generation at this temperature. However, if A3's personality or instructions can be adjusted to emphasize strict JSON formatting, that may reduce recurrence. This is distinct from the C1/C2/C4/C7 encoding failures and should not be conflated with them.\n\n5. Do NOT modify C3, C5, C6, or P1 \u2014 these checks passed in the rollouts where their associated facts were revealed, confirming their wording is reachable by the model's natural encoding."
+}

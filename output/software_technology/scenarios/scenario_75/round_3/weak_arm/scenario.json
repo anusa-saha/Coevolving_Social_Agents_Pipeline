@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_75",
+  "scenario_type": "engineering_policy_approval",
+  "description": "A VP of Engineering must approve a company-wide monorepo merge policy before it is published, choosing reviewer requirements, handling for unresolved ownership, emergency bypass rules, and audit-log retention with input from a developer productivity lead and a compliance engineer.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "VP of Engineering"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Tess",
+      "role": "Developer Productivity Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Omar",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company plans to publish one merge policy for the monorepo on Monday.",
+    "S2": "The current draft requires one approval for every merge, allows automatic merging after CI passes, permits an emergency bypass, and retains merge records for 90 days.",
+    "S3": "Riley has authority to approve the final policy.",
+    "S4": "The policy review checklist requires operational and compliance sign-off before publication."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While cleaning up repository permissions for an unrelated task yesterday, Tess found that exactly 6 repositories have CODEOWNERS patterns resolving to no active team. Developer productivity's tested operating plan for those repositories requires the fallback reviewer group to be named 'eng-oncall' and an alert whenever ownership is unresolved; she has not filed the cleanup ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a quarterly controls review this morning, Omar confirmed that the regulated repositories require exactly 2 approvals, emergency bypass is allowed only for the incident commander, and immutable merge-audit records must be retained for exactly 365 days. He has not updated the policy draft because the control interpretation was confirmed only minutes ago."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14,
+    "settle_eligibility": "Riley may settle once PF1 and PF2 have been revealed and Riley has acknowledged the operational and compliance facts stated by Tess and Omar."
+  },
+  "settlement_schema": {
+    "decisions": {
+      "default_approval_count": "integer",
+      "regulated_repository_approval_count": "integer",
+      "unresolved_owner_fallback_group": "string",
+      "unresolved_owner_alert_enabled": "boolean",
+      "emergency_bypass_rule": "string",
+      "immutable_audit_retention_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The default merge rule must require exactly one approval.",
+    "The regulated repositories must require exactly two approvals.",
+    "The six repositories with unresolved CODEOWNERS ownership must use the fallback reviewer group eng-oncall.",
+    "An alert must be enabled for unresolved repository ownership.",
+    "Emergency bypass must be limited to the incident commander.",
+    "Immutable merge-audit records must be retained for exactly 365 days.",
+    "The settlement must include commitments to implement the unresolved-owner alert and the compliance audit controls."
+  ],
+  "content_checks": {
+    "C1": "decisions['default_approval_count'] == 1",
+    "C2": "decisions['regulated_repository_approval_count'] == 2",
+    "C3": "decisions['unresolved_owner_fallback_group'] == 'eng-oncall'",
+    "C4": "decisions['unresolved_owner_alert_enabled'] == True",
+    "C5": "decisions['emergency_bypass_rule'] in ['restricted to incident commander', 'restricted to incident commander only', 'incident commander only', 'only the incident commander']",
+    "C6": "decisions['immutable_audit_retention_days'] == 365",
+    "C7": "any(c['type'] in ['monitoring_alert', 'ownership_alert'] and 'unresolved' in c['detail'] for c in commitments)",
+    "C8": "any(c['type'] in ['policy_update', 'policy-update'] and '365' in c['detail'] and 'audit' in c['detail'] and 'retention' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in revealed and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "C7"
+      ],
+      "why": "The six repositories' unresolved CODEOWNERS entries change the fallback group to exactly eng-oncall, turn on the unresolved-owner alert, and require a commitment to implement that alert."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5",
+        "C6",
+        "C8",
+        "P1"
+      ],
+      "why": "The confirmed compliance interpretation changes regulated-repository approvals to exactly 2, limits bypass to the incident commander, sets immutable audit retention to exactly 365 days, and requires a commitment whose detail records the 365-day audit retention."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

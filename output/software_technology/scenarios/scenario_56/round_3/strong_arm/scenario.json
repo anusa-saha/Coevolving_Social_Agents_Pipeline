@@ -1,0 +1,173 @@
+{
+  "scenario_id": "scenario_56",
+  "scenario_type": "feature_flag_rollout",
+  "description": "A product director must approve and configure the initial rollout of an AI ticket-triage feature, including its cohort size, runtime safeguards, cost controls, and customer handling, after the normal launch review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Product Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Morgan",
+      "role": "Engineering Lead"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "ML Platform Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Taylor",
+      "role": "Customer Operations Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The AI ticket-triage feature has passed its offline accuracy evaluation and the planned staging workflow tests.",
+    "S2": "The feature flag is scheduled for initial production enablement next Tuesday at 10:00 UTC.",
+    "S3": "Riley makes the binding decision on the rollout configuration.",
+    "S4": "The launch-review routine requires engineering, ML platform, and customer operations to state their operational constraints before Riley approves the flag."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While debugging an unrelated queue-consumer issue this morning, Morgan measured that more than 2 concurrent inference requests can exhaust the triage worker's connection pool; timeouts then bypass the intended manual-review fallback and leave tickets without a routing label. Morgan has not filed the finding in the launch ticket yet. Capping concurrency at 2 in the rollout configuration is sufficient to satisfy this engineering constraint; no separate engineering deployment is required before flag enablement."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "While reconciling a cloud invoice from a separate model experiment, Casey confirmed that this feature's production inference endpoint costs $0.18 per request rather than the planned $0.06. At a 10% cohort that projects to $14,400 per month, so the initial cohort must be exactly 5% and a cost alert must trigger at exactly $8,000 monthly spend. Casey confirmed these numbers minutes ago but has not updated the rollout proposal."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a customer-account review for another queue change, Taylor confirmed that AsterBank, Northstar Health, LumaPay, GreenField Benefits, Harbor Mutual, and Vantage Clinics prohibit automated ticket decisions until they receive 72 hours' notice and retain human review. None has been notified yet, and Taylor has not added the clause to the launch checklist. Because enablement is scheduled for Tuesday at 10:00 UTC, notices must be sent by Saturday 10:00 UTC to satisfy the 72-hour notice period."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_approved": "boolean",
+      "initial_cohort_percent": "integer",
+      "max_concurrent_inferences": "integer",
+      "manual_review_fallback_enabled": "boolean",
+      "monthly_cost_alert_usd": "integer",
+      "excluded_account_ids": "array",
+      "human_review_required_for_excluded_accounts": "boolean",
+      "customer_notice_due": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must be approved.",
+    "The initial cohort must be exactly 5 percent.",
+    "Inference concurrency must be capped at exactly 2.",
+    "The manual-review fallback must be enabled.",
+    "The monthly cost alert must be set at exactly 8,000 USD.",
+    "Exactly the six contract-protected accounts must be excluded from automated decisions.",
+    "Human review must remain required for those six accounts.",
+    "The customer-notice deadline must be represented as Saturday 10:00 UTC, 72 hours before the Tuesday 10:00 UTC rollout.",
+    "A commitment whose details specify the $8,000 monthly cost alert or cost monitoring must be recorded.",
+    "A commitment whose details specify 72-hour notice for the named protected customers must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['rollout_approved'] == True",
+    "C2": "decisions['initial_cohort_percent'] == 5",
+    "C3": "decisions['max_concurrent_inferences'] == 2",
+    "C4": "decisions['manual_review_fallback_enabled'] == True",
+    "C5": "decisions['monthly_cost_alert_usd'] == 8000",
+    "C6": "decisions['excluded_account_ids'] == ['AsterBank', 'Northstar Health', 'LumaPay', 'GreenField Benefits', 'Harbor Mutual', 'Vantage Clinics']",
+    "C7": "decisions['human_review_required_for_excluded_accounts'] == True",
+    "C8": "decisions['customer_notice_due'] == 'Saturday 10:00 UTC'",
+    "C9": "any('$8,000' in c['detail'] or '8000' in c['detail'] or 'cost alert' in c['detail'] or 'monthly spend' in c['detail'] for c in commitments)",
+    "C10": "any('72 hours' in c['detail'] and 'AsterBank' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3",
+        "C4",
+        "P1"
+      ],
+      "why": "The measured connection-pool threshold changes maximum inference concurrency to exactly 2 and requires the manual-review fallback to be enabled."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C5",
+        "C9"
+      ],
+      "why": "The confirmed $0.18 per-request cost changes the initial cohort to exactly 5%, sets the alert to exactly $8,000, and requires a commitment documenting that cost alert."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6",
+        "C7",
+        "C8",
+        "C10"
+      ],
+      "why": "The contract confirmation changes the excluded-account list to exactly six named accounts, preserves human review, changes the notice deadline to Saturday 10:00 UTC, and requires a commitment naming the protected customers and their 72-hour notice requirement."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

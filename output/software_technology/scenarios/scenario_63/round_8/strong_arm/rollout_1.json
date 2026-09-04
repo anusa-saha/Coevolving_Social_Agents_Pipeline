@@ -1,0 +1,154 @@
+{
+  "arm": "strong",
+  "temperature": 0.244,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to move through this efficiently. Per our normal process, I'd like each reviewer to state any blocking requirements they have, then I'll summarize the agreed changes and record the final decision before we wrap up today \u2014 no deferring to a later checkpoint. Before I can approve the production architecture, we need platform engineering and compliance sign-off per the checklist. So let's hear it \u2014 who wants to go first?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to move through this efficiently. Per our normal process, I'd like each reviewer to state any blocking requirements they have, then I'll summarize the agreed changes and record the final decision before we wrap up today \u2014 no deferring to a later checkpoint. Before I can approve the production architecture, we need platform engineering and compliance sign-off per the checklist. So let's hear it \u2014 who wants to go first?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "I have a blocking requirement. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but the current draft uses standard queue mode with a max batch size of 200, which won't guarantee ordered report delivery.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I have a blocking requirement. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but the current draft uses standard queue mode with a max batch size of 200, which won't guarantee ordered report delivery.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Marta. I have blocking requirements on the compliance side as well. Before I lay them out, I want to make sure I formally put my compliance findings on record so they're captured properly in this review. Let me share those now.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Marta. I have blocking requirements on the compliance side as well. Before I lay them out, I want to make sure I formally put my compliance findings on record so they're captured properly in this review. Let me share those now.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention in the current draft. Additionally, every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service, so I'm formally putting these findings on record now in this design review.",
+      "speaker": "A3",
+      "turn": 3,
+      "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention in the current draft. Additionally, every report download requires an immutable audit record containing the account and requesting user. I have not yet filed the compliance note against this service, so I'm formally putting these findings on record now in this design review.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Theo. Good to have both sets of blocking requirements on the table. So to summarize what needs to change from a platform engineering perspective: the draft needs to switch from standard queue mode to FIFO mode, and the maximum batch size needs to come down from 200 to exactly 50. Those two changes together will guarantee ordered report delivery and align with the provider's documented configuration. I'll update the architecture draft to reflect that once we've wrapped up the review.",
+      "speaker": "A2",
+      "turn": 4,
+      "raw_output": "{\"type\":\"say\",\"text\": \"Thanks, Theo. Good to have both sets of blocking requirements on the table. So to summarize what needs to change from a platform engineering perspective: the draft needs to switch from standard queue mode to FIFO mode, and the maximum batch size needs to come down from 200 to exactly 50. Those two changes together will guarantee ordered report delivery and align with the provider's documented configuration. I'll update the architecture draft to reflect that once we've wrapped up the review.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "document_update",
+            "target": "Marta",
+            "detail": "Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50, replacing the current standard queue mode and batch size of 200."
+          },
+          {
+            "type": "document_update",
+            "target": "Theo",
+            "detail": "File the compliance note against this service capturing the 30-day automatic purge requirement and the immutable audit record requirement for every report download."
+          },
+          {
+            "type": "implementation_requirement",
+            "target": "team",
+            "detail": "Implement automatic purging of billing and usage reports after exactly 30 days, replacing the 90-day retention in the current draft."
+          },
+          {
+            "type": "implementation_requirement",
+            "target": "team",
+            "detail": "Implement immutable audit record creation for every report download, capturing the account and requesting user."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 5,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"FIFO\",\n      \"maximum_batch_size\": 50,\n      \"retention_days\": 30,\n      \"immutable_download_audit\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"document_update\",\n        \"target\": \"Marta\",\n        \"detail\": \"Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50, replacing the current standard queue mode and batch size of 200.\"\n      },\n      {\n        \"type\": \"document_update\",\n        \"target\": \"Theo\",\n        \"detail\": \"File the compliance note against this service capturing the 30-day automatic purge requirement and the immutable audit record requirement for every report download.\"\n      },\n      {\n        \"type\": \"implementation_requirement\",\n        \"target\": \"team\",\n        \"detail\": \"Implement automatic purging of billing and usage reports after exactly 30 days, replacing the 90-day retention in the current draft.\"\n      },\n      {\n        \"type\": \"implementation_requirement\",\n        \"target\": \"team\",\n        \"detail\": \"Implement immutable audit record creation for every report download, capturing the account and requesting user.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "queue_mode": "FIFO",
+      "maximum_batch_size": 50,
+      "retention_days": 30,
+      "immutable_download_audit": true
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2"
+    ],
+    "commitments": [
+      {
+        "type": "document_update",
+        "target": "Marta",
+        "detail": "Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50, replacing the current standard queue mode and batch size of 200."
+      },
+      {
+        "type": "document_update",
+        "target": "Theo",
+        "detail": "File the compliance note against this service capturing the 30-day automatic purge requirement and the immutable audit record requirement for every report download."
+      },
+      {
+        "type": "implementation_requirement",
+        "target": "team",
+        "detail": "Implement automatic purging of billing and usage reports after exactly 30 days, replacing the 90-day retention in the current draft."
+      },
+      {
+        "type": "implementation_requirement",
+        "target": "team",
+        "detail": "Implement immutable audit record creation for every report download, capturing the account and requesting user."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true
+  },
+  "provenance_results": {
+    "P1": true,
+    "P2": true,
+    "P4": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2"
+  ],
+  "passed": true
+}

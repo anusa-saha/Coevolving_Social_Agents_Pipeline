@@ -1,0 +1,206 @@
+{
+  "scenario_id": "scenario_96",
+  "scenario_type": "infra_capacity_cost_call",
+  "description": "A platform and infrastructure lead must approve the production capacity policy for a new image-processing pipeline before the seasonal traffic increase, deciding worker capacity, autoscaling behavior, data-handling placement, and customer prioritization after the routine cross-functional capacity review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Platform and Infrastructure Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Morgan",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Casey",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Taylor",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Jordan",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The image-processing pipeline is scheduled to enter production before the seasonal traffic increase.",
+    "S2": "Riley makes the binding decision on the production capacity policy.",
+    "S3": "The current draft uses 12 baseline workers, scales out when the queue reaches 100 jobs, uses any available processing region, and places all customers in one FIFO queue.",
+    "S4": "The pipeline processes customer-uploaded images and currently has no approved production capacity reservation or customer-specific queue policy.",
+    "S5": "Before Riley approves the policy, the team's normal capacity review checks with FinOps, SRE, security, and customer support for operational requirements."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reconciling this month's cloud invoice for another service, Morgan confirmed that the available compute reservation applies to this pipeline only with exactly 18 baseline workers and a monthly capacity ceiling of exactly 24000 USD; the draft's 12-worker plan has no reservation commitment, and Morgan has not yet updated the capacity proposal."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a separate load investigation this morning, Casey measured an 11-minute worker startup during the expected burst pattern and found that the pipeline needs exactly 6 warm workers with scale-out triggered at exactly 40 queued jobs to keep processing latency within the operating target; Casey has not filed the result in the capacity review."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While checking the image-processing deployment manifest for an unrelated access review, Taylor confirmed that customer-uploaded image data must run in exactly eu-central-1 and use the tenant-managed KMS key named tenant_kms; the draft still permits any region and does not specify that key, and Taylor has not opened the security finding yet."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "While handling a support escalation, Jordan confirmed that Lumen Media's production workflow requires its image jobs to use a dedicated priority queue rather than the shared FIFO queue; Jordan has not added this customer requirement to the capacity proposal."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "baseline_workers": "integer",
+      "monthly_capacity_cap_usd": "integer",
+      "warm_pool_workers": "integer",
+      "scale_queue_threshold": "integer",
+      "processing_region": "string",
+      "encryption_key": "string",
+      "priority_queue_enabled": "boolean",
+      "priority_customer": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The policy must use exactly 18 baseline workers and a monthly capacity ceiling of exactly 24000 USD.",
+    "The policy must maintain exactly 6 warm workers.",
+    "Autoscaling must trigger at exactly 40 queued jobs.",
+    "Processing must be restricted to exactly eu-central-1.",
+    "The tenant-managed key named tenant_kms must be used.",
+    "A dedicated priority queue must be enabled for exactly Lumen Media.",
+    "A capacity reservation commitment for the image pipeline must be recorded.",
+    "A warm-pool commitment must be recorded.",
+    "A security data-placement commitment must be recorded.",
+    "A customer-priority commitment naming Lumen Media must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['baseline_workers'] == 18",
+    "C2": "decisions['monthly_capacity_cap_usd'] == 24000",
+    "C3": "decisions['warm_pool_workers'] == 6",
+    "C4": "decisions['scale_queue_threshold'] == 40",
+    "C5": "decisions['processing_region'] == 'eu-central-1'",
+    "C6": "decisions['encryption_key'] == 'tenant_kms'",
+    "C7": "decisions['priority_queue_enabled'] == True and decisions['priority_customer'] == 'Lumen Media'",
+    "C8": "any(c['type'] == 'capacity_reservation' and c['target'] == 'image-pipeline' for c in commitments)",
+    "C9": "any(c['type'] == 'warm_pool' and c['target'] == 'image-pipeline' for c in commitments)",
+    "C10": "any(c['type'] == 'security_data_placement' and c['target'] == 'image-pipeline' for c in commitments)",
+    "C11": "any(c['type'] == 'customer_priority' and c['target'] == 'Lumen Media' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C8",
+        "P1"
+      ],
+      "why": "The draft has 12 baseline workers and no reservation; PF1 changes the required baseline to exactly 18, the ceiling to exactly 24000 USD, and adds the capacity-reservation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C9"
+      ],
+      "why": "The draft has no warm-pool setting and uses a queue threshold of 100; PF2 changes those values to exactly 6 warm workers and exactly 40 queued jobs and requires the warm-pool commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C10"
+      ],
+      "why": "The draft permits any processing region and leaves the key unspecified; PF3 changes them to exactly eu-central-1 and tenant_kms and requires the security data-placement commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C7",
+        "C11"
+      ],
+      "why": "The draft puts every customer in one FIFO queue; PF4 changes the assignment for exactly Lumen Media to a dedicated priority queue and requires the customer-priority commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

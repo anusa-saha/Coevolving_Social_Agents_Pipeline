@@ -1,0 +1,173 @@
+{
+  "scenario_id": "scenario_83",
+  "scenario_type": "infra_capacity_cost_call",
+  "description": "A platform lead must approve the operating policy for a nightly analytics backfill cluster, setting capacity, purchasing mode, budget, isolation, and audit retention after the routine infrastructure review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Platform Engineering Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mina",
+      "role": "Data Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leah",
+      "role": "Security and Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The analytics backfill cluster runs nightly from 22:00 UTC until the queued work is complete.",
+    "S2": "Riley has final approval authority for the cluster's operating policy.",
+    "S3": "The current draft policy uses 12 baseline workers, scales out at 80 percent utilization, permits spot instances, sets an $18,000 monthly spending cap, uses the shared compute pool, and retains audit records for 30 days.",
+    "S4": "As part of the normal policy review, Riley asks data platform, FinOps, and security and compliance to confirm their operational requirements before approval."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While checking an unrelated dashboard query this morning, Mina measured the backfill's overnight queue behavior and confirmed that it needs exactly 18 baseline workers and a scale-out trigger at exactly 70 percent utilization to finish before the 06:00 UTC reporting run; she has not updated the policy draft yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During this month's invoice reconciliation, Owen confirmed that the cluster's reserved-capacity credits expire this quarter, so spot capacity is not approved for these jobs and the correct monthly spending cap is exactly $14,000; he has not posted the reconciliation note in the infrastructure review thread."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing dataset classifications for a separate audit, Leah confirmed that regulated exports processed by this cluster must run in a dedicated compute pool and that their audit records must be retained for exactly 180 days; she has not opened the compliance ticket for this policy yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "baseline_workers": "integer",
+      "scale_out_trigger_percent": "integer",
+      "purchasing_mode": "string",
+      "monthly_spending_cap": "integer",
+      "dedicated_compute_pool": "boolean",
+      "audit_retention_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The policy must set exactly 18 baseline workers.",
+    "The policy must scale out at exactly 70 percent utilization.",
+    "The purchasing mode must prohibit spot capacity.",
+    "The monthly spending cap must be exactly $14,000.",
+    "The cluster must use a dedicated compute pool.",
+    "Audit records must be retained for exactly 180 days.",
+    "A capacity-policy commitment must be recorded.",
+    "A cost-control commitment must be recorded.",
+    "A compliance-controls commitment must be recorded.",
+    "Mina's measured queue requirement must be cited as justification after she reports it."
+  ],
+  "content_checks": {
+    "C1": "decisions['baseline_workers'] == 18",
+    "C2": "decisions['scale_out_trigger_percent'] == 70",
+    "C3": "decisions['purchasing_mode'] == 'on-demand' or decisions['purchasing_mode'] == 'non-spot' or decisions['purchasing_mode'] == 'no-spot'",
+    "C4": "decisions['monthly_spending_cap'] == 14000",
+    "C5": "decisions['dedicated_compute_pool'] == True",
+    "C6": "decisions['audit_retention_days'] == 180",
+    "C7": "any((('18' in c['detail'] and '70' in c['detail']) and (('Mina' in c['detail']) or ('Mina' in c['target']) or ('data platform' in c['detail']) or ('data platform' in c['target']))) for c in commitments)",
+    "C8": "any((('$14,000' in c['detail'] or '14000' in c['detail']) and ('spot' in c['detail'] or 'on-demand' in c['detail'] or 'non-spot' in c['detail'])) for c in commitments)",
+    "C9": "any(('dedicated compute pool' in c['detail'] and ('180' in c['detail'] or '180-day' in c['detail'])) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "Mina's measurement changes the draft from 12 to exactly 18 baseline workers and from an 80 to exactly 70 percent scale-out trigger, while also requiring a commitment that cites those data-platform operational findings."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C8"
+      ],
+      "why": "Owen's reconciliation changes purchasing from permitted spot capacity to a non-spot mode and changes the monthly cap from $18,000 to exactly $14,000, requiring a commitment that cites the FinOps reconciliation findings."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "Leah's classification review changes the shared compute pool to a dedicated pool and changes audit retention from 30 to exactly 180 days, requiring a commitment that cites the security and compliance requirements."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

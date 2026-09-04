@@ -1,0 +1,186 @@
+{
+  "arm": "strong",
+  "temperature": 0.244,
+  "transcript": [
+    {
+      "type": "say",
+      "text": "Alright, let's get started. We're here to review the draft RFC for moving customer activity events to the new event bus. I own the final architecture approval, but as we all know, I need sign-off from backend, reliability, and privacy before this RFC can be approved. I'd like to go through the key proposals one at a time. The RFC currently proposes direct protobuf publishing, a 30-day event-retention period, unrestricted replay workers, and storage in the default US region. Who wants to start with their assessment?",
+      "speaker": "A1",
+      "turn": 0,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Alright, let's get started. We're here to review the draft RFC for moving customer activity events to the new event bus. I own the final architecture approval, but as we all know, I need sign-off from backend, reliability, and privacy before this RFC can be approved. I'd like to go through the key proposals one at a time. The RFC currently proposes direct protobuf publishing, a 30-day event-retention period, unrestricted replay workers, and storage in the default US region. Who wants to start with their assessment?\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF1",
+      "text": "While tracing an unrelated SDK issue yesterday, I confirmed that three named legacy consumers can only read the current Avro envelope. The migration therefore needs an Avro compatibility gateway and exactly 21 days of dual publishing. I haven't updated the RFC yet to reflect this.",
+      "speaker": "A2",
+      "turn": 1,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While tracing an unrelated SDK issue yesterday, I confirmed that three named legacy consumers can only read the current Avro envelope. The migration therefore needs an Avro compatibility gateway and exactly 21 days of dual publishing. I haven't updated the RFC yet to reflect this.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF2",
+      "text": "I ran a replay benchmark this morning and the results show that the expected peak backlog can be recovered safely with at most 4 concurrent replay workers and 14 days of retained events. I haven't posted the benchmark yet because I'm still checking the dashboard screenshots, but I wanted to share this now since it's directly relevant to the retention period and replay worker proposals we're reviewing.",
+      "speaker": "A3",
+      "turn": 2,
+      "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I ran a replay benchmark this morning and the results show that the expected peak backlog can be recovered safely with at most 4 concurrent replay workers and 14 days of retained events. I haven't posted the benchmark yet because I'm still checking the dashboard screenshots, but I wanted to share this now since it's directly relevant to the retention period and replay worker proposals we're reviewing.\"}"
+    },
+    {
+      "type": "reveal",
+      "fact_id": "PF3",
+      "text": "I completed a privacy review thirty minutes ago and confirmed that activity payloads include precise location data, so events must be tokenized before entering the bus and stored in the EU region. I haven't filed the review record yet, but I want to share this now since it directly impacts the direct protobuf publishing and US region storage proposals we're reviewing.",
+      "speaker": "A4",
+      "turn": 3,
+      "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I completed a privacy review thirty minutes ago and confirmed that activity payloads include precise location data, so events must be tokenized before entering the bus and stored in the EU region. I haven't filed the review record yet, but I want to share this now since it directly impacts the direct protobuf publishing and US region storage proposals we're reviewing.\"}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Thank you all for bringing these findings forward \u2014 they're all directly relevant to the RFC proposals on the table. Let me summarize what I'm hearing and the implications for each decision point:\n\n1. **Compatibility mode & dual publishing**: Maya, you've identified three legacy consumers that can only read Avro envelopes, meaning direct protobuf publishing as proposed won't work for them. You're recommending an Avro compatibility gateway with exactly 21 days of dual publishing. That directly conflicts with the RFC's current direct protobuf publishing proposal.\n\n2. **Replay workers & retention**: Jon, your benchmark shows 4 concurrent replay workers and 14 days of retained events are sufficient for safe peak backlog recovery. That's significantly different from the RFC's current proposals of unrestricted replay workers and 30-day retention.\n\n3. **Tokenization & storage region**: Nadia, your privacy review found precise location data in the payloads, requiring tokenization before events enter the bus and EU region storage. This directly conflicts with both the direct protobuf publishing proposal (since tokenization would need to happen before publishing) and the default US region storage proposal.\n\nEach of these findings impacts multiple RFC proposals, and several of them interact with each other. Before I make a settlement decision, I want to make sure I understand the constraints clearly:\n\n- Maya, does the Avro compatibility gateway need to be in place before any migration begins, or can it be stood up during the dual-publishing period?\n- Jon, does your 14-day retention figure account for the dual-publishing window Maya described, or is it independent?\n- Nadia, does tokenization need to happen before events are written to the Avro compatibility gateway as well, or only before they enter the new event bus?\n\nI want to get these interactions right before I settle the architecture.",
+      "speaker": "A1",
+      "turn": 4,
+      "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you all for bringing these findings forward \u2014 they're all directly relevant to the RFC proposals on the table. Let me summarize what I'm hearing and the implications for each decision point:\\n\\n1. **Compatibility mode & dual publishing**: Maya, you've identified three legacy consumers that can only read Avro envelopes, meaning direct protobuf publishing as proposed won't work for them. You're recommending an Avro compatibility gateway with exactly 21 days of dual publishing. That directly conflicts with the RFC's current direct protobuf publishing proposal.\\n\\n2. **Replay workers & retention**: Jon, your benchmark shows 4 concurrent replay workers and 14 days of retained events are sufficient for safe peak backlog recovery. That's significantly different from the RFC's current proposals of unrestricted replay workers and 30-day retention.\\n\\n3. **Tokenization & storage region**: Nadia, your privacy review found precise location data in the payloads, requiring tokenization before events enter the bus and EU region storage. This directly conflicts with both the direct protobuf publishing proposal (since tokenization would need to happen before publishing) and the default US region storage proposal.\\n\\nEach of these findings impacts multiple RFC proposals, and several of them interact with each other. Before I make a settlement decision, I want to make sure I understand the constraints clearly:\\n\\n- Maya, does the Avro compatibility gateway need to be in place before any migration begins, or can it be stood up during the dual-publishing period?\\n- Jon, does your 14-day retention figure account for the dual-publishing window Maya described, or is it independent?\\n- Nadia, does tokenization need to happen before events are written to the Avro compatibility gateway as well, or only before they enter the new event bus?\\n\\nI want to get these interactions right before I settle the architecture.\"\n}\n```"
+    },
+    {
+      "type": "say",
+      "text": "Good questions, Riley. The Avro compatibility gateway needs to be in place before any migration begins \u2014 it's a prerequisite, not something we can stand up during the dual-publishing period. The reason is that the three legacy consumers I identified would break the moment we start publishing to the new bus without a way for them to read the Avro envelope format they depend on. The gateway has to be ready and tested before we flip the switch on dual publishing. The 21-day dual-publishing window is the period during which both the legacy queue and the new bus receive events simultaneously, giving us a safe overlap while we validate and eventually cut over the consumers. So to be clear: gateway first, then 21 days of dual publishing, then we can retire the legacy path for those consumers.",
+      "speaker": "A2",
+      "turn": 5,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Good questions, Riley. The Avro compatibility gateway needs to be in place before any migration begins \u2014 it's a prerequisite, not something we can stand up during the dual-publishing period. The reason is that the three legacy consumers I identified would break the moment we start publishing to the new bus without a way for them to read the Avro envelope format they depend on. The gateway has to be ready and tested before we flip the switch on dual publishing. The 21-day dual-publishing window is the period during which both the legacy queue and the new bus receive events simultaneously, giving us a safe overlap while we validate and eventually cut over the consumers. So to be clear: gateway first, then 21 days of dual publishing, then we can retire the legacy path for those consumers.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Good question, Riley. My 14-day retention figure is based solely on replay recovery needs \u2014 it's the minimum window required to safely recover the expected peak backlog with at most 4 concurrent replay workers. It does not account for Maya's 21-day dual-publishing window, since I wasn't aware of that requirement when I ran the benchmark this morning. So if we need to retain events for at least 21 days to cover the dual-publishing period, that would exceed my 14-day minimum, and retention would need to be set to at least 21 days to satisfy both constraints. The 4-worker cap from my benchmark would still hold regardless of the retention period, since it's driven by peak backlog recovery throughput, not by how long we store events.",
+      "speaker": "A3",
+      "turn": 6,
+      "raw_output": "{\"type\": \"say\", \"text\": \"Good question, Riley. My 14-day retention figure is based solely on replay recovery needs \u2014 it's the minimum window required to safely recover the expected peak backlog with at most 4 concurrent replay workers. It does not account for Maya's 21-day dual-publishing window, since I wasn't aware of that requirement when I ran the benchmark this morning. So if we need to retain events for at least 21 days to cover the dual-publishing period, that would exceed my 14-day minimum, and retention would need to be set to at least 21 days to satisfy both constraints. The 4-worker cap from my benchmark would still hold regardless of the retention period, since it's driven by peak backlog recovery throughput, not by how long we store events.\"}"
+    },
+    {
+      "type": "say",
+      "text": "Good question, Riley. Tokenization needs to happen before events enter the new event bus \u2014 that's the critical privacy boundary. The precise location data in the payloads means raw location can't be stored in clear form on the bus itself. So tokenization must occur upstream of the bus, before publishing. As for the Avro compatibility gateway specifically, I'd want to understand the data flow better \u2014 if the gateway is just translating envelope format and not persisting raw payloads independently, it may be acceptable for tokenization to happen at the point of bus ingestion. But if the gateway has its own storage or caching layer, that would also need to be covered by the tokenization requirement. The key constraint from my privacy review is: no precise location data in clear form on the new event bus or in the EU storage. Wherever that boundary falls in the architecture, tokenization must be applied before it.",
+      "speaker": "A4",
+      "turn": 7,
+      "raw_output": "{\"type\":\"say\",\"text\":\"Good question, Riley. Tokenization needs to happen before events enter the new event bus \u2014 that's the critical privacy boundary. The precise location data in the payloads means raw location can't be stored in clear form on the bus itself. So tokenization must occur upstream of the bus, before publishing. As for the Avro compatibility gateway specifically, I'd want to understand the data flow better \u2014 if the gateway is just translating envelope format and not persisting raw payloads independently, it may be acceptable for tokenization to happen at the point of bus ingestion. But if the gateway has its own storage or caching layer, that would also need to be covered by the tokenization requirement. The key constraint from my privacy review is: no precise location data in clear form on the new event bus or in the EU storage. Wherever that boundary falls in the architecture, tokenization must be applied before it.\"}"
+    },
+    {
+      "type": "settle",
+      "settlement": {
+        "decisions": {
+          "compatibility_mode": "Avro compatibility gateway required before migration begins",
+          "dual_publish_days": 21,
+          "max_replay_workers": 4,
+          "retention_days": 21,
+          "payload_tokenization_required": true,
+          "storage_region": "EU"
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "prerequisite",
+            "target": "Maya",
+            "detail": "Avro compatibility gateway must be built, tested, and operational before any migration or dual publishing begins."
+          },
+          {
+            "type": "follow-up",
+            "target": "Nadia",
+            "detail": "Nadia to clarify whether the Avro compatibility gateway's storage or caching layer requires tokenization upstream of the gateway itself, or if tokenization at bus ingestion suffices."
+          },
+          {
+            "type": "follow-up",
+            "target": "Jon",
+            "detail": "Jon to post the benchmark results once dashboard screenshots are verified, confirming the 4-worker cap and 14-day minimum recovery window."
+          },
+          {
+            "type": "follow-up",
+            "target": "Maya",
+            "detail": "Maya to update the RFC to reflect the Avro compatibility gateway requirement and 21-day dual-publishing window."
+          },
+          {
+            "type": "follow-up",
+            "target": "Nadia",
+            "detail": "Nadia to file the privacy review record documenting the tokenization and EU storage requirements."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ]
+      },
+      "speaker": "A1",
+      "turn": 8,
+      "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"compatibility_mode\": \"Avro compatibility gateway required before migration begins\",\n      \"dual_publish_days\": 21,\n      \"max_replay_workers\": 4,\n      \"retention_days\": 21,\n      \"payload_tokenization_required\": true,\n      \"storage_region\": \"EU\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"prerequisite\",\n        \"target\": \"Maya\",\n        \"detail\": \"Avro compatibility gateway must be built, tested, and operational before any migration or dual publishing begins.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Nadia to clarify whether the Avro compatibility gateway's storage or caching layer requires tokenization upstream of the gateway itself, or if tokenization at bus ingestion suffices.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Jon\",\n        \"detail\": \"Jon to post the benchmark results once dashboard screenshots are verified, confirming the 4-worker cap and 14-day minimum recovery window.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Maya\",\n        \"detail\": \"Maya to update the RFC to reflect the Avro compatibility gateway requirement and 21-day dual-publishing window.\"\n      },\n      {\n        \"type\": \"follow-up\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Nadia to file the privacy review record documenting the tokenization and EU storage requirements.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+    }
+  ],
+  "settlement": {
+    "decisions": {
+      "compatibility_mode": "Avro compatibility gateway required before migration begins",
+      "dual_publish_days": 21,
+      "max_replay_workers": 4,
+      "retention_days": 21,
+      "payload_tokenization_required": true,
+      "storage_region": "EU"
+    },
+    "credited_facts": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ],
+    "commitments": [
+      {
+        "type": "prerequisite",
+        "target": "Maya",
+        "detail": "Avro compatibility gateway must be built, tested, and operational before any migration or dual publishing begins."
+      },
+      {
+        "type": "follow-up",
+        "target": "Nadia",
+        "detail": "Nadia to clarify whether the Avro compatibility gateway's storage or caching layer requires tokenization upstream of the gateway itself, or if tokenization at bus ingestion suffices."
+      },
+      {
+        "type": "follow-up",
+        "target": "Jon",
+        "detail": "Jon to post the benchmark results once dashboard screenshots are verified, confirming the 4-worker cap and 14-day minimum recovery window."
+      },
+      {
+        "type": "follow-up",
+        "target": "Maya",
+        "detail": "Maya to update the RFC to reflect the Avro compatibility gateway requirement and 21-day dual-publishing window."
+      },
+      {
+        "type": "follow-up",
+        "target": "Nadia",
+        "detail": "Nadia to file the privacy review record documenting the tokenization and EU storage requirements."
+      }
+    ],
+    "justification_fact_ids": [
+      "PF1",
+      "PF2",
+      "PF3"
+    ]
+  },
+  "settled": true,
+  "content_results": {
+    "C1": false,
+    "C2": true,
+    "C3": true,
+    "C4": false,
+    "C5": true,
+    "C6": true,
+    "C7": false,
+    "C8": false,
+    "C9": false
+  },
+  "provenance_results": {
+    "P1": true
+  },
+  "revealed": [
+    "PF1",
+    "PF2",
+    "PF3"
+  ],
+  "passed": false
+}

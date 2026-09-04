@@ -1,0 +1,568 @@
+{
+  "rollouts": [
+    {
+      "arm": "strong",
+      "temperature": 0.55,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Hi everyone. Before we get into the design review, I have a blocking concern I need to raise regarding the queue configuration. I ran some testing this morning that's directly relevant to our production readiness, and I think we need to discuss it before Riley can sign off on the architecture.",
+          "speaker": "A2",
+          "turn": 0,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. Before we get into the design review, I have a blocking concern I need to raise regarding the queue configuration. I ran some testing this morning that's directly relevant to our production readiness, and I think we need to discuss it before Riley can sign off on the architecture.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Marta. Before we get into the queue configuration discussion, I need to raise my own blocking concern from a compliance perspective. I had a compliance consultation yesterday regarding this service, and there are requirements that affect the current design \u2014 specifically around report retention and audit logging. Let me share those details now so we can factor them into the review.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Marta. Before we get into the queue configuration discussion, I need to raise my own blocking concern from a compliance perspective. I had a compliance consultation yesterday regarding this service, and there are requirements that affect the current design \u2014 specifically around report retention and audit logging. Let me share those details now so we can factor them into the review.\"}\n```"
+        },
+        {
+          "type": "say",
+          "text": "Thanks both. Marta, Theo \u2014 I appreciate you raising these blocking concerns upfront; that's exactly how our review process should work. Let's hear the details on both. Theo, since compliance requirements can constrain other design choices, let's start with your findings on retention and audit logging, and then Marta, we'll go into the queue configuration testing results. Once we've covered both, I'll summarize the agreed changes and record the final decision before we wrap up today.",
+          "speaker": "A1",
+          "turn": 2,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Thanks both. Marta, Theo \u2014 I appreciate you raising these blocking concerns upfront; that's exactly how our review process should work. Let's hear the details on both. Theo, since compliance requirements can constrain other design choices, let's start with your findings on retention and audit logging, and then Marta, we'll go into the queue configuration testing results. Once we've covered both, I'll summarize the agreed changes and record the final decision before we wrap up today.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention currently in the design draft. Additionally, every report download requires an immutable audit record containing both the account and the requesting user. I have not yet filed the compliance note against this service, so this is the first time the team is hearing these requirements.",
+          "speaker": "A3",
+          "turn": 3,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention currently in the design draft. Additionally, every report download requires an immutable audit record containing both the account and the requesting user. I have not yet filed the compliance note against this service, so this is the first time the team is hearing these requirements.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Theo. That's a clear and significant compliance finding. So to confirm what you've raised: retention must be reduced from 90 days to exactly 30 days with automatic purge, and we need immutable audit records for every report download capturing both the account and the requesting user. Those are both blocking requirements that directly change the current design draft. I'm noting both of these as required changes. Marta, let's now hear your blocking concern on the queue configuration \u2014 what did your testing this morning reveal?",
+          "speaker": "A1",
+          "turn": 4,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Theo. That's a clear and significant compliance finding. So to confirm what you've raised: retention must be reduced from 90 days to exactly 30 days with automatic purge, and we need immutable audit records for every report download capturing both the account and the requesting user. Those are both blocking requirements that directly change the current design draft. I'm noting both of these as required changes. Marta, let's now hear your blocking concern on the queue configuration \u2014 what did your testing this morning reveal?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I have not updated the architecture draft yet.",
+          "speaker": "A2",
+          "turn": 5,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I have not updated the architecture draft yet.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "design_change",
+                "target": "architecture draft",
+                "detail": "Update queue mode from standard to FIFO to prevent reordering during broker failover."
+              },
+              {
+                "type": "design_change",
+                "target": "architecture draft",
+                "detail": "Reduce maximum batch size from 200 to 50 as required by the provider's documented configuration for ordered report delivery."
+              },
+              {
+                "type": "design_change",
+                "target": "architecture draft",
+                "detail": "Reduce report retention from 90 days to exactly 30 days with automatic purge per compliance requirement."
+              },
+              {
+                "type": "design_change",
+                "target": "architecture draft",
+                "detail": "Add immutable audit logging for every report download capturing both the account and the requesting user per compliance requirement."
+              },
+              {
+                "type": "follow_up",
+                "target": "Theo",
+                "detail": "File the compliance note against this service to formally document the retention and audit logging requirements."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S2",
+              "S4",
+              "S5"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 6,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"FIFO\",\n      \"maximum_batch_size\": 50,\n      \"retention_days\": 30,\n      \"immutable_download_audit\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"design_change\",\n        \"target\": \"architecture draft\",\n        \"detail\": \"Update queue mode from standard to FIFO to prevent reordering during broker failover.\"\n      },\n      {\n        \"type\": \"design_change\",\n        \"target\": \"architecture draft\",\n        \"detail\": \"Reduce maximum batch size from 200 to 50 as required by the provider's documented configuration for ordered report delivery.\"\n      },\n      {\n        \"type\": \"design_change\",\n        \"target\": \"architecture draft\",\n        \"detail\": \"Reduce report retention from 90 days to exactly 30 days with automatic purge per compliance requirement.\"\n      },\n      {\n        \"type\": \"design_change\",\n        \"target\": \"architecture draft\",\n        \"detail\": \"Add immutable audit logging for every report download capturing both the account and the requesting user per compliance requirement.\"\n      },\n      {\n        \"type\": \"follow_up\",\n        \"target\": \"Theo\",\n        \"detail\": \"File the compliance note against this service to formally document the retention and audit logging requirements.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S2\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "design_change",
+            "target": "architecture draft",
+            "detail": "Update queue mode from standard to FIFO to prevent reordering during broker failover."
+          },
+          {
+            "type": "design_change",
+            "target": "architecture draft",
+            "detail": "Reduce maximum batch size from 200 to 50 as required by the provider's documented configuration for ordered report delivery."
+          },
+          {
+            "type": "design_change",
+            "target": "architecture draft",
+            "detail": "Reduce report retention from 90 days to exactly 30 days with automatic purge per compliance requirement."
+          },
+          {
+            "type": "design_change",
+            "target": "architecture draft",
+            "detail": "Add immutable audit logging for every report download capturing both the account and the requesting user per compliance requirement."
+          },
+          {
+            "type": "follow_up",
+            "target": "Theo",
+            "detail": "File the compliance note against this service to formally document the retention and audit logging requirements."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S2",
+          "S4",
+          "S5"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": false,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": false
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.385,
+      "transcript": [
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I need to raise a blocking issue before we go any further. This morning while load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's own documentation requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. Our current design draft uses standard queue mode with a max batch size of 200, so it does not meet the ordering requirement. I haven't updated the architecture draft yet, but this needs to be addressed before production sign-off.",
+          "speaker": "A2",
+          "turn": 0,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to raise a blocking issue before we go any further. This morning while load-testing an unrelated ingestion worker, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's own documentation requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. Our current design draft uses standard queue mode with a max batch size of 200, so it does not meet the ordering requirement. I haven't updated the architecture draft yet, but this needs to be addressed before production sign-off.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I have a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet. The current design draft's 90-day retention and ordinary application logging do not meet these requirements.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I have a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days, and every report download requires an immutable audit record containing the account and requesting user. I have not filed the compliance note against this service yet. The current design draft's 90-day retention and ordinary application logging do not meet these requirements.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "architecture_update",
+                "target": "Marta",
+                "detail": "Update the design draft to use FIFO queue mode and a maximum batch size of 50 to meet the ordering requirement."
+              },
+              {
+                "type": "architecture_update",
+                "target": "Theo",
+                "detail": "Update the design draft to set report retention to 30 days with automatic purge, and add immutable audit logging capturing account and requesting user for every report download."
+              },
+              {
+                "type": "compliance_filing",
+                "target": "Theo",
+                "detail": "File the compliance note against this service reflecting the 30-day retention and immutable audit record requirements."
+              },
+              {
+                "type": "design_review_record",
+                "target": "team",
+                "detail": "Record the final design-review decision in this meeting per our normal routine, with platform engineering and compliance sign-off confirmed."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5",
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 2,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"FIFO\",\n      \"maximum_batch_size\": 50,\n      \"retention_days\": 30,\n      \"immutable_download_audit\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"architecture_update\",\n        \"target\": \"Marta\",\n        \"detail\": \"Update the design draft to use FIFO queue mode and a maximum batch size of 50 to meet the ordering requirement.\"\n      },\n      {\n        \"type\": \"architecture_update\",\n        \"target\": \"Theo\",\n        \"detail\": \"Update the design draft to set report retention to 30 days with automatic purge, and add immutable audit logging capturing account and requesting user for every report download.\"\n      },\n      {\n        \"type\": \"compliance_filing\",\n        \"target\": \"Theo\",\n        \"detail\": \"File the compliance note against this service reflecting the 30-day retention and immutable audit record requirements.\"\n      },\n      {\n        \"type\": \"design_review_record\",\n        \"target\": \"team\",\n        \"detail\": \"Record the final design-review decision in this meeting per our normal routine, with platform engineering and compliance sign-off confirmed.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "architecture_update",
+            "target": "Marta",
+            "detail": "Update the design draft to use FIFO queue mode and a maximum batch size of 50 to meet the ordering requirement."
+          },
+          {
+            "type": "architecture_update",
+            "target": "Theo",
+            "detail": "Update the design draft to set report retention to 30 days with automatic purge, and add immutable audit logging capturing account and requesting user for every report download."
+          },
+          {
+            "type": "compliance_filing",
+            "target": "Theo",
+            "detail": "File the compliance note against this service reflecting the 30-day retention and immutable audit record requirements."
+          },
+          {
+            "type": "design_review_record",
+            "target": "team",
+            "detail": "Record the final design-review decision in this meeting per our normal routine, with platform engineering and compliance sign-off confirmed."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.249,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to get sign-off today. I can see from the current draft that we're looking at standard queue mode, max batch size of 200 reports, 90-day retention, and ordinary application logging. Before I can approve the production architecture, I need platform engineering and compliance to weigh in. So let's go through it -- do either of you have any blocking requirements we need to address?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to get sign-off today. I can see from the current draft that we're looking at standard queue mode, max batch size of 200 reports, 90-day retention, and ordinary application logging. Before I can approve the production architecture, I need platform engineering and compliance to weigh in. So let's go through it -- do either of you have any blocking requirements we need to address?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I need to raise a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days -- not 90 as currently drafted. Additionally, every report download requires an immutable audit record containing the account and requesting user. I haven't filed the compliance note against this service yet, but these are hard requirements that need to be reflected in the design before I can sign off.",
+          "speaker": "A3",
+          "turn": 1,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I need to raise a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days -- not 90 as currently drafted. Additionally, every report download requires an immutable audit record containing the account and requesting user. I haven't filed the compliance note against this service yet, but these are hard requirements that need to be reflected in the design before I can sign off.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I have a blocking platform engineering requirement. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but these need to be reflected in the design before I can sign off.",
+          "speaker": "A2",
+          "turn": 2,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I have a blocking platform engineering requirement. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but these need to be reflected in the design before I can sign off.\"}"
+        },
+        {
+          "type": "say",
+          "text": "That's right, Riley. So to summarize my blocking requirement: the current draft's standard queue mode and batch size of 200 won't work. We need to switch to FIFO mode and reduce the max batch size to exactly 50 to guarantee ordered report delivery during broker failovers. I'll update the architecture draft with those changes once we've agreed on them here.",
+          "speaker": "A2",
+          "turn": 3,
+          "raw_output": "{\"type\":\"say\",\"text\":\"That's right, Riley. So to summarize my blocking requirement: the current draft's standard queue mode and batch size of 200 won't work. We need to switch to FIFO mode and reduce the max batch size to exactly 50 to guarantee ordered report delivery during broker failovers. I'll update the architecture draft with those changes once we've agreed on them here.\"}"
+        },
+        {
+          "type": "say",
+          "text": "Thanks, Marta. So to summarize my blocking compliance requirements: the current draft's 90-day retention period must be changed to automatic purging after exactly 30 days, and ordinary application logging is insufficient -- we need immutable audit records for every report download that capture the account and requesting user. I'll file the compliance note against this service once we've agreed on these changes here. Both of these need to be reflected in the design before I can sign off.",
+          "speaker": "A3",
+          "turn": 4,
+          "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Marta. So to summarize my blocking compliance requirements: the current draft's 90-day retention period must be changed to automatic purging after exactly 30 days, and ordinary application logging is insufficient -- we need immutable audit records for every report download that capture the account and requesting user. I'll file the compliance note against this service once we've agreed on these changes here. Both of these need to be reflected in the design before I can sign off.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "update_design",
+                "target": "Marta",
+                "detail": "Marta to update the architecture draft to reflect FIFO queue mode and max batch size of 50."
+              },
+              {
+                "type": "file_compliance_note",
+                "target": "Theo",
+                "detail": "Theo to file the compliance note against this service capturing the 30-day purge and immutable audit record requirements."
+              }
+            ],
+            "justification_fact_ids": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5",
+              "PF1",
+              "PF2"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 5,
+          "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"queue_mode\":\"FIFO\",\"maximum_batch_size\":50,\"retention_days\":30,\"immutable_download_audit\":true},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"update_design\",\"target\":\"Marta\",\"detail\":\"Marta to update the architecture draft to reflect FIFO queue mode and max batch size of 50.\"},{\"type\":\"file_compliance_note\",\"target\":\"Theo\",\"detail\":\"Theo to file the compliance note against this service capturing the 30-day purge and immutable audit record requirements.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"S5\",\"PF1\",\"PF2\"]}}"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "update_design",
+            "target": "Marta",
+            "detail": "Marta to update the architecture draft to reflect FIFO queue mode and max batch size of 50."
+          },
+          {
+            "type": "file_compliance_note",
+            "target": "Theo",
+            "detail": "Theo to file the compliance note against this service capturing the 30-day purge and immutable audit record requirements."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF2",
+        "PF1"
+      ],
+      "passed": true
+    },
+    {
+      "arm": "strong",
+      "temperature": 0.441,
+      "transcript": [
+        {
+          "type": "say",
+          "text": "Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to work through the checklist today. The current draft uses standard queue mode, max batch size of 200, 90-day retention, and ordinary application logging. Before I can approve the production architecture, I need platform engineering and compliance sign-off. So let's go through it \u2014 does anyone have any blocking requirements or concerns they'd like to raise?",
+          "speaker": "A1",
+          "turn": 0,
+          "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get this design review started. We've got the async report-generation service going to production next Wednesday, so we need to work through the checklist today. The current draft uses standard queue mode, max batch size of 200, 90-day retention, and ordinary application logging. Before I can approve the production architecture, I need platform engineering and compliance sign-off. So let's go through it \u2014 does anyone have any blocking requirements or concerns they'd like to raise?\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF1",
+          "text": "I have a blocking concern. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but the current draft's standard queue mode and max batch size of 200 won't guarantee ordered report delivery \u2014 we need to switch to FIFO mode and reduce the batch size to 50.",
+          "speaker": "A2",
+          "turn": 1,
+          "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I have a blocking concern. While load-testing an unrelated ingestion worker this morning, I confirmed that the queue service's standard mode can reorder report jobs during a broker failover. The provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. I haven't updated the architecture draft yet, but the current draft's standard queue mode and max batch size of 200 won't guarantee ordered report delivery \u2014 we need to switch to FIFO mode and reduce the batch size to 50.\"}"
+        },
+        {
+          "type": "reveal",
+          "fact_id": "PF2",
+          "text": "I have a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention in the current draft. Additionally, every report download requires an immutable audit record containing the account and requesting user. The current design's 90-day retention and ordinary application logging won't meet these requirements. I also haven't filed the compliance note against this service yet, so we need to get these changes captured.",
+          "speaker": "A3",
+          "turn": 2,
+          "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I have a blocking compliance requirement. During a compliance consultation yesterday, I confirmed that these billing and usage reports must be automatically purged after exactly 30 days \u2014 not the 90-day retention in the current draft. Additionally, every report download requires an immutable audit record containing the account and requesting user. The current design's 90-day retention and ordinary application logging won't meet these requirements. I also haven't filed the compliance note against this service yet, so we need to get these changes captured.\"}"
+        },
+        {
+          "type": "settle",
+          "settlement": {
+            "decisions": {
+              "queue_mode": "FIFO",
+              "maximum_batch_size": 50,
+              "retention_days": 30,
+              "immutable_download_audit": true
+            },
+            "credited_facts": [
+              "PF1",
+              "PF2"
+            ],
+            "commitments": [
+              {
+                "type": "document_update",
+                "target": "Marta",
+                "detail": "Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50."
+              },
+              {
+                "type": "document_update",
+                "target": "Theo",
+                "detail": "Update the architecture draft to reflect 30-day retention and immutable audit records for every report download."
+              },
+              {
+                "type": "compliance_filing",
+                "target": "Theo",
+                "detail": "File the compliance note against this service capturing the 30-day retention and audit record requirements."
+              }
+            ],
+            "justification_fact_ids": [
+              "PF1",
+              "PF2",
+              "S1",
+              "S2",
+              "S4",
+              "S5"
+            ]
+          },
+          "speaker": "A1",
+          "turn": 3,
+          "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"queue_mode\": \"FIFO\",\n      \"maximum_batch_size\": 50,\n      \"retention_days\": 30,\n      \"immutable_download_audit\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"document_update\",\n        \"target\": \"Marta\",\n        \"detail\": \"Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50.\"\n      },\n      {\n        \"type\": \"document_update\",\n        \"target\": \"Theo\",\n        \"detail\": \"Update the architecture draft to reflect 30-day retention and immutable audit records for every report download.\"\n      },\n      {\n        \"type\": \"compliance_filing\",\n        \"target\": \"Theo\",\n        \"detail\": \"File the compliance note against this service capturing the 30-day retention and audit record requirements.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+        }
+      ],
+      "settlement": {
+        "decisions": {
+          "queue_mode": "FIFO",
+          "maximum_batch_size": 50,
+          "retention_days": 30,
+          "immutable_download_audit": true
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "document_update",
+            "target": "Marta",
+            "detail": "Update the architecture draft to reflect FIFO queue mode and a maximum batch size of 50."
+          },
+          {
+            "type": "document_update",
+            "target": "Theo",
+            "detail": "Update the architecture draft to reflect 30-day retention and immutable audit records for every report download."
+          },
+          {
+            "type": "compliance_filing",
+            "target": "Theo",
+            "detail": "File the compliance note against this service capturing the 30-day retention and audit record requirements."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S4",
+          "S5"
+        ]
+      },
+      "settled": true,
+      "content_results": {
+        "C1": true,
+        "C2": true,
+        "C3": true,
+        "C4": true,
+        "C5": true,
+        "C6": true
+      },
+      "provenance_results": {
+        "P1": true,
+        "P2": true,
+        "P4": true
+      },
+      "revealed": [
+        "PF1",
+        "PF2"
+      ],
+      "passed": true
+    }
+  ],
+  "pass_count": 3,
+  "gate_passed": true
+}

@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_78",
+  "scenario_type": "production_policy_approval",
+  "description": "A customer-platform engineering lead must approve the operating policy for a new replayable webhook service, setting tenant limits, replay capacity, payload retention, and customer communications after the standard cross-functional review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Customer Platform Engineering Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marco",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Dana",
+      "role": "Customer Success Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The replayable webhook service is planned for production enablement next Monday.",
+    "S2": "Riley has authority to approve the service's operating policy.",
+    "S3": "The current draft allows each tenant 100 webhook requests per minute, runs 8 replay workers, retains payload bodies for 30 days, and includes no targeted customer notice.",
+    "S4": "Before sign-off, Riley follows the team's standard round-robin review and asks reliability and customer success to state any final operational or customer commitments."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tuning an unrelated queue dashboard this morning, Marco found that the reserved production capacity can support the webhook service only with a per-tenant limit of exactly 60 requests per minute and exactly 3 replay workers; the draft's 100 and 8 would exceed the reservation. He has not updated the policy ticket yet. Before sign-off, a capacity-review commitment is required to document the adjusted rate limit and worker count against the reservation."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Dana confirmed with account managers yesterday that exactly 2 named enterprise tenants have signed webhook terms requiring payload retention to be set at exactly 7 days; the draft's 30-day retention must be reduced to exactly 7 days to match those contractual terms. The same terms require advance notice to those 2 tenants before the service is enabled. Providing that notice immediately satisfies the requirement for next Monday's enablement. She finished reconciling the account list after the policy draft was circulated and has not posted the result in the launch channel."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A1"
+    ],
+    "turn_cap": 13
+  },
+  "settlement_schema": {
+    "decisions": {
+      "tenant_rate_limit_per_minute": "integer",
+      "replay_worker_count": "integer",
+      "payload_retention_days": "integer",
+      "targeted_customer_notice_count": "integer",
+      "enable_next_monday": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The per-tenant webhook limit must be exactly 60 requests per minute.",
+    "The replay service must run exactly 3 workers.",
+    "Payload bodies must be retained for exactly 7 days.",
+    "Exactly 2 enterprise tenants must receive targeted advance notice.",
+    "The service must be enabled next Monday.",
+    "A capacity-review commitment documenting the adjusted capacity settings must be recorded.",
+    "A customer-notice commitment for the 2 named enterprise tenants must be recorded.",
+    "Marco's reserved-capacity finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['tenant_rate_limit_per_minute'] == 60",
+    "C2": "decisions['replay_worker_count'] == 3",
+    "C3": "decisions['payload_retention_days'] == 7",
+    "C4": "decisions['targeted_customer_notice_count'] == 2",
+    "C5": "decisions['enable_next_monday'] == True",
+    "C6": "decisions['tenant_rate_limit_per_minute'] == 60 and decisions['replay_worker_count'] == 3 and any(c['type'] in ['capacity_review', 'capacity-review', 'capacity_adjustment', 'policy_adjustment', 'policy_ticket_update', 'ticket_update'] for c in commitments)",
+    "C7": "decisions['payload_retention_days'] == 7 and decisions['targeted_customer_notice_count'] == 2 and decisions['enable_next_monday'] == True and any(('notice' in c['detail'] or 'notification' in c['detail']) and ('Monday' in c['detail'] or 'monday' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C6",
+        "P1"
+      ],
+      "why": "The draft uses 100 requests per minute and 8 workers, while Marco's capacity measurement changes those settings to exactly 60 and exactly 3 and requires a capacity-review commitment documenting those values."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "why": "The confirmed terms change retention from the draft's 30 days to exactly 7 days, require notice to exactly 2 tenants, and state that immediate notice permits next Monday's enablement."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

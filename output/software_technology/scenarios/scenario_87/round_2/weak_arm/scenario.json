@@ -1,0 +1,186 @@
+{
+  "scenario_id": "scenario_87",
+  "scenario_type": "production_data_retention_automation",
+  "description": "A Data Platform Lead must approve the production enablement plan for an automated tenant-data purge service, deciding its timing, verification settings, and customer exceptions after the routine go-live review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Data Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mateo",
+      "role": "Backend Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Hana",
+      "role": "Privacy Compliance Analyst"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Grace",
+      "role": "Customer Support Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The automated tenant-data purge service is scheduled for production enablement this Friday.",
+    "S2": "The current manual purge process is being retired at the end of this week.",
+    "S3": "The purge service passed its planned synthetic-data and staging-environment tests.",
+    "S4": "Riley makes the final production enablement decision.",
+    "S5": "The go-live checklist requires backend engineering, privacy compliance, and customer support to state any relevant constraints before Riley signs off.",
+    "S6": "The platform release policy permits conditional enablement when required pre-enable work is assigned with deadlines before the run; the checklist records those work items as conditions rather than requiring them to be completed at the moment of sign-off.",
+    "S7": "After backend engineering, privacy compliance, and customer support have each reported, Riley records the enablement decision and the responsible owners' conditions in the go-live checklist."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While investigating an unrelated profile-search issue yesterday, Mateo found that the production purge job does not cover the legacy profile_notes column, which contains tenant data for about 8% of accounts. A mapping patch is ready and can be verified before Friday, but he has not filed the implementation ticket yet. Under the platform release policy, the Friday settlement should record profile_notes_mapping_verified as true when it assigns the required pre-enable mapping verification with a before-Friday deadline, even though that verification will be completed after the settlement."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Hana confirmed with the privacy office this morning that the applicable retention policy requires each deletion request to complete within exactly 30 calendar days and requires an immutable deletion receipt to be retained for exactly 365 days. She has not updated the go-live checklist because the policy review finished after the checklist was circulated."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing Friday's customer activity, Grace found that the Acme Health and Vela Retail tenants have export jobs scheduled during the first purge run. Their data must be excluded until Monday 09:00 UTC, and both customers must receive direct notice; she has not posted this because the export schedule was confirmed only an hour ago."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "enable_purge_friday": "boolean",
+      "profile_notes_mapping_verified": "boolean",
+      "deletion_completion_days": "integer",
+      "receipt_retention_days": "integer",
+      "excluded_tenants": "list",
+      "exception_release_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The purge must be enabled on Friday.",
+    "The profile_notes mapping must be recorded as verified through a pre-enable verification commitment before enablement.",
+    "Deletion requests must complete within exactly 30 calendar days.",
+    "Immutable deletion receipts must be retained for exactly 365 days.",
+    "Acme Health and Vela Retail must be excluded from the first purge run.",
+    "The two excluded tenants must be released at exactly Monday 09:00 UTC.",
+    "A commitment whose detail references the profile_notes mapping and verification must be recorded.",
+    "A commitment whose detail references 365-day receipt retention must be recorded.",
+    "A commitment whose detail references direct notice or notification to the affected customers must be recorded."
+  ],
+  "content_checks": {
+    "C1": "decisions['enable_purge_friday'] == True",
+    "C2": "decisions['profile_notes_mapping_verified'] == True",
+    "C3": "decisions['deletion_completion_days'] == 30",
+    "C4": "decisions['receipt_retention_days'] == 365",
+    "C5": "decisions['excluded_tenants'] == ['Acme Health', 'Vela Retail']",
+    "C6": "decisions['exception_release_time'] == 'Monday 09:00 UTC'",
+    "C7": "any('profile_notes' in c.get('detail', '') and 'verif' in c.get('detail', '') for c in commitments)",
+    "C8": "any('365' in c.get('detail', '') and ('receipt' in c.get('detail', '') or 'retention' in c.get('detail', '')) for c in commitments)",
+    "C9": "any('direct' in c.get('detail', '') and ('notice' in c.get('detail', '') or 'notif' in c.get('detail', '')) and ('Acme' in c.get('detail', '') or 'Vela' in c.get('detail', '') or 'customer' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The staging tests do not expose the uncovered profile_notes column; PF1 changes profile_notes_mapping_verified to true under the conditional-enable policy and requires a commitment whose detail names profile_notes verification before Friday."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C8"
+      ],
+      "why": "The confirmed policy changes the completion setting to exactly 30 calendar days and the immutable receipt-retention setting to exactly 365 days, requiring a commitment whose detail records 365-day receipt retention."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "The confirmed export schedule changes the exception list to exactly Acme Health and Vela Retail, sets their release time to exactly Monday 09:00 UTC, and requires a commitment whose detail names direct customer notice or notification."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

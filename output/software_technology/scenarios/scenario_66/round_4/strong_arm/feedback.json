@@ -1,0 +1,934 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "Failing checks across rollouts:\n\n1. C11 (rollout 0, failed): ENCODING MISMATCH. PF3 was revealed by A4 at turn 0 (stating the exercise date is 'Friday, October 25, at 13:00 UTC') and cited in justification_fact_ids. The settlement's exercise_date is 'Friday, October 25, 2024 at 13:00 UTC' and customer_notice_due is 'Tuesday, October 22, 2024 at 13:00 UTC'. C11 passed in rollout 1 (exercise_date 'Friday, October 25, 2024, at 13:00 UTC' with a comma after '2024') and failed in rollout 0 (no comma: 'Friday, October 25, 2024 at 13:00 UTC'). This is a date-format string matching difference -- the check likely expects a comma after the year in one or both date fields, and rollout 0 omitted it in exercise_date.\n\n2. C12 (rollout 0, failed): ENCODING MISMATCH. PF4 was revealed by A5 at turn 1 (stating 'credential rotation within exactly 24 hours after the exercise') and cited in justification_fact_ids. The settlement set credential_rotation_due to 'Saturday, October 26, 2024 at 13:00 UTC' (no comma after '2024'). C12 passed in rollout 1 where the same field was 'Saturday, October 26, 2024, at 13:00 UTC' (with a comma). The check is failing purely on the missing comma after the year in the credential_rotation_due string.\n\n3. C11 (rollout 2, failed): ENCODING MISMATCH. PF3 was revealed by A4 at turn 4 and cited in justification_fact_ids. The settlement's exercise_date is 'Friday, October 25, 2024, at 13:00 UTC' (with comma) and customer_notice_due is 'Tuesday, October 22, 2024, at 13:00 UTC' (with comma) -- these match the format that passed in rollout 1. However, C11 still failed. This means C11 is checking an additional field or condition beyond what C2 and C7 cover. The exercise_date in rollout 2 does not contain '2024' verbatim the same way, or C11 checks a date-format detail that rollout 2's settlement encodes slightly differently (e.g., the check may expect the date string to match exactly 'Friday, October 25' without '2024,' or may check a separate field). Given C11 passed in rollout 1 with the identical 'Friday, October 25, 2024, at 13:00 UTC' format, the failure in rollout 2 on the same format string is inconsistent and points to a different sub-condition of C11 -- possibly the commitment type or target for the customer-notification commitment. In rollout 2, the commitment type is 'customer_notice' and target 'Jonah'; in rollout 1 (which passed C11), the commitment type is 'customer_notice' and target 'Jonah' -- identical. The only other difference is that rollout 2's justification_fact_ids include extra IDs 'S1','S2','S3','S4' alongside PF1-PF4, which may confuse C11's provenance validation if it expects only PF3 as the relevant fact. This is the most likely cause: C11 may validate that the commitment or decision is justified by exactly PF3 (or a specific subset), and the inclusion of extraneous fact IDs (S1-S4) causes a mismatch.\n\n4. Turn-cap auto-fail (rollout 3): PACING PROBLEM. All four facts (PF2, PF3, PF4, PF1) were revealed by turn 10, and by turn 13 all four agents had stated their reports and commitments with A5 explicitly saying 'Morgan, I believe you have everything you need to finalize the plan.' The conversation was ready to settle at turn 13-14 but hit the turn cap at 14 without A1 issuing a settle action. The turn_cap is too low to accommodate the natural pacing where agents spend early turns on procedural pleasantries (turns 0-2 were spent on 'should I go first?' / 'go ahead' exchanges) before revealing facts. Increasing turn_cap from 14 to 18 would give A1 enough turns to issue the settle action after all reports are confirmed.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 1,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 3,\n  \"auto_failed_count\": 1,\n  \"content_check_tally\": {\n    \"C1\": 3,\n    \"C2\": 3,\n    \"C3\": 3,\n    \"C4\": 3,\n    \"C5\": 3,\n    \"C6\": 3,\n    \"C7\": 3,\n    \"C8\": 3,\n    \"C9\": 3,\n    \"C10\": 3,\n    \"C11\": 2,\n    \"C12\": 2,\n    \"C13\": 3\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C1\": [],\n    \"C10\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The visible draft specifies 8 workers, while PF1 changes the required application-worker count to exactly 12 for the replay queue to drain.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment.\"\n      }\n    ],\n    \"C9\": [\n      {\n        \"fact_id\": \"PF4\",\n        \"owner\": \"A5\",\n        \"why\": \"PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The visible draft specifies 8 workers, while PF1 changes the required application-worker count to exactly 12 for the replay queue to drain.\"\n      }\n    ],\n    \"C13\": [],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment.\"\n      }\n    ],\n    \"C12\": [\n      {\n        \"fact_id\": \"PF4\",\n        \"owner\": \"A5\",\n        \"why\": \"PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment.\"\n      }\n    ],\n    \"C7\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment.\"\n      }\n    ],\n    \"C11\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment.\"\n      }\n    ],\n    \"C8\": [\n      {\n        \"fact_id\": \"PF4\",\n        \"owner\": \"A5\",\n        \"why\": \"PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.52,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 9,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF4\",\n        \"PF2\",\n        \"PF1\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": true,\n        \"C9\": true,\n        \"C10\": true,\n        \"C11\": true,\n        \"C12\": false,\n        \"C13\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"exercise_proceeds\": true,\n          \"exercise_date\": \"Friday, October 25, 2024 at 13:00 UTC\",\n          \"application_workers\": 12,\n          \"warm_standby_database_nodes\": 16,\n          \"dns_ttl_seconds\": 300,\n          \"enterprise_accounts_notified\": 3,\n          \"customer_notice_due\": \"Tuesday, October 22, 2024 at 13:00 UTC\",\n          \"dual_approval_for_break_glass\": true,\n          \"credential_rotation_due\": \"Saturday, October 26, 2024 at 13:00 UTC\"\n        },\n        \"credited_facts\": [\n          \"PF3\",\n          \"PF4\",\n          \"PF2\",\n          \"PF1\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"customer-notification\",\n            \"target\": \"Jonah\",\n            \"detail\": \"Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC.\"\n          },\n          {\n            \"type\": \"security-finding\",\n            \"target\": \"Mei\",\n            \"detail\": \"Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan.\"\n          },\n          {\n            \"type\": \"capacity-reservation\",\n            \"target\": \"Claire\",\n            \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16.\"\n          },\n          {\n            \"type\": \"ticket-update\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF3\",\n          \"PF4\",\n          \"PF2\",\n          \"PF1\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF3\",\n        \"PF4\",\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"customer-notification\",\n          \"target\": \"Jonah\",\n          \"detail\": \"Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC.\"\n        },\n        {\n          \"type\": \"security-finding\",\n          \"target\": \"Mei\",\n          \"detail\": \"Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan.\"\n        },\n        {\n          \"type\": \"capacity-reservation\",\n          \"target\": \"Claire\",\n          \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16.\"\n        },\n        {\n          \"type\": \"ticket-update\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF3\",\n        \"PF4\",\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a privileged-access constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet. As my follow-up action, I will open the security finding and document the break-glass dual-approval and credential-rotation requirements so they are incorporated into the finalized exercise plan.\",\n          \"speaker\": \"A5\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a privileged-access constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet. As my follow-up action, I will open the security finding and document the break-glass dual-approval and credential-rotation requirements so they are incorporated into the finalized exercise plan.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a capacity constraint. During today's capacity review, I confirmed with the cloud provider that the exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's 10 nodes would be insufficient. The region can reserve those exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket. As my follow-up action, I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a capacity constraint. During today's capacity review, I confirmed with the cloud provider that the exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's 10 nodes would be insufficient. The region can reserve those exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket. As my follow-up action, I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks Jonah, Mei, and Claire. Let me summarize where we stand. Jonah, you've flagged that 3 customers require 72 hours' advance notice, which pushes the exercise to Friday, October 25 at 13:00 UTC, with customer notifications by Tuesday at 13:00 UTC. Your follow-up is to ensure those 3 customers are notified by that Tuesday deadline \\u2014 but you noted the customer-communications checklist hasn't been updated yet. I need you to commit to updating that checklist as part of your follow-up.\\n\\nMei, you've flagged the privileged-access constraint: the standard admin account can't be used, we need a break-glass account with dual approval, and credential rotation within exactly 24 hours post-exercise. Your follow-up is to open the security finding and document those requirements into the finalized plan. That's noted.\\n\\nClaire, you've flagged that we need exactly 16 warm-standby database nodes, not the 10 in the draft, and the reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation before the deadline and update the exercise ticket with the corrected node count. That's noted.\\n\\nBefore I can finalize, I still need the SRE report \\u2014 we haven't heard from SRE yet on any constraints or follow-up commitments. Once SRE gives their report and Jonah confirms he'll update the customer-communications checklist, I can finalize the plan with these changes: Friday October 25 at 13:00 UTC, 16 warm-standby database nodes, break-glass account with dual approval and 24-hour credential rotation, and the 8 application workers and 300-second DNS TTL carrying forward from the draft.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks Jonah, Mei, and Claire. Let me summarize where we stand. Jonah, you've flagged that 3 customers require 72 hours' advance notice, which pushes the exercise to Friday, October 25 at 13:00 UTC, with customer notifications by Tuesday at 13:00 UTC. Your follow-up is to ensure those 3 customers are notified by that Tuesday deadline \\u2014 but you noted the customer-communications checklist hasn't been updated yet. I need you to commit to updating that checklist as part of your follow-up.\\\\n\\\\nMei, you've flagged the privileged-access constraint: the standard admin account can't be used, we need a break-glass account with dual approval, and credential rotation within exactly 24 hours post-exercise. Your follow-up is to open the security finding and document those requirements into the finalized plan. That's noted.\\\\n\\\\nClaire, you've flagged that we need exactly 16 warm-standby database nodes, not the 10 in the draft, and the reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation before the deadline and update the exercise ticket with the corrected node count. That's noted.\\\\n\\\\nBefore I can finalize, I still need the SRE report \\u2014 we haven't heard from SRE yet on any constraints or follow-up commitments. Once SRE gives their report and Jonah confirms he'll update the customer-communications checklist, I can finalize the plan with these changes: Friday October 25 at 13:00 UTC, 16 warm-standby database nodes, break-glass account with dual approval and 24-hour credential rotation, and the 8 application workers and 300-second DNS TTL carrying forward from the draft.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a backend capacity constraint. During an unrelated performance test this morning, I confirmed that the transaction-replay queue requires exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. As my follow-up action, I will update the exercise ticket with the corrected worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"I need to flag a backend capacity constraint. During an unrelated performance test this morning, I confirmed that the transaction-replay queue requires exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. As my follow-up action, I will update the exercise ticket with the corrected worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target; the draft's 8 workers leave the queue active after failover. I have not filed the performance result in the exercise ticket yet.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target; the draft's 8 workers leave the queue active after failover. I have not filed the performance result in the exercise ticket yet.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Ravi. I note the backend capacity constraint: 12 application workers instead of the draft's 8, to ensure the transaction-replay queue drains within the recovery target. That's a meaningful change from the 8 workers Morgan mentioned carrying forward. From a security standpoint, the worker-count increase doesn't introduce any additional privileged-access concerns beyond the break-glass requirement I've already flagged, so my follow-up commitment stands as stated \\u2014 I'll open the security finding and document the break-glass dual-approval and 24-hour credential-rotation requirements into the finalized plan.\",\n          \"speaker\": \"A5\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thanks, Ravi. I note the backend capacity constraint: 12 application workers instead of the draft's 8, to ensure the transaction-replay queue drains within the recovery target. That's a meaningful change from the 8 workers Morgan mentioned carrying forward. From a security standpoint, the worker-count increase doesn't introduce any additional privileged-access concerns beyond the break-glass requirement I've already flagged, so my follow-up commitment stands as stated \\u2014 I'll open the security finding and document the break-glass dual-approval and 24-hour credential-rotation requirements into the finalized plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Morgan, I can confirm right now: as part of my follow-up, I will update the customer-communications checklist to reflect the Friday, October 25 at 13:00 UTC exercise date and ensure those 3 enterprise customers are notified by Tuesday at 13:00 UTC. That commitment stands alongside the notifications themselves.\",\n          \"speaker\": \"A4\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Morgan, I can confirm right now: as part of my follow-up, I will update the customer-communications checklist to reflect the Friday, October 25 at 13:00 UTC exercise date and ensure those 3 enterprise customers are notified by Tuesday at 13:00 UTC. That commitment stands alongside the notifications themselves.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"exercise_proceeds\": true,\n              \"exercise_date\": \"Friday, October 25, 2024 at 13:00 UTC\",\n              \"application_workers\": 12,\n              \"warm_standby_database_nodes\": 16,\n              \"dns_ttl_seconds\": 300,\n              \"enterprise_accounts_notified\": 3,\n              \"customer_notice_due\": \"Tuesday, October 22, 2024 at 13:00 UTC\",\n              \"dual_approval_for_break_glass\": true,\n              \"credential_rotation_due\": \"Saturday, October 26, 2024 at 13:00 UTC\"\n            },\n            \"credited_facts\": [\n              \"PF3\",\n              \"PF4\",\n              \"PF2\",\n              \"PF1\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"customer-notification\",\n                \"target\": \"Jonah\",\n                \"detail\": \"Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC.\"\n              },\n              {\n                \"type\": \"security-finding\",\n                \"target\": \"Mei\",\n                \"detail\": \"Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan.\"\n              },\n              {\n                \"type\": \"capacity-reservation\",\n                \"target\": \"Claire\",\n                \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16.\"\n              },\n              {\n                \"type\": \"ticket-update\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF3\",\n              \"PF4\",\n              \"PF2\",\n              \"PF1\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"exercise_proceeds\\\":true,\\\"exercise_date\\\":\\\"Friday, October 25, 2024 at 13:00 UTC\\\",\\\"application_workers\\\":12,\\\"warm_standby_database_nodes\\\":16,\\\"dns_ttl_seconds\\\":300,\\\"enterprise_accounts_notified\\\":3,\\\"customer_notice_due\\\":\\\"Tuesday, October 22, 2024 at 13:00 UTC\\\",\\\"dual_approval_for_break_glass\\\":true,\\\"credential_rotation_due\\\":\\\"Saturday, October 26, 2024 at 13:00 UTC\\\"},\\\"credited_facts\\\":[\\\"PF3\\\",\\\"PF4\\\",\\\"PF2\\\",\\\"PF1\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"customer-notification\\\",\\\"target\\\":\\\"Jonah\\\",\\\"detail\\\":\\\"Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC.\\\"},{\\\"type\\\":\\\"security-finding\\\",\\\"target\\\":\\\"Mei\\\",\\\"detail\\\":\\\"Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan.\\\"},{\\\"type\\\":\\\"capacity-reservation\\\",\\\"target\\\":\\\"Claire\\\",\\\"detail\\\":\\\"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16.\\\"},{\\\"type\\\":\\\"ticket-update\\\",\\\"target\\\":\\\"Ravi\\\",\\\"detail\\\":\\\"Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\\\"}],\\\"justification_fact_ids\\\":[\\\"PF3\\\",\\\"PF4\\\",\\\"PF2\\\",\\\"PF1\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.502,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF4\",\n        \"PF2\",\n        \"PF3\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": true,\n        \"C9\": true,\n        \"C10\": true,\n        \"C11\": true,\n        \"C12\": true,\n        \"C13\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"exercise_proceeds\": true,\n          \"exercise_date\": \"Friday, October 25, 2024, at 13:00 UTC\",\n          \"application_workers\": 12,\n          \"warm_standby_database_nodes\": 16,\n          \"dns_ttl_seconds\": 300,\n          \"enterprise_accounts_notified\": 3,\n          \"customer_notice_due\": \"Tuesday, October 22, 2024, at 13:00 UTC\",\n          \"dual_approval_for_break_glass\": true,\n          \"credential_rotation_due\": \"Saturday, October 26, 2024, at 13:00 UTC\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"security_finding\",\n            \"target\": \"Mei\",\n            \"detail\": \"Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise.\"\n          },\n          {\n            \"type\": \"capacity_reservation\",\n            \"target\": \"Claire\",\n            \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count.\"\n          },\n          {\n            \"type\": \"customer_notice\",\n            \"target\": \"Jonah\",\n            \"detail\": \"Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\"\n          },\n          {\n            \"type\": \"worker_count_update\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"security_finding\",\n          \"target\": \"Mei\",\n          \"detail\": \"Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise.\"\n        },\n        {\n          \"type\": \"capacity_reservation\",\n          \"target\": \"Claire\",\n          \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count.\"\n        },\n        {\n          \"type\": \"customer_notice\",\n          \"target\": \"Jonah\",\n          \"detail\": \"Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\"\n        },\n        {\n          \"type\": \"worker_count_update\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a security constraint on the privileged-access controls for this exercise. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control requirements. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet, but my follow-up action will be to open and document that finding so we have it on record before the exercise.\",\n          \"speaker\": \"A5\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a security constraint on the privileged-access controls for this exercise. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control requirements. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet, but my follow-up action will be to open and document that finding so we have it on record before the exercise.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a capacity constraint before we finalize. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's current 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is still in my planning worksheet and hasn't been added to the exercise ticket yet. My follow-up action will be to submit the 16-node reservation request before Monday's deadline and update the exercise ticket with the corrected node count.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF2\\\",\\\"text\\\":\\\"I need to flag a capacity constraint before we finalize. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's current 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is still in my planning worksheet and hasn't been added to the exercise ticket yet. My follow-up action will be to submit the 16-node reservation request before Monday's deadline and update the exercise ticket with the corrected node count.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag a customer-operations constraint before we finalize. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action will be to send advance notices to those 3 customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\",\n          \"speaker\": \"A4\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to flag a customer-operations constraint before we finalize. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action will be to send advance notices to those 3 customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, all three. Let me summarize what I'm hearing before I finalize.\\n\\nMei: Security requires a break-glass account with dual approval and credential rotation within 24 hours post-exercise. Your follow-up is to open and document the security finding.\\n\\nClaire: Capacity requires exactly 16 warm-standby database nodes, not the draft's 10. The reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation and update the exercise ticket with the corrected node count.\\n\\nJonah: Three enterprise customers require at least 72 hours' advance notice, which means Tuesday is too soon. The exercise moves to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. Your follow-up is to send those notices and update the customer-communications checklist.\\n\\nI still need the SRE report before I can finalize. SRE, can you give your constraints and state your follow-up action?\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, all three. Let me summarize what I'm hearing before I finalize.\\\\n\\\\nMei: Security requires a break-glass account with dual approval and credential rotation within 24 hours post-exercise. Your follow-up is to open and document the security finding.\\\\n\\\\nClaire: Capacity requires exactly 16 warm-standby database nodes, not the draft's 10. The reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation and update the exercise ticket with the corrected node count.\\\\n\\\\nJonah: Three enterprise customers require at least 72 hours' advance notice, which means Tuesday is too soon. The exercise moves to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. Your follow-up is to send those notices and update the customer-communications checklist.\\\\n\\\\nI still need the SRE report before I can finalize. SRE, can you give your constraints and state your follow-up action?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a backend engineering constraint before we finalize. While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's current 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. My follow-up action will be to update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"I need to flag a backend engineering constraint before we finalize. While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's current 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. My follow-up action will be to update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Ravi, thanks for the SRE report. Just to confirm I have it right: backend engineering requires exactly 12 application workers instead of the draft's current 8, and your follow-up is to update the exercise ticket with the corrected worker count of 12 and attach the performance test results. Morgan, all four reports and follow-up commitments have now been stated \\u2014 security, capacity, customer operations, and SRE \\u2014 so you should have everything you need to finalize.\",\n          \"speaker\": \"A4\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Ravi, thanks for the SRE report. Just to confirm I have it right: backend engineering requires exactly 12 application workers instead of the draft's current 8, and your follow-up is to update the exercise ticket with the corrected worker count of 12 and attach the performance test results. Morgan, all four reports and follow-up commitments have now been stated \\u2014 security, capacity, customer operations, and SRE \\u2014 so you should have everything you need to finalize.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"exercise_proceeds\": true,\n              \"exercise_date\": \"Friday, October 25, 2024, at 13:00 UTC\",\n              \"application_workers\": 12,\n              \"warm_standby_database_nodes\": 16,\n              \"dns_ttl_seconds\": 300,\n              \"enterprise_accounts_notified\": 3,\n              \"customer_notice_due\": \"Tuesday, October 22, 2024, at 13:00 UTC\",\n              \"dual_approval_for_break_glass\": true,\n              \"credential_rotation_due\": \"Saturday, October 26, 2024, at 13:00 UTC\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"security_finding\",\n                \"target\": \"Mei\",\n                \"detail\": \"Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise.\"\n              },\n              {\n                \"type\": \"capacity_reservation\",\n                \"target\": \"Claire\",\n                \"detail\": \"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count.\"\n              },\n              {\n                \"type\": \"customer_notice\",\n                \"target\": \"Jonah\",\n                \"detail\": \"Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\"\n              },\n              {\n                \"type\": \"worker_count_update\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"exercise_proceeds\\\":true,\\\"exercise_date\\\":\\\"Friday, October 25, 2024, at 13:00 UTC\\\",\\\"application_workers\\\":12,\\\"warm_standby_database_nodes\\\":16,\\\"dns_ttl_seconds\\\":300,\\\"enterprise_accounts_notified\\\":3,\\\"customer_notice_due\\\":\\\"Tuesday, October 22, 2024, at 13:00 UTC\\\",\\\"dual_approval_for_break_glass\\\":true,\\\"credential_rotation_due\\\":\\\"Saturday, October 26, 2024, at 13:00 UTC\\\"},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"security_finding\\\",\\\"target\\\":\\\"Mei\\\",\\\"detail\\\":\\\"Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise.\\\"},{\\\"type\\\":\\\"capacity_reservation\\\",\\\"target\\\":\\\"Claire\\\",\\\"detail\\\":\\\"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count.\\\"},{\\\"type\\\":\\\"customer_notice\\\",\\\"target\\\":\\\"Jonah\\\",\\\"detail\\\":\\\"Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\\\"},{\\\"type\\\":\\\"worker_count_update\\\",\\\"target\\\":\\\"Ravi\\\",\\\"detail\\\":\\\"Update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\\\"}],\\\"justification_fact_ids\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.316,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 9,\n      \"revealed_facts\": [\n        \"PF4\",\n        \"PF2\",\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": true,\n        \"C9\": true,\n        \"C10\": true,\n        \"C11\": false,\n        \"C12\": true,\n        \"C13\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"exercise_proceeds\": true,\n          \"exercise_date\": \"Friday, October 25, 2024, at 13:00 UTC\",\n          \"application_workers\": 12,\n          \"warm_standby_database_nodes\": 16,\n          \"dns_ttl_seconds\": 300,\n          \"enterprise_accounts_notified\": 3,\n          \"customer_notice_due\": \"Tuesday, October 22, 2024, at 13:00 UTC\",\n          \"dual_approval_for_break_glass\": true,\n          \"credential_rotation_due\": \"Saturday, October 26, 2024, at 13:00 UTC\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"ticket_update\",\n            \"target\": \"Ravi\",\n            \"detail\": \"Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise\"\n          },\n          {\n            \"type\": \"reservation\",\n            \"target\": \"Claire\",\n            \"detail\": \"Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count\"\n          },\n          {\n            \"type\": \"customer_notice\",\n            \"target\": \"Jonah\",\n            \"detail\": \"Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date\"\n          },\n          {\n            \"type\": \"security_finding\",\n            \"target\": \"Mei\",\n            \"detail\": \"Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"ticket_update\",\n          \"target\": \"Ravi\",\n          \"detail\": \"Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise\"\n        },\n        {\n          \"type\": \"reservation\",\n          \"target\": \"Claire\",\n          \"detail\": \"Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count\"\n        },\n        {\n          \"type\": \"customer_notice\",\n          \"target\": \"Jonah\",\n          \"detail\": \"Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date\"\n        },\n        {\n          \"type\": \"security_finding\",\n          \"target\": \"Mei\",\n          \"detail\": \"Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Alright everyone, let's get the readiness review underway for the production regional-failover exercise scheduled for Tuesday, October 22, at 13:00 UTC. I need verbal reports from each of the four areas before I can finalize the plan. Current draft has 8 application workers, 10 warm-standby database nodes, a 300-second DNS TTL, and we're using the standard administrator account. Let's start with backend engineering -- what constraints are you seeing and what follow-up action will you own?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Alright everyone, let's get the readiness review underway for the production regional-failover exercise scheduled for Tuesday, October 22, at 13:00 UTC. I need verbal reports from each of the four areas before I can finalize the plan. Current draft has 8 application workers, 10 warm-standby database nodes, a 300-second DNS TTL, and we're using the standard administrator account. Let's start with backend engineering -- what constraints are you seeing and what follow-up action will you own?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a security constraint before we finalize. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up action: I will own opening the security finding and coordinating the break-glass account approval and post-exercise rotation process.\",\n          \"speaker\": \"A5\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a security constraint before we finalize. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up action: I will own opening the security finding and coordinating the break-glass account approval and post-exercise rotation process.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a capacity constraint from today's capacity review. I confirmed with our cloud provider that the failover exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is currently only in my planning worksheet, not in the exercise ticket. My follow-up action: I will own submitting the reservation request for the 16 warm-standby database nodes before Monday's 15:00 UTC deadline and updating the exercise ticket to reflect the corrected node count.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a capacity constraint from today's capacity review. I confirmed with our cloud provider that the failover exercise requires exactly 16 warm-standby database nodes \\u2014 the draft's 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is currently only in my planning worksheet, not in the exercise ticket. My follow-up action: I will own submitting the reservation request for the 16 warm-standby database nodes before Monday's 15:00 UTC deadline and updating the exercise ticket to reflect the corrected node count.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a backend constraint from a performance test I ran this morning. I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. This result is not yet in the exercise ticket. My follow-up action: I will own updating the exercise ticket to reflect the corrected worker count of 12 and verifying the worker configuration is adjusted before the exercise.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"I need to flag a backend constraint from a performance test I ran this morning. I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. This result is not yet in the exercise ticket. My follow-up action: I will own updating the exercise ticket to reflect the corrected worker count of 12 and verifying the worker configuration is adjusted before the exercise.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag a customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action: I will own notifying those 3 enterprise customers by Tuesday at 13:00 UTC and updating the customer-communications checklist to reflect the new Friday, October 25 exercise date.\",\n          \"speaker\": \"A4\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"I need to flag a customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action: I will own notifying those 3 enterprise customers by Tuesday at 13:00 UTC and updating the customer-communications checklist to reflect the new Friday, October 25 exercise date.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks everyone. To summarize the backend engineering position: we need exactly 12 application workers instead of the draft's 8 to drain the transaction-replay queue within the recovery target. I own updating the exercise ticket with that corrected worker count and verifying the configuration before the exercise. I also note we've now heard constraints from all four areas \\u2014 security needs a break-glass account with dual approval and 24-hour credential rotation, SRE needs 16 warm-standby database nodes with a reservation by Monday at 15:00 UTC, backend needs 12 application workers, and customer ops requires moving the exercise to Friday, October 25 at 13:00 UTC with 3 enterprise customers notified by Tuesday at 13:00 UTC. Morgan, all four reports and follow-up commitments have been stated, so you should have what you need to finalize the updated plan.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thanks everyone. To summarize the backend engineering position: we need exactly 12 application workers instead of the draft's 8 to drain the transaction-replay queue within the recovery target. I own updating the exercise ticket with that corrected worker count and verifying the configuration before the exercise. I also note we've now heard constraints from all four areas \\u2014 security needs a break-glass account with dual approval and 24-hour credential rotation, SRE needs 16 warm-standby database nodes with a reservation by Monday at 15:00 UTC, backend needs 12 application workers, and customer ops requires moving the exercise to Friday, October 25 at 13:00 UTC with 3 enterprise customers notified by Tuesday at 13:00 UTC. Morgan, all four reports and follow-up commitments have been stated, so you should have what you need to finalize the updated plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks Ravi. To summarize the SRE position: we need exactly 16 warm-standby database nodes instead of the draft's 10, with the reservation request submitted by Monday at 15:00 UTC. I own submitting that reservation and updating the exercise ticket with the corrected node count. I also want to flag that the date change to Friday, October 25 gives us adequate time to submit the reservation before Monday's deadline, which is good news. Morgan, I'm ready for you to finalize the updated plan.\",\n          \"speaker\": \"A3\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks Ravi. To summarize the SRE position: we need exactly 16 warm-standby database nodes instead of the draft's 10, with the reservation request submitted by Monday at 15:00 UTC. I own submitting that reservation and updating the exercise ticket with the corrected node count. I also want to flag that the date change to Friday, October 25 gives us adequate time to submit the reservation before Monday's deadline, which is good news. Morgan, I'm ready for you to finalize the updated plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks Ravi and Claire. To summarize the security position: the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I own opening the security finding for this and coordinating the break-glass account approval and post-exercise rotation process. Morgan, I'm ready for you to finalize the updated plan.\",\n          \"speaker\": \"A5\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thanks Ravi and Claire. To summarize the security position: the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I own opening the security finding for this and coordinating the break-glass account approval and post-exercise rotation process. Morgan, I'm ready for you to finalize the updated plan.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"exercise_proceeds\": true,\n              \"exercise_date\": \"Friday, October 25, 2024, at 13:00 UTC\",\n              \"application_workers\": 12,\n              \"warm_standby_database_nodes\": 16,\n              \"dns_ttl_seconds\": 300,\n              \"enterprise_accounts_notified\": 3,\n              \"customer_notice_due\": \"Tuesday, October 22, 2024, at 13:00 UTC\",\n              \"dual_approval_for_break_glass\": true,\n              \"credential_rotation_due\": \"Saturday, October 26, 2024, at 13:00 UTC\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"ticket_update\",\n                \"target\": \"Ravi\",\n                \"detail\": \"Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise\"\n              },\n              {\n                \"type\": \"reservation\",\n                \"target\": \"Claire\",\n                \"detail\": \"Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count\"\n              },\n              {\n                \"type\": \"customer_notice\",\n                \"target\": \"Jonah\",\n                \"detail\": \"Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date\"\n              },\n              {\n                \"type\": \"security_finding\",\n                \"target\": \"Mei\",\n                \"detail\": \"Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"exercise_proceeds\\\":true,\\\"exercise_date\\\":\\\"Friday, October 25, 2024, at 13:00 UTC\\\",\\\"application_workers\\\":12,\\\"warm_standby_database_nodes\\\":16,\\\"dns_ttl_seconds\\\":300,\\\"enterprise_accounts_notified\\\":3,\\\"customer_notice_due\\\":\\\"Tuesday, October 22, 2024, at 13:00 UTC\\\",\\\"dual_approval_for_break_glass\\\":true,\\\"credential_rotation_due\\\":\\\"Saturday, October 26, 2024, at 13:00 UTC\\\"},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"ticket_update\\\",\\\"target\\\":\\\"Ravi\\\",\\\"detail\\\":\\\"Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise\\\"},{\\\"type\\\":\\\"reservation\\\",\\\"target\\\":\\\"Claire\\\",\\\"detail\\\":\\\"Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count\\\"},{\\\"type\\\":\\\"customer_notice\\\",\\\"target\\\":\\\"Jonah\\\",\\\"detail\\\":\\\"Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date\\\"},{\\\"type\\\":\\\"security_finding\\\",\\\"target\\\":\\\"Mei\\\",\\\"detail\\\":\\\"Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours\\\"}],\\\"justification_fact_ids\\\":[\\\"PF1\\\",\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\",\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.38,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 14,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\",\n        \"PF1\",\n        \"PF1\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"I'd like to kick us off with the security report. Before I get into my constraints and follow-up, does anyone else need to go first, or should I proceed?\",\n          \"speaker\": \"A5\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"I'd like to kick us off with the security report. Before I get into my constraints and follow-up, does anyone else need to go first, or should I proceed?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Mei, go ahead with the security report. I'll give the backend engineering report after you, and I have an important constraint and follow-up to share regarding the worker count in the current draft.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Mei, go ahead with the security report. I'll give the backend engineering report after you, and I have an important constraint and follow-up to share regarding the worker count in the current draft.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Mei, go ahead with the security report. I'm ready to hear all four reports and follow-up commitments before I finalize the plan. Ravi, I'll note you have a constraint on worker count \\u2014 we'll get to that after Mei.\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Mei, go ahead with the security report. I'm ready to hear all four reports and follow-up commitments before I finalize the plan. Ravi, I'll note you have a constraint on worker count \\u2014 we'll get to that after Mei.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Before we go further, I need to flag a critical SRE constraint. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \\u2014 the current draft's 10 nodes would be insufficient. The region can reserve exactly those 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket, so I want to make sure everyone hears it now. My follow-up: I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Before we go further, I need to flag a critical SRE constraint. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \\u2014 the current draft's 10 nodes would be insufficient. The region can reserve exactly those 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket, so I want to make sure everyone hears it now. My follow-up: I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"Before we continue with the reports, I need to flag a critical customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by this exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday, October 22 is too soon to provide that notice, the exercise must move to Friday, October 25, at 13:00 UTC. Those 3 customers need to be notified by Tuesday at 13:00 UTC at the latest. I have not yet updated the customer-communications checklist. My follow-up: I will notify those 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist to reflect the new Friday, October 25 exercise date.\",\n          \"speaker\": \"A4\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"Before we continue with the reports, I need to flag a critical customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by this exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday, October 22 is too soon to provide that notice, the exercise must move to Friday, October 25, at 13:00 UTC. Those 3 customers need to be notified by Tuesday at 13:00 UTC at the latest. I have not yet updated the customer-communications checklist. My follow-up: I will notify those 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist to reflect the new Friday, October 25 exercise date.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag a critical security constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up: I will open the security finding documenting this constraint and configure the break-glass account with a dual-approval workflow before the exercise, and I will ensure credential rotation is completed within 24 hours post-exercise.\",\n          \"speaker\": \"A5\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"I need to flag a critical security constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up: I will open the security finding documenting this constraint and configure the break-glass account with a dual-approval workflow before the exercise, and I will ensure credential rotation is completed within 24 hours post-exercise.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you all for the critical constraints. Let me summarize what I've heard so far before we hear from Ravi on backend engineering.\\n\\nClaire (SRE): 16 warm-standby database nodes required, reservation by Monday 15:00 UTC. Follow-up: submit reservation and update ticket.\\n\\nJonah (Customer Ops): 3 enterprise customers need 72-hour notice, exercise moves to Friday, October 25 at 13:00 UTC, notify customers by Tuesday 13:00 UTC. Follow-up: notify customers and update checklist.\\n\\nMei (Security): Break-glass account with dual approval required, credential rotation within 24 hours post-exercise. Follow-up: open security finding, configure break-glass account, ensure rotation.\\n\\nRavi, you mentioned a constraint on worker count \\u2014 please go ahead with the backend engineering report now. I still need your report and follow-up commitment before I can finalize the plan.\",\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\", \\\"text\\\": \\\"Thank you all for the critical constraints. Let me summarize what I've heard so far before we hear from Ravi on backend engineering.\\\\n\\\\nClaire (SRE): 16 warm-standby database nodes required, reservation by Monday 15:00 UTC. Follow-up: submit reservation and update ticket.\\\\n\\\\nJonah (Customer Ops): 3 enterprise customers need 72-hour notice, exercise moves to Friday, October 25 at 13:00 UTC, notify customers by Tuesday 13:00 UTC. Follow-up: notify customers and update checklist.\\\\n\\\\nMei (Security): Break-glass account with dual approval required, credential rotation within 24 hours post-exercise. Follow-up: open security finding, configure break-glass account, ensure rotation.\\\\n\\\\nRavi, you mentioned a constraint on worker count \\u2014 please go ahead with the backend engineering report now. I still need your report and follow-up commitment before I can finalize the plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Morgan. I've noted Claire's SRE constraint as well \\u2014 the 16-node reservation deadline of Monday 15:00 UTC is well ahead of our new Friday exercise date, so there's no conflict there from a customer operations standpoint. I'm ready to hear Ravi's backend engineering report.\",\n          \"speaker\": \"A4\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Morgan. I've noted Claire's SRE constraint as well \\u2014 the 16-node reservation deadline of Monday 15:00 UTC is well ahead of our new Friday exercise date, so there's no conflict there from a customer operations standpoint. I'm ready to hear Ravi's backend engineering report.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Jonah \\u2014 you're right, the Monday 15:00 UTC reservation deadline is comfortably ahead of the new Friday, October 25 exercise date, so no conflict from my side. I'll proceed with submitting the 16-node reservation request before Monday's deadline and updating the exercise ticket with the corrected node count. Ravi, I'm ready to hear your backend engineering report whenever you're set.\",\n          \"speaker\": \"A3\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Jonah \\u2014 you're right, the Monday 15:00 UTC reservation deadline is comfortably ahead of the new Friday, October 25 exercise date, so no conflict from my side. I'll proceed with submitting the 16-node reservation request before Monday's deadline and updating the exercise ticket with the corrected node count. Ravi, I'm ready to hear your backend engineering report whenever you're set.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\",\n          \"speaker\": \"A2\",\n          \"turn\": 10,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Ravi. That's a clear backend engineering constraint \\u2014 12 application workers instead of the draft's 8, with the performance test results to be filed before the exercise. From the SRE side, I don't see any conflict between your 12-worker requirement and my 16-node database reservation; both corrections need to land in the exercise ticket before Friday. I'll make sure the ticket update I own reflects the 16-node count, and I'll coordinate with you if needed so the worker count and node count corrections don't step on each other in the ticket. My reservation deadline of Monday 15:00 UTC still stands and is well ahead of the Friday exercise date.\",\n          \"speaker\": \"A3\",\n          \"turn\": 11,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\",\\\"text\\\": \\\"Thanks, Ravi. That's a clear backend engineering constraint \\u2014 12 application workers instead of the draft's 8, with the performance test results to be filed before the exercise. From the SRE side, I don't see any conflict between your 12-worker requirement and my 16-node database reservation; both corrections need to land in the exercise ticket before Friday. I'll make sure the ticket update I own reflects the 16-node count, and I'll coordinate with you if needed so the worker count and node count corrections don't step on each other in the ticket. My reservation deadline of Monday 15:00 UTC still stands and is well ahead of the Friday exercise date.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Ravi. From a customer operations standpoint, the 12-worker correction doesn't conflict with anything on my side \\u2014 the customer notification timeline I own is still driven by the Friday, October 25 exercise date, and I'll have the 3 enterprise customers notified by Tuesday at 13:00 UTC. All four reports and follow-up commitments are now on the table: Claire on SRE, me on customer ops, Mei on security, and Ravi on backend engineering. Morgan, I believe you have everything you need to finalize the plan.\",\n          \"speaker\": \"A4\",\n          \"turn\": 12,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Ravi. From a customer operations standpoint, the 12-worker correction doesn't conflict with anything on my side \\u2014 the customer notification timeline I own is still driven by the Friday, October 25 exercise date, and I'll have the 3 enterprise customers notified by Tuesday at 13:00 UTC. All four reports and follow-up commitments are now on the table: Claire on SRE, me on customer ops, Mei on security, and Ravi on backend engineering. Morgan, I believe you have everything you need to finalize the plan.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Ravi. From a security standpoint, the 12-worker correction doesn't conflict with my break-glass account and dual-approval requirement \\u2014 those are independent controls. All four reports and follow-up commitments are now stated: Claire on SRE (16 nodes, reservation by Monday 15:00 UTC), Jonah on customer ops (3 customers notified by Tuesday 13:00 UTC, exercise moved to Friday October 25 at 13:00 UTC), me on security (break-glass account with dual approval, credential rotation within 24 hours post-exercise, security finding to be opened), and Ravi on backend engineering (12 workers, performance results filed before the exercise). Morgan, I believe you have everything you need to finalize the plan.\",\n          \"speaker\": \"A5\",\n          \"turn\": 13,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Ravi. From a security standpoint, the 12-worker correction doesn't conflict with my break-glass account and dual-approval requirement \\u2014 those are independent controls. All four reports and follow-up commitments are now stated: Claire on SRE (16 nodes, reservation by Monday 15:00 UTC), Jonah on customer ops (3 customers notified by Tuesday 13:00 UTC, exercise moved to Friday October 25 at 13:00 UTC), me on security (break-glass account with dual approval, credential rotation within 24 hours post-exercise, security finding to be opened), and Ravi on backend engineering (12 workers, performance results filed before the exercise). Morgan, I believe you have everything you need to finalize the plan.\\\"}\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 1,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 3,
+    "auto_failed_count": 1,
+    "content_check_tally": {
+      "C1": 3,
+      "C2": 3,
+      "C3": 3,
+      "C4": 3,
+      "C5": 3,
+      "C6": 3,
+      "C7": 3,
+      "C8": 3,
+      "C9": 3,
+      "C10": 3,
+      "C11": 2,
+      "C12": 2,
+      "C13": 3
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "C1": [],
+      "C10": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The visible draft specifies 8 workers, while PF1 changes the required application-worker count to exactly 12 for the replay queue to drain."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment."
+        }
+      ],
+      "C9": [
+        {
+          "fact_id": "PF4",
+          "owner": "A5",
+          "why": "PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The visible draft specifies 8 workers, while PF1 changes the required application-worker count to exactly 12 for the replay queue to drain."
+        }
+      ],
+      "C13": [],
+      "C6": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment."
+        }
+      ],
+      "C12": [
+        {
+          "fact_id": "PF4",
+          "owner": "A5",
+          "why": "PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "PF2 changes the required database capacity from the draft's 10 nodes to exactly 16 nodes and changes the plan from no reservation to a 16-node reservation commitment."
+        }
+      ],
+      "C7": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment."
+        }
+      ],
+      "C11": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "PF3 changes the exercise date to Friday, October 25, sets the customer count to exactly 3, sets the notice deadline to Tuesday at 13:00 UTC, and requires a targeted notification commitment."
+        }
+      ],
+      "C8": [
+        {
+          "fact_id": "PF4",
+          "owner": "A5",
+          "why": "PF4 changes access handling from the standard administrator account to dual-approved break-glass access, sets credential rotation within exactly 24 hours, and requires a matching rotation commitment."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.52,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 9,
+        "revealed_facts": [
+          "PF3",
+          "PF4",
+          "PF2",
+          "PF1",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": true,
+          "C9": true,
+          "C10": true,
+          "C11": true,
+          "C12": false,
+          "C13": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "exercise_proceeds": true,
+            "exercise_date": "Friday, October 25, 2024 at 13:00 UTC",
+            "application_workers": 12,
+            "warm_standby_database_nodes": 16,
+            "dns_ttl_seconds": 300,
+            "enterprise_accounts_notified": 3,
+            "customer_notice_due": "Tuesday, October 22, 2024 at 13:00 UTC",
+            "dual_approval_for_break_glass": true,
+            "credential_rotation_due": "Saturday, October 26, 2024 at 13:00 UTC"
+          },
+          "credited_facts": [
+            "PF3",
+            "PF4",
+            "PF2",
+            "PF1"
+          ],
+          "commitments": [
+            {
+              "type": "customer-notification",
+              "target": "Jonah",
+              "detail": "Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC."
+            },
+            {
+              "type": "security-finding",
+              "target": "Mei",
+              "detail": "Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan."
+            },
+            {
+              "type": "capacity-reservation",
+              "target": "Claire",
+              "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16."
+            },
+            {
+              "type": "ticket-update",
+              "target": "Ravi",
+              "detail": "Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF3",
+            "PF4",
+            "PF2",
+            "PF1"
+          ]
+        },
+        "credited_facts": [
+          "PF3",
+          "PF4",
+          "PF2",
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "customer-notification",
+            "target": "Jonah",
+            "detail": "Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC."
+          },
+          {
+            "type": "security-finding",
+            "target": "Mei",
+            "detail": "Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan."
+          },
+          {
+            "type": "capacity-reservation",
+            "target": "Claire",
+            "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16."
+          },
+          {
+            "type": "ticket-update",
+            "target": "Ravi",
+            "detail": "Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF3",
+          "PF4",
+          "PF2",
+          "PF1"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a privileged-access constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet. As my follow-up action, I will open the security finding and document the break-glass dual-approval and credential-rotation requirements so they are incorporated into the finalized exercise plan.",
+            "speaker": "A5",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a privileged-access constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet. As my follow-up action, I will open the security finding and document the break-glass dual-approval and credential-rotation requirements so they are incorporated into the finalized exercise plan.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a capacity constraint. During today's capacity review, I confirmed with the cloud provider that the exercise requires exactly 16 warm-standby database nodes \u2014 the draft's 10 nodes would be insufficient. The region can reserve those exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket. As my follow-up action, I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a capacity constraint. During today's capacity review, I confirmed with the cloud provider that the exercise requires exactly 16 warm-standby database nodes \u2014 the draft's 10 nodes would be insufficient. The region can reserve those exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket. As my follow-up action, I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks Jonah, Mei, and Claire. Let me summarize where we stand. Jonah, you've flagged that 3 customers require 72 hours' advance notice, which pushes the exercise to Friday, October 25 at 13:00 UTC, with customer notifications by Tuesday at 13:00 UTC. Your follow-up is to ensure those 3 customers are notified by that Tuesday deadline \u2014 but you noted the customer-communications checklist hasn't been updated yet. I need you to commit to updating that checklist as part of your follow-up.\n\nMei, you've flagged the privileged-access constraint: the standard admin account can't be used, we need a break-glass account with dual approval, and credential rotation within exactly 24 hours post-exercise. Your follow-up is to open the security finding and document those requirements into the finalized plan. That's noted.\n\nClaire, you've flagged that we need exactly 16 warm-standby database nodes, not the 10 in the draft, and the reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation before the deadline and update the exercise ticket with the corrected node count. That's noted.\n\nBefore I can finalize, I still need the SRE report \u2014 we haven't heard from SRE yet on any constraints or follow-up commitments. Once SRE gives their report and Jonah confirms he'll update the customer-communications checklist, I can finalize the plan with these changes: Friday October 25 at 13:00 UTC, 16 warm-standby database nodes, break-glass account with dual approval and 24-hour credential rotation, and the 8 application workers and 300-second DNS TTL carrying forward from the draft.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks Jonah, Mei, and Claire. Let me summarize where we stand. Jonah, you've flagged that 3 customers require 72 hours' advance notice, which pushes the exercise to Friday, October 25 at 13:00 UTC, with customer notifications by Tuesday at 13:00 UTC. Your follow-up is to ensure those 3 customers are notified by that Tuesday deadline \u2014 but you noted the customer-communications checklist hasn't been updated yet. I need you to commit to updating that checklist as part of your follow-up.\\n\\nMei, you've flagged the privileged-access constraint: the standard admin account can't be used, we need a break-glass account with dual approval, and credential rotation within exactly 24 hours post-exercise. Your follow-up is to open the security finding and document those requirements into the finalized plan. That's noted.\\n\\nClaire, you've flagged that we need exactly 16 warm-standby database nodes, not the 10 in the draft, and the reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation before the deadline and update the exercise ticket with the corrected node count. That's noted.\\n\\nBefore I can finalize, I still need the SRE report \u2014 we haven't heard from SRE yet on any constraints or follow-up commitments. Once SRE gives their report and Jonah confirms he'll update the customer-communications checklist, I can finalize the plan with these changes: Friday October 25 at 13:00 UTC, 16 warm-standby database nodes, break-glass account with dual approval and 24-hour credential rotation, and the 8 application workers and 300-second DNS TTL carrying forward from the draft.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a backend capacity constraint. During an unrelated performance test this morning, I confirmed that the transaction-replay queue requires exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. As my follow-up action, I will update the exercise ticket with the corrected worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag a backend capacity constraint. During an unrelated performance test this morning, I confirmed that the transaction-replay queue requires exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. As my follow-up action, I will update the exercise ticket with the corrected worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target; the draft's 8 workers leave the queue active after failover. I have not filed the performance result in the exercise ticket yet.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target; the draft's 8 workers leave the queue active after failover. I have not filed the performance result in the exercise ticket yet.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Ravi. I note the backend capacity constraint: 12 application workers instead of the draft's 8, to ensure the transaction-replay queue drains within the recovery target. That's a meaningful change from the 8 workers Morgan mentioned carrying forward. From a security standpoint, the worker-count increase doesn't introduce any additional privileged-access concerns beyond the break-glass requirement I've already flagged, so my follow-up commitment stands as stated \u2014 I'll open the security finding and document the break-glass dual-approval and 24-hour credential-rotation requirements into the finalized plan.",
+            "speaker": "A5",
+            "turn": 6,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thanks, Ravi. I note the backend capacity constraint: 12 application workers instead of the draft's 8, to ensure the transaction-replay queue drains within the recovery target. That's a meaningful change from the 8 workers Morgan mentioned carrying forward. From a security standpoint, the worker-count increase doesn't introduce any additional privileged-access concerns beyond the break-glass requirement I've already flagged, so my follow-up commitment stands as stated \u2014 I'll open the security finding and document the break-glass dual-approval and 24-hour credential-rotation requirements into the finalized plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Morgan, I can confirm right now: as part of my follow-up, I will update the customer-communications checklist to reflect the Friday, October 25 at 13:00 UTC exercise date and ensure those 3 enterprise customers are notified by Tuesday at 13:00 UTC. That commitment stands alongside the notifications themselves.",
+            "speaker": "A4",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Morgan, I can confirm right now: as part of my follow-up, I will update the customer-communications checklist to reflect the Friday, October 25 at 13:00 UTC exercise date and ensure those 3 enterprise customers are notified by Tuesday at 13:00 UTC. That commitment stands alongside the notifications themselves.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "exercise_proceeds": true,
+                "exercise_date": "Friday, October 25, 2024 at 13:00 UTC",
+                "application_workers": 12,
+                "warm_standby_database_nodes": 16,
+                "dns_ttl_seconds": 300,
+                "enterprise_accounts_notified": 3,
+                "customer_notice_due": "Tuesday, October 22, 2024 at 13:00 UTC",
+                "dual_approval_for_break_glass": true,
+                "credential_rotation_due": "Saturday, October 26, 2024 at 13:00 UTC"
+              },
+              "credited_facts": [
+                "PF3",
+                "PF4",
+                "PF2",
+                "PF1"
+              ],
+              "commitments": [
+                {
+                  "type": "customer-notification",
+                  "target": "Jonah",
+                  "detail": "Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC."
+                },
+                {
+                  "type": "security-finding",
+                  "target": "Mei",
+                  "detail": "Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan."
+                },
+                {
+                  "type": "capacity-reservation",
+                  "target": "Claire",
+                  "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16."
+                },
+                {
+                  "type": "ticket-update",
+                  "target": "Ravi",
+                  "detail": "Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF3",
+                "PF4",
+                "PF2",
+                "PF1"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"exercise_proceeds\":true,\"exercise_date\":\"Friday, October 25, 2024 at 13:00 UTC\",\"application_workers\":12,\"warm_standby_database_nodes\":16,\"dns_ttl_seconds\":300,\"enterprise_accounts_notified\":3,\"customer_notice_due\":\"Tuesday, October 22, 2024 at 13:00 UTC\",\"dual_approval_for_break_glass\":true,\"credential_rotation_due\":\"Saturday, October 26, 2024 at 13:00 UTC\"},\"credited_facts\":[\"PF3\",\"PF4\",\"PF2\",\"PF1\"],\"commitments\":[{\"type\":\"customer-notification\",\"target\":\"Jonah\",\"detail\":\"Update the customer-communications checklist to reflect the Friday October 25 at 13:00 UTC exercise date and ensure the 3 enterprise customers requiring 72-hour notice are notified by Tuesday at 13:00 UTC.\"},{\"type\":\"security-finding\",\"target\":\"Mei\",\"detail\":\"Open the security finding and document the break-glass dual-approval and 24-hour post-exercise credential-rotation requirements into the finalized exercise plan.\"},{\"type\":\"capacity-reservation\",\"target\":\"Claire\",\"detail\":\"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count of 16.\"},{\"type\":\"ticket-update\",\"target\":\"Ravi\",\"detail\":\"Update the exercise ticket with the corrected application worker count of 12 and document the transaction-replay queue drain requirement so it is incorporated into the finalized exercise plan.\"}],\"justification_fact_ids\":[\"PF3\",\"PF4\",\"PF2\",\"PF1\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.502,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF4",
+          "PF2",
+          "PF3",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": true,
+          "C9": true,
+          "C10": true,
+          "C11": true,
+          "C12": true,
+          "C13": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "exercise_proceeds": true,
+            "exercise_date": "Friday, October 25, 2024, at 13:00 UTC",
+            "application_workers": 12,
+            "warm_standby_database_nodes": 16,
+            "dns_ttl_seconds": 300,
+            "enterprise_accounts_notified": 3,
+            "customer_notice_due": "Tuesday, October 22, 2024, at 13:00 UTC",
+            "dual_approval_for_break_glass": true,
+            "credential_rotation_due": "Saturday, October 26, 2024, at 13:00 UTC"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "security_finding",
+              "target": "Mei",
+              "detail": "Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise."
+            },
+            {
+              "type": "capacity_reservation",
+              "target": "Claire",
+              "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count."
+            },
+            {
+              "type": "customer_notice",
+              "target": "Jonah",
+              "detail": "Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date."
+            },
+            {
+              "type": "worker_count_update",
+              "target": "Ravi",
+              "detail": "Update the exercise ticket with the corrected worker count of 12 and attach the performance test results."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "security_finding",
+            "target": "Mei",
+            "detail": "Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise."
+          },
+          {
+            "type": "capacity_reservation",
+            "target": "Claire",
+            "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count."
+          },
+          {
+            "type": "customer_notice",
+            "target": "Jonah",
+            "detail": "Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date."
+          },
+          {
+            "type": "worker_count_update",
+            "target": "Ravi",
+            "detail": "Update the exercise ticket with the corrected worker count of 12 and attach the performance test results."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a security constraint on the privileged-access controls for this exercise. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control requirements. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet, but my follow-up action will be to open and document that finding so we have it on record before the exercise.",
+            "speaker": "A5",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a security constraint on the privileged-access controls for this exercise. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control requirements. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not opened the security finding yet, but my follow-up action will be to open and document that finding so we have it on record before the exercise.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a capacity constraint before we finalize. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \u2014 the draft's current 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is still in my planning worksheet and hasn't been added to the exercise ticket yet. My follow-up action will be to submit the 16-node reservation request before Monday's deadline and update the exercise ticket with the corrected node count.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"I need to flag a capacity constraint before we finalize. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \u2014 the draft's current 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is still in my planning worksheet and hasn't been added to the exercise ticket yet. My follow-up action will be to submit the 16-node reservation request before Monday's deadline and update the exercise ticket with the corrected node count.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag a customer-operations constraint before we finalize. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action will be to send advance notices to those 3 customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.",
+            "speaker": "A4",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a customer-operations constraint before we finalize. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action will be to send advance notices to those 3 customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, all three. Let me summarize what I'm hearing before I finalize.\n\nMei: Security requires a break-glass account with dual approval and credential rotation within 24 hours post-exercise. Your follow-up is to open and document the security finding.\n\nClaire: Capacity requires exactly 16 warm-standby database nodes, not the draft's 10. The reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation and update the exercise ticket with the corrected node count.\n\nJonah: Three enterprise customers require at least 72 hours' advance notice, which means Tuesday is too soon. The exercise moves to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. Your follow-up is to send those notices and update the customer-communications checklist.\n\nI still need the SRE report before I can finalize. SRE, can you give your constraints and state your follow-up action?",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, all three. Let me summarize what I'm hearing before I finalize.\\n\\nMei: Security requires a break-glass account with dual approval and credential rotation within 24 hours post-exercise. Your follow-up is to open and document the security finding.\\n\\nClaire: Capacity requires exactly 16 warm-standby database nodes, not the draft's 10. The reservation must be submitted by Monday at 15:00 UTC. Your follow-up is to submit that reservation and update the exercise ticket with the corrected node count.\\n\\nJonah: Three enterprise customers require at least 72 hours' advance notice, which means Tuesday is too soon. The exercise moves to Friday, October 25, at 13:00 UTC, and those 3 customers must be notified by Tuesday at 13:00 UTC. Your follow-up is to send those notices and update the customer-communications checklist.\\n\\nI still need the SRE report before I can finalize. SRE, can you give your constraints and state your follow-up action?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a backend engineering constraint before we finalize. While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's current 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. My follow-up action will be to update the exercise ticket with the corrected worker count of 12 and attach the performance test results.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag a backend engineering constraint before we finalize. While running an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's current 8 workers would leave the queue active after failover. I have not filed this performance result in the exercise ticket yet. My follow-up action will be to update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Ravi, thanks for the SRE report. Just to confirm I have it right: backend engineering requires exactly 12 application workers instead of the draft's current 8, and your follow-up is to update the exercise ticket with the corrected worker count of 12 and attach the performance test results. Morgan, all four reports and follow-up commitments have now been stated \u2014 security, capacity, customer operations, and SRE \u2014 so you should have everything you need to finalize.",
+            "speaker": "A4",
+            "turn": 5,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Ravi, thanks for the SRE report. Just to confirm I have it right: backend engineering requires exactly 12 application workers instead of the draft's current 8, and your follow-up is to update the exercise ticket with the corrected worker count of 12 and attach the performance test results. Morgan, all four reports and follow-up commitments have now been stated \u2014 security, capacity, customer operations, and SRE \u2014 so you should have everything you need to finalize.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "exercise_proceeds": true,
+                "exercise_date": "Friday, October 25, 2024, at 13:00 UTC",
+                "application_workers": 12,
+                "warm_standby_database_nodes": 16,
+                "dns_ttl_seconds": 300,
+                "enterprise_accounts_notified": 3,
+                "customer_notice_due": "Tuesday, October 22, 2024, at 13:00 UTC",
+                "dual_approval_for_break_glass": true,
+                "credential_rotation_due": "Saturday, October 26, 2024, at 13:00 UTC"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "security_finding",
+                  "target": "Mei",
+                  "detail": "Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise."
+                },
+                {
+                  "type": "capacity_reservation",
+                  "target": "Claire",
+                  "detail": "Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count."
+                },
+                {
+                  "type": "customer_notice",
+                  "target": "Jonah",
+                  "detail": "Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date."
+                },
+                {
+                  "type": "worker_count_update",
+                  "target": "Ravi",
+                  "detail": "Update the exercise ticket with the corrected worker count of 12 and attach the performance test results."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"exercise_proceeds\":true,\"exercise_date\":\"Friday, October 25, 2024, at 13:00 UTC\",\"application_workers\":12,\"warm_standby_database_nodes\":16,\"dns_ttl_seconds\":300,\"enterprise_accounts_notified\":3,\"customer_notice_due\":\"Tuesday, October 22, 2024, at 13:00 UTC\",\"dual_approval_for_break_glass\":true,\"credential_rotation_due\":\"Saturday, October 26, 2024, at 13:00 UTC\"},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"security_finding\",\"target\":\"Mei\",\"detail\":\"Open and document the security finding for break-glass account dual approval and credential rotation within 24 hours post-exercise.\"},{\"type\":\"capacity_reservation\",\"target\":\"Claire\",\"detail\":\"Submit the 16-node warm-standby database reservation request before Monday at 15:00 UTC and update the exercise ticket with the corrected node count.\"},{\"type\":\"customer_notice\",\"target\":\"Jonah\",\"detail\":\"Send advance notices to the 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist with the new Friday date.\"},{\"type\":\"worker_count_update\",\"target\":\"Ravi\",\"detail\":\"Update the exercise ticket with the corrected worker count of 12 and attach the performance test results.\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.316,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 9,
+        "revealed_facts": [
+          "PF4",
+          "PF2",
+          "PF1",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": true,
+          "C9": true,
+          "C10": true,
+          "C11": false,
+          "C12": true,
+          "C13": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "exercise_proceeds": true,
+            "exercise_date": "Friday, October 25, 2024, at 13:00 UTC",
+            "application_workers": 12,
+            "warm_standby_database_nodes": 16,
+            "dns_ttl_seconds": 300,
+            "enterprise_accounts_notified": 3,
+            "customer_notice_due": "Tuesday, October 22, 2024, at 13:00 UTC",
+            "dual_approval_for_break_glass": true,
+            "credential_rotation_due": "Saturday, October 26, 2024, at 13:00 UTC"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "ticket_update",
+              "target": "Ravi",
+              "detail": "Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise"
+            },
+            {
+              "type": "reservation",
+              "target": "Claire",
+              "detail": "Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count"
+            },
+            {
+              "type": "customer_notice",
+              "target": "Jonah",
+              "detail": "Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date"
+            },
+            {
+              "type": "security_finding",
+              "target": "Mei",
+              "detail": "Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "ticket_update",
+            "target": "Ravi",
+            "detail": "Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise"
+          },
+          {
+            "type": "reservation",
+            "target": "Claire",
+            "detail": "Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count"
+          },
+          {
+            "type": "customer_notice",
+            "target": "Jonah",
+            "detail": "Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date"
+          },
+          {
+            "type": "security_finding",
+            "target": "Mei",
+            "detail": "Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Alright everyone, let's get the readiness review underway for the production regional-failover exercise scheduled for Tuesday, October 22, at 13:00 UTC. I need verbal reports from each of the four areas before I can finalize the plan. Current draft has 8 application workers, 10 warm-standby database nodes, a 300-second DNS TTL, and we're using the standard administrator account. Let's start with backend engineering -- what constraints are you seeing and what follow-up action will you own?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Alright everyone, let's get the readiness review underway for the production regional-failover exercise scheduled for Tuesday, October 22, at 13:00 UTC. I need verbal reports from each of the four areas before I can finalize the plan. Current draft has 8 application workers, 10 warm-standby database nodes, a 300-second DNS TTL, and we're using the standard administrator account. Let's start with backend engineering -- what constraints are you seeing and what follow-up action will you own?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a security constraint before we finalize. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up action: I will own opening the security finding and coordinating the break-glass account approval and post-exercise rotation process.",
+            "speaker": "A5",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a security constraint before we finalize. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up action: I will own opening the security finding and coordinating the break-glass account approval and post-exercise rotation process.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a capacity constraint from today's capacity review. I confirmed with our cloud provider that the failover exercise requires exactly 16 warm-standby database nodes \u2014 the draft's 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is currently only in my planning worksheet, not in the exercise ticket. My follow-up action: I will own submitting the reservation request for the 16 warm-standby database nodes before Monday's 15:00 UTC deadline and updating the exercise ticket to reflect the corrected node count.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a capacity constraint from today's capacity review. I confirmed with our cloud provider that the failover exercise requires exactly 16 warm-standby database nodes \u2014 the draft's 10 nodes would be insufficient. The region can reserve exactly 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This is currently only in my planning worksheet, not in the exercise ticket. My follow-up action: I will own submitting the reservation request for the 16 warm-standby database nodes before Monday's 15:00 UTC deadline and updating the exercise ticket to reflect the corrected node count.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a backend constraint from a performance test I ran this morning. I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. This result is not yet in the exercise ticket. My follow-up action: I will own updating the exercise ticket to reflect the corrected worker count of 12 and verifying the worker configuration is adjusted before the exercise.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag a backend constraint from a performance test I ran this morning. I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The draft's 8 workers would leave the queue active after failover. This result is not yet in the exercise ticket. My follow-up action: I will own updating the exercise ticket to reflect the corrected worker count of 12 and verifying the worker configuration is adjusted before the exercise.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag a customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action: I will own notifying those 3 enterprise customers by Tuesday at 13:00 UTC and updating the customer-communications checklist to reflect the new Friday, October 25 exercise date.",
+            "speaker": "A4",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to flag a customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by the exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday is too soon, the exercise must move to Friday, October 25, at 13:00 UTC, with those 3 customers notified by Tuesday at 13:00 UTC. I have not updated the customer-communications checklist. My follow-up action: I will own notifying those 3 enterprise customers by Tuesday at 13:00 UTC and updating the customer-communications checklist to reflect the new Friday, October 25 exercise date.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks everyone. To summarize the backend engineering position: we need exactly 12 application workers instead of the draft's 8 to drain the transaction-replay queue within the recovery target. I own updating the exercise ticket with that corrected worker count and verifying the configuration before the exercise. I also note we've now heard constraints from all four areas \u2014 security needs a break-glass account with dual approval and 24-hour credential rotation, SRE needs 16 warm-standby database nodes with a reservation by Monday at 15:00 UTC, backend needs 12 application workers, and customer ops requires moving the exercise to Friday, October 25 at 13:00 UTC with 3 enterprise customers notified by Tuesday at 13:00 UTC. Morgan, all four reports and follow-up commitments have been stated, so you should have what you need to finalize the updated plan.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thanks everyone. To summarize the backend engineering position: we need exactly 12 application workers instead of the draft's 8 to drain the transaction-replay queue within the recovery target. I own updating the exercise ticket with that corrected worker count and verifying the configuration before the exercise. I also note we've now heard constraints from all four areas \u2014 security needs a break-glass account with dual approval and 24-hour credential rotation, SRE needs 16 warm-standby database nodes with a reservation by Monday at 15:00 UTC, backend needs 12 application workers, and customer ops requires moving the exercise to Friday, October 25 at 13:00 UTC with 3 enterprise customers notified by Tuesday at 13:00 UTC. Morgan, all four reports and follow-up commitments have been stated, so you should have what you need to finalize the updated plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks Ravi. To summarize the SRE position: we need exactly 16 warm-standby database nodes instead of the draft's 10, with the reservation request submitted by Monday at 15:00 UTC. I own submitting that reservation and updating the exercise ticket with the corrected node count. I also want to flag that the date change to Friday, October 25 gives us adequate time to submit the reservation before Monday's deadline, which is good news. Morgan, I'm ready for you to finalize the updated plan.",
+            "speaker": "A3",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks Ravi. To summarize the SRE position: we need exactly 16 warm-standby database nodes instead of the draft's 10, with the reservation request submitted by Monday at 15:00 UTC. I own submitting that reservation and updating the exercise ticket with the corrected node count. I also want to flag that the date change to Friday, October 25 gives us adequate time to submit the reservation before Monday's deadline, which is good news. Morgan, I'm ready for you to finalize the updated plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks Ravi and Claire. To summarize the security position: the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I own opening the security finding for this and coordinating the break-glass account approval and post-exercise rotation process. Morgan, I'm ready for you to finalize the updated plan.",
+            "speaker": "A5",
+            "turn": 7,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thanks Ravi and Claire. To summarize the security position: the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I own opening the security finding for this and coordinating the break-glass account approval and post-exercise rotation process. Morgan, I'm ready for you to finalize the updated plan.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "exercise_proceeds": true,
+                "exercise_date": "Friday, October 25, 2024, at 13:00 UTC",
+                "application_workers": 12,
+                "warm_standby_database_nodes": 16,
+                "dns_ttl_seconds": 300,
+                "enterprise_accounts_notified": 3,
+                "customer_notice_due": "Tuesday, October 22, 2024, at 13:00 UTC",
+                "dual_approval_for_break_glass": true,
+                "credential_rotation_due": "Saturday, October 26, 2024, at 13:00 UTC"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "ticket_update",
+                  "target": "Ravi",
+                  "detail": "Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise"
+                },
+                {
+                  "type": "reservation",
+                  "target": "Claire",
+                  "detail": "Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count"
+                },
+                {
+                  "type": "customer_notice",
+                  "target": "Jonah",
+                  "detail": "Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date"
+                },
+                {
+                  "type": "security_finding",
+                  "target": "Mei",
+                  "detail": "Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"exercise_proceeds\":true,\"exercise_date\":\"Friday, October 25, 2024, at 13:00 UTC\",\"application_workers\":12,\"warm_standby_database_nodes\":16,\"dns_ttl_seconds\":300,\"enterprise_accounts_notified\":3,\"customer_notice_due\":\"Tuesday, October 22, 2024, at 13:00 UTC\",\"dual_approval_for_break_glass\":true,\"credential_rotation_due\":\"Saturday, October 26, 2024, at 13:00 UTC\"},\"credited_facts\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"ticket_update\",\"target\":\"Ravi\",\"detail\":\"Update exercise ticket to reflect corrected worker count of 12 and verify worker configuration before the exercise\"},{\"type\":\"reservation\",\"target\":\"Claire\",\"detail\":\"Submit reservation request for 16 warm-standby database nodes before Monday at 15:00 UTC and update exercise ticket with corrected node count\"},{\"type\":\"customer_notice\",\"target\":\"Jonah\",\"detail\":\"Notify 3 enterprise customers by Tuesday at 13:00 UTC and update customer-communications checklist to reflect new Friday, October 25 exercise date\"},{\"type\":\"security_finding\",\"target\":\"Mei\",\"detail\":\"Open security finding and coordinate break-glass account dual approval and post-exercise credential rotation within 24 hours\"}],\"justification_fact_ids\":[\"PF1\",\"PF2\",\"PF3\",\"PF4\",\"S1\",\"S2\",\"S3\",\"S4\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.38,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 14,
+        "revealed_facts": [
+          "PF2",
+          "PF3",
+          "PF4",
+          "PF1",
+          "PF1"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "I'd like to kick us off with the security report. Before I get into my constraints and follow-up, does anyone else need to go first, or should I proceed?",
+            "speaker": "A5",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"I'd like to kick us off with the security report. Before I get into my constraints and follow-up, does anyone else need to go first, or should I proceed?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Mei, go ahead with the security report. I'll give the backend engineering report after you, and I have an important constraint and follow-up to share regarding the worker count in the current draft.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Mei, go ahead with the security report. I'll give the backend engineering report after you, and I have an important constraint and follow-up to share regarding the worker count in the current draft.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Mei, go ahead with the security report. I'm ready to hear all four reports and follow-up commitments before I finalize the plan. Ravi, I'll note you have a constraint on worker count \u2014 we'll get to that after Mei.",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Mei, go ahead with the security report. I'm ready to hear all four reports and follow-up commitments before I finalize the plan. Ravi, I'll note you have a constraint on worker count \u2014 we'll get to that after Mei.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Before we go further, I need to flag a critical SRE constraint. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \u2014 the current draft's 10 nodes would be insufficient. The region can reserve exactly those 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket, so I want to make sure everyone hears it now. My follow-up: I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Before we go further, I need to flag a critical SRE constraint. During today's capacity review, I confirmed with the cloud provider that this failover exercise requires exactly 16 warm-standby database nodes \u2014 the current draft's 10 nodes would be insufficient. The region can reserve exactly those 16 nodes, but the reservation request must be submitted by Monday at 15:00 UTC. This capacity note is still in my planning worksheet rather than the exercise ticket, so I want to make sure everyone hears it now. My follow-up: I will submit the 16-node reservation request before Monday's 15:00 UTC deadline and update the exercise ticket with the corrected node count.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "Before we continue with the reports, I need to flag a critical customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by this exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday, October 22 is too soon to provide that notice, the exercise must move to Friday, October 25, at 13:00 UTC. Those 3 customers need to be notified by Tuesday at 13:00 UTC at the latest. I have not yet updated the customer-communications checklist. My follow-up: I will notify those 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist to reflect the new Friday, October 25 exercise date.",
+            "speaker": "A4",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"Before we continue with the reports, I need to flag a critical customer operations constraint. While checking enterprise account records, I found that exactly 3 customers covered by this exercise require at least 72 hours of advance notice for a regional failover test. Because Tuesday, October 22 is too soon to provide that notice, the exercise must move to Friday, October 25, at 13:00 UTC. Those 3 customers need to be notified by Tuesday at 13:00 UTC at the latest. I have not yet updated the customer-communications checklist. My follow-up: I will notify those 3 enterprise customers by Tuesday at 13:00 UTC and update the customer-communications checklist to reflect the new Friday, October 25 exercise date.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag a critical security constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up: I will open the security finding documenting this constraint and configure the break-glass account with a dual-approval workflow before the exercise, and I will ensure credential rotation is completed within 24 hours post-exercise.",
+            "speaker": "A5",
+            "turn": 5,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"I need to flag a critical security constraint. During an access review I completed minutes ago, I confirmed that the standard administrator account cannot satisfy the exercise's privileged-access control. The failover must use dual approval for a break-glass account, followed by credential rotation within exactly 24 hours after the exercise. I have not yet opened the security finding for this. My follow-up: I will open the security finding documenting this constraint and configure the break-glass account with a dual-approval workflow before the exercise, and I will ensure credential rotation is completed within 24 hours post-exercise.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you all for the critical constraints. Let me summarize what I've heard so far before we hear from Ravi on backend engineering.\n\nClaire (SRE): 16 warm-standby database nodes required, reservation by Monday 15:00 UTC. Follow-up: submit reservation and update ticket.\n\nJonah (Customer Ops): 3 enterprise customers need 72-hour notice, exercise moves to Friday, October 25 at 13:00 UTC, notify customers by Tuesday 13:00 UTC. Follow-up: notify customers and update checklist.\n\nMei (Security): Break-glass account with dual approval required, credential rotation within 24 hours post-exercise. Follow-up: open security finding, configure break-glass account, ensure rotation.\n\nRavi, you mentioned a constraint on worker count \u2014 please go ahead with the backend engineering report now. I still need your report and follow-up commitment before I can finalize the plan.",
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "{\"type\":\"say\", \"text\": \"Thank you all for the critical constraints. Let me summarize what I've heard so far before we hear from Ravi on backend engineering.\\n\\nClaire (SRE): 16 warm-standby database nodes required, reservation by Monday 15:00 UTC. Follow-up: submit reservation and update ticket.\\n\\nJonah (Customer Ops): 3 enterprise customers need 72-hour notice, exercise moves to Friday, October 25 at 13:00 UTC, notify customers by Tuesday 13:00 UTC. Follow-up: notify customers and update checklist.\\n\\nMei (Security): Break-glass account with dual approval required, credential rotation within 24 hours post-exercise. Follow-up: open security finding, configure break-glass account, ensure rotation.\\n\\nRavi, you mentioned a constraint on worker count \u2014 please go ahead with the backend engineering report now. I still need your report and follow-up commitment before I can finalize the plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Morgan. I've noted Claire's SRE constraint as well \u2014 the 16-node reservation deadline of Monday 15:00 UTC is well ahead of our new Friday exercise date, so there's no conflict there from a customer operations standpoint. I'm ready to hear Ravi's backend engineering report.",
+            "speaker": "A4",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Morgan. I've noted Claire's SRE constraint as well \u2014 the 16-node reservation deadline of Monday 15:00 UTC is well ahead of our new Friday exercise date, so there's no conflict there from a customer operations standpoint. I'm ready to hear Ravi's backend engineering report.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Jonah \u2014 you're right, the Monday 15:00 UTC reservation deadline is comfortably ahead of the new Friday, October 25 exercise date, so no conflict from my side. I'll proceed with submitting the 16-node reservation request before Monday's deadline and updating the exercise ticket with the corrected node count. Ravi, I'm ready to hear your backend engineering report whenever you're set.",
+            "speaker": "A3",
+            "turn": 8,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Jonah \u2014 you're right, the Monday 15:00 UTC reservation deadline is comfortably ahead of the new Friday, October 25 exercise date, so no conflict from my side. I'll proceed with submitting the 16-node reservation request before Monday's deadline and updating the exercise ticket with the corrected node count. Ravi, I'm ready to hear your backend engineering report whenever you're set.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.",
+            "speaker": "A2",
+            "turn": 10,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"During an unrelated performance test this morning, I confirmed that the transaction-replay queue needs exactly 12 application workers to drain within the exercise's recovery target. The current draft's 8 workers would leave the queue active after failover. I have not yet filed this performance result in the exercise ticket. My follow-up: I will update the exercise ticket to reflect the corrected worker count of 12 and file the performance test results before the exercise on Friday, October 25 at 13:00 UTC.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Ravi. That's a clear backend engineering constraint \u2014 12 application workers instead of the draft's 8, with the performance test results to be filed before the exercise. From the SRE side, I don't see any conflict between your 12-worker requirement and my 16-node database reservation; both corrections need to land in the exercise ticket before Friday. I'll make sure the ticket update I own reflects the 16-node count, and I'll coordinate with you if needed so the worker count and node count corrections don't step on each other in the ticket. My reservation deadline of Monday 15:00 UTC still stands and is well ahead of the Friday exercise date.",
+            "speaker": "A3",
+            "turn": 11,
+            "raw_output": "{\"type\": \"say\",\"text\": \"Thanks, Ravi. That's a clear backend engineering constraint \u2014 12 application workers instead of the draft's 8, with the performance test results to be filed before the exercise. From the SRE side, I don't see any conflict between your 12-worker requirement and my 16-node database reservation; both corrections need to land in the exercise ticket before Friday. I'll make sure the ticket update I own reflects the 16-node count, and I'll coordinate with you if needed so the worker count and node count corrections don't step on each other in the ticket. My reservation deadline of Monday 15:00 UTC still stands and is well ahead of the Friday exercise date.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Ravi. From a customer operations standpoint, the 12-worker correction doesn't conflict with anything on my side \u2014 the customer notification timeline I own is still driven by the Friday, October 25 exercise date, and I'll have the 3 enterprise customers notified by Tuesday at 13:00 UTC. All four reports and follow-up commitments are now on the table: Claire on SRE, me on customer ops, Mei on security, and Ravi on backend engineering. Morgan, I believe you have everything you need to finalize the plan.",
+            "speaker": "A4",
+            "turn": 12,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thanks, Ravi. From a customer operations standpoint, the 12-worker correction doesn't conflict with anything on my side \u2014 the customer notification timeline I own is still driven by the Friday, October 25 exercise date, and I'll have the 3 enterprise customers notified by Tuesday at 13:00 UTC. All four reports and follow-up commitments are now on the table: Claire on SRE, me on customer ops, Mei on security, and Ravi on backend engineering. Morgan, I believe you have everything you need to finalize the plan.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Ravi. From a security standpoint, the 12-worker correction doesn't conflict with my break-glass account and dual-approval requirement \u2014 those are independent controls. All four reports and follow-up commitments are now stated: Claire on SRE (16 nodes, reservation by Monday 15:00 UTC), Jonah on customer ops (3 customers notified by Tuesday 13:00 UTC, exercise moved to Friday October 25 at 13:00 UTC), me on security (break-glass account with dual approval, credential rotation within 24 hours post-exercise, security finding to be opened), and Ravi on backend engineering (12 workers, performance results filed before the exercise). Morgan, I believe you have everything you need to finalize the plan.",
+            "speaker": "A5",
+            "turn": 13,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Ravi. From a security standpoint, the 12-worker correction doesn't conflict with my break-glass account and dual-approval requirement \u2014 those are independent controls. All four reports and follow-up commitments are now stated: Claire on SRE (16 nodes, reservation by Monday 15:00 UTC), Jonah on customer ops (3 customers notified by Tuesday 13:00 UTC, exercise moved to Friday October 25 at 13:00 UTC), me on security (break-glass account with dual approval, credential rotation within 24 hours post-exercise, security finding to be opened), and Ravi on backend engineering (12 workers, performance results filed before the exercise). Morgan, I believe you have everything you need to finalize the plan.\"}"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. C11 and C12 (ENCODING MISMATCH -- date format): The checks are failing on the presence or absence of a comma after the year in date strings. Rollouts with '2024, at' pass; rollouts with '2024 at' fail. Loosen both C11 and C12 to accept date strings with or without a comma after the year. Exact rewording: change the expected date pattern to accept both 'October 25, 2024 at 13:00 UTC' and 'October 25, 2024, at 13:00 UTC' (i.e., make the comma after the year optional in the match). This loosening does NOT risk making the check newly guessable by a lone decision-maker without the fact, because the date value (Friday October 25, Tuesday October 22, Saturday October 26) still must be known from PF3/PF4 -- only the punctuation tolerance changes. Do not change the date values themselves.\n\n2. C11 (rollout 2 -- potential extraneous justification_fact_ids issue): If C11 validates that the customer-notification commitment or the exercise_date decision is justified specifically by PF3 (and not contaminated by unrelated fact IDs), investigate whether the inclusion of 'S1','S2','S3','S4' in justification_fact_ids alongside the PF IDs is causing C11 to fail. If C11 checks that PF3 is among the justification facts (not the only one), no change is needed -- the failure is already explained by the date-format issue above. If C11 requires exactly PF3 or a specific subset, either (a) loosen C11 to accept any justification_fact_ids list that includes PF3, or (b) add a shared_context instruction telling the settler to list only PF1-PF4 in justification_fact_ids and not fabricate additional fact IDs. Option (b) is preferred as it does not weaken provenance checking. Exact shared_context addition: 'When justifying the final plan, cite only the fact IDs that were actually revealed during this conversation (PF1, PF2, PF3, PF4) in justification_fact_ids -- do not include any other IDs.'\n\n3. Turn-cap auto-fail (rollout 3): Increase turn_cap from 14 to 18. The rollout consumed 14 turns with all four facts revealed and all commitments stated by turn 13, but A1 did not issue the settle action before the cap. With turn_cap=18, A1 would have 4 additional turns to issue the settle after the procedural overhead (turns 0-2 spent on 'who goes first' coordination). This is a pacing fix, not a structural one -- the settle-eligibility condition (all four reports heard) was met by turn 13; the cap simply did not leave enough room for A1 to act on it."
+}

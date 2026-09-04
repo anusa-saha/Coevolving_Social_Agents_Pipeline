@@ -1,0 +1,127 @@
+{
+  "scenario_id": "scenario_61",
+  "scenario_type": "patient_transport_allocation",
+  "description": "A hospital transport supervisor must assign the hospital's only wheelchair-accessible medical van for two same-day discharges and finalize the transport arrangements for the patient who will use another vehicle, with input from respiratory therapy and social work.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Hospital Transport Supervisor"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marcus",
+      "role": "Respiratory Therapist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rina",
+      "role": "Social Worker"
+    }
+  ],
+  "shared_context": {
+    "S1": "The hospital's only wheelchair-accessible medical van is available for one of two medically cleared discharges today: Patient A, who uses a wheelchair and is going to Maple Grove Assisted Living, or Patient B, who is going home.",
+    "S2": "Elena makes the final assignment of the medical van and records the transport plan.",
+    "S3": "Both patients are expected to leave the hospital today, and neither discharge transport plan has been finalized.",
+    "S4": "The daily discharge huddle includes respiratory therapy and social work before Elena closes the transport schedule."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A3",
+      "text": "Patient A's brother has an accessible SUV and confirmed to Rina by phone that he can pick Patient A up at 10:30 today; the 30-minute trip would arrive at Maple Grove by 11:00, within the facility's 10:00-12:00 arrival window."
+    },
+    "PF2": {
+      "owner": "A2",
+      "text": "Patient B must use supplemental oxygen at 2 L/min continuously during the 45-minute trip home, and the hospital medical van is the only available vehicle today with an approved oxygen-cylinder mount; Marcus verified the requirement during this morning's respiratory assessment."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "medical_van_assigned_to": "string",
+      "oxygen_cylinder_mount_checked": "boolean",
+      "patient_a_arrival_window": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The medical van must be assigned to Patient B because Patient B requires continuous oxygen and the van is the only vehicle with an approved oxygen-cylinder mount.",
+    "The oxygen-cylinder mount must be checked and documented for Patient B's transport.",
+    "Patient A's accessible SUV transport must be recorded for a 10:30 pickup and 11:00 arrival at Maple Grove Assisted Living.",
+    "The transport plan must cite the respiratory finding requiring Patient B's oxygen-supported trip."
+  ],
+  "content_checks": {
+    "C1": "decisions['medical_van_assigned_to'] == 'Patient B'",
+    "C2": "decisions['oxygen_cylinder_mount_checked'] == True",
+    "C3": "any(c['type'] == 'alternate_transport' and c['target'] == 'Patient A' and c['detail'] == 'Accessible SUV pickup at 10:30; arrival at Maple Grove Assisted Living at 11:00' for c in commitments)",
+    "C4": "decisions['patient_a_arrival_window'] == '10:30-11:00'"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in credited_facts and 'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "The brother's confirmed accessible SUV changes Patient A's plan from having no recorded alternative transport to a 10:30 pickup with an exact 11:00 Maple Grove arrival."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "Patient B's exact 2 L/min continuous-oxygen requirement changes the van assignment from an unresolved choice to Patient B and changes the equipment check from unspecified to confirmation of the approved oxygen-cylinder mount."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

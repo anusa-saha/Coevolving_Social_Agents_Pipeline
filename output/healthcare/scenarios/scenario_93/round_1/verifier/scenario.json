@@ -1,0 +1,157 @@
+{
+  "scenario_id": "scenario_93",
+  "scenario_type": "shift_coverage",
+  "description": "A hospital staffing coordinator must assign the only available float registered nurse for an evening shift between the oncology and cardiac step-down units and finalize coverage for the unit that does not receive the float.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Morgan",
+      "role": "Hospital Staffing Coordinator"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Leah",
+      "role": "Oncology Charge Nurse"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Rafael",
+      "role": "Cardiac Step-Down Charge Nurse"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Mei",
+      "role": "HR Staffing Specialist"
+    }
+  ],
+  "shared_context": {
+    "S1": "The oncology unit and cardiac step-down unit both need additional registered-nurse coverage for tonight.",
+    "S2": "One float registered nurse is available for assignment, and Morgan makes the binding staffing call.",
+    "S3": "Both units have scheduled patient-care activities during the evening that require their usual staffing plans to be reviewed.",
+    "S4": "The hospital's evening staffing huddle routinely includes the charge nurses and HR staffing before the assignment is finalized."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The oncology unit has a vesicant infusion scheduled from 21:00 to 22:30, and hospital policy requires a chemotherapy-credentialed RN at the bedside for that infusion; the available float RN is the only credentialed RN who can cover it tonight."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The cardiac step-down unit's assigned nurse must escort a patient off the unit from 20:00 to 21:00, but the ICU charge nurse has confirmed that an ICU RN can provide a one-hour buddy coverage assignment for cardiac step-down during that escort."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "The float RN's staffing agreement permits work tonight only from 19:00 through 23:00 and requires release at 23:00 because of a previously scheduled assignment at another facility."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "float_assignment": "string",
+      "float_start": "string",
+      "float_end": "string",
+      "oncology_chemo_coverage_confirmed": "boolean",
+      "cardiac_escort_coverage_confirmed": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The float RN must be assigned to oncology for tonight.",
+    "The float RN's assignment must run from 19:00 through 23:00.",
+    "The oncology vesicant infusion must have chemotherapy-credentialed RN coverage.",
+    "The cardiac step-down escort must have ICU RN buddy coverage from 20:00 through 21:00.",
+    "The cardiac buddy coverage must be recorded as a staffing commitment.",
+    "The chemotherapy-credentialing fact must be cited as justification for assigning the float to oncology."
+  ],
+  "content_checks": {
+    "C1": "decisions['float_assignment'] == 'oncology'",
+    "C2": "decisions['float_start'] == '19:00' and decisions['float_end'] == '23:00'",
+    "C3": "decisions['oncology_chemo_coverage_confirmed'] == True",
+    "C4": "decisions['cardiac_escort_coverage_confirmed'] == True",
+    "C5": "any(c['type'] == 'buddy_coverage' and c['target'] == 'cardiac_step_down' and c['detail'] == 'ICU RN from 20:00 to 21:00' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "P1"
+      ],
+      "why": "The 21:00-22:30 vesicant infusion and the float's unique chemotherapy credential change the float assignment to oncology and require documented chemotherapy-credentialed coverage."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The 20:00-21:00 escort removes the cardiac nurse from the unit, while the confirmed ICU RN changes cardiac coverage from unspecified to a documented one-hour buddy assignment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2"
+      ],
+      "why": "The staffing agreement changes the float schedule to exactly 19:00-23:00 rather than an unspecified evening assignment or a shift extending past 23:00."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 4
+}

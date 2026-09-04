@@ -1,0 +1,135 @@
+{
+  "scenario_id": "scenario_63",
+  "scenario_type": "architecture_decision",
+  "description": "A tech lead must approve the production architecture for an asynchronous customer-report generation service, deciding queue configuration, batch sizing, data retention, and audit controls with input from a platform engineer and a compliance engineer.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marta",
+      "role": "Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Theo",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The asynchronous report-generation service is scheduled for its first production deployment next Wednesday.",
+    "S2": "The current design draft uses the standard queue mode, a maximum batch size of 200 reports, 90-day report retention, and ordinary application logging.",
+    "S3": "The service generates downloadable reports from customer billing and usage data.",
+    "S4": "The design review checklist requires platform engineering and compliance sign-off before Riley approves the production architecture."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While load-testing an unrelated ingestion worker this morning, Marta confirmed that the queue service's standard mode can reorder report jobs during a broker failover; the provider's documented configuration requires FIFO mode and a maximum batch size of exactly 50 for ordered report delivery. She has not updated the architecture draft yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Theo confirmed during a compliance consultation yesterday that these billing and usage reports must be automatically purged after exactly 30 days and that every report download requires an immutable audit record containing the account and requesting user. He has not filed the compliance note against this service yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "queue_mode": "string",
+      "maximum_batch_size": "integer",
+      "retention_days": "integer",
+      "immutable_download_audit": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The service must use FIFO queue mode.",
+    "The maximum report batch size must be exactly 50.",
+    "Reports must be retained for exactly 30 days.",
+    "Immutable download auditing must be enabled.",
+    "A platform queue-configuration commitment must be recorded.",
+    "A compliance audit-record commitment must be recorded.",
+    "The queue reordering risk must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['queue_mode'] == 'FIFO'",
+    "C2": "decisions['maximum_batch_size'] == 50",
+    "C3": "decisions['retention_days'] == 30",
+    "C4": "decisions['immutable_download_audit'] == True",
+    "C5": "any(c['type'] in ['update_architecture_draft', 'platform_signoff', 'update_draft'] and c['target'] == 'Marta' and 'FIFO' in c['detail'] and ('batch size of 50' in c['detail'] or 'batch size of exactly 50' in c['detail'] or 'maximum batch size of 50' in c['detail'] or 'maximum batch size of exactly 50' in c['detail']) and ('architecture draft' in c['detail'] or 'queue configuration' in c['detail']) for c in commitments)",
+    "C6": "any(c['type'] in ['file_compliance_note', 'compliance_signoff', 'documentation'] and 'compliance note' in c['detail'] and 'file' in c['detail'] and 'service' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The draft's standard queue and 200-report batch appear acceptable until PF1 changes the required mode to FIFO, the batch limit to exactly 50, and adds the queue-configuration commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The draft's 90-day retention and ordinary logging change to exactly 30 days and immutable account-and-user download records once PF2 is applied, along with the need to file the compliance note."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 3
+}

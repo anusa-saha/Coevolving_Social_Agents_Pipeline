@@ -1,0 +1,131 @@
+{
+  "scenario_id": "scenario_58",
+  "scenario_type": "transfusion_service_decision",
+  "description": "A transfusion service medical director must finalize tonight's platelet transfusion plan for a hematology patient, including whether to release platelets, the product type, dose, start time, and blood-bank coordination, with input from the patient's hematologist and a blood-bank technologist.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Dr. Marisol Vega",
+      "role": "Transfusion Service Medical Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dr. Aaron Chen",
+      "role": "Hematologist"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nina Patel",
+      "role": "Blood-Bank Technologist"
+    }
+  ],
+  "shared_context": {
+    "S1": "A hematology patient on 6 West has an active platelet transfusion request for tonight.",
+    "S2": "The blood bank lists both a standard pooled platelet product and a specialized platelet product as possible products for the request.",
+    "S3": "Dr. Vega makes the final transfusion-service decision and authorizes any product release.",
+    "S4": "The hospital's routine blood-product release process uses a brief coordination huddle. Dr. Vega must hear a clinical report from the ordering hematologist, Dr. Chen, and a blood-bank report from the technologist, Nina Patel, before making the authorization decision; she must not settle until both reports have been given."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The patient's platelet count is 7,000 per microliter and the patient has active mucosal bleeding; Dr. Chen's clinical plan is to transfuse exactly one platelet unit beginning at 20:00 rather than defer transfusion or give a prophylactic dose later."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The patient has documented antibodies against common platelet antigens, and the blood bank has a compatible HLA-selected, irradiated single-donor platelet unit reserved for this patient until 22:00; it must be picked up from the blood bank by 20:30 to preserve the planned start."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "transfusion_approved": "boolean",
+      "product_type": "string",
+      "units": "integer",
+      "start_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The platelet transfusion must be approved.",
+    "Exactly one platelet unit must be ordered to begin at 20:00.",
+    "The product must be a compatible HLA-selected, irradiated single-donor platelet unit.",
+    "The settlement must specify that the product is picked up from the blood bank by 20:30, either in a dedicated pickup commitment or in commitment text.",
+    "The clinical indication for urgent transfusion must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['transfusion_approved'] == True",
+    "C2": "decisions['units'] == 1",
+    "C3": "decisions['start_time'] == '20:00'",
+    "C4": "('HLA-selected' in decisions.get('product_type', '') and 'irradiated' in decisions.get('product_type', '') and 'single-donor' in decisions.get('product_type', '')) or any('HLA-selected' in c.get('detail', '') and 'irradiated' in c.get('detail', '') and 'single-donor' in c.get('detail', '') for c in commitments)",
+    "C5": "any('20:30' in c.get('detail', '') and ('6 West' in c.get('detail', '') or 'blood bank' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in credited_facts and 'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The platelet count of 7,000 per microliter with active mucosal bleeding changes the plan from an optional or deferred transfusion to approval of exactly one unit beginning at 20:00."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The antibody result and reserved compatible product change the product choice to HLA-selected irradiated single-donor platelets and require a blood-bank pickup at 6 West by 20:30."
+    }
+  ],
+  "domain": "healthcare",
+  "requested_num_agents": 3
+}

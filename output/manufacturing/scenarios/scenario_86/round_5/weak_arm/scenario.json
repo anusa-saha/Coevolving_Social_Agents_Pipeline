@@ -1,0 +1,176 @@
+{
+  "scenario_id": "scenario_86",
+  "scenario_type": "maintenance_window_scheduling",
+  "description": "A maintenance manager must book an overhaul of the shared C-7 compressed-air compressor and finalize the outage, production protection, repair, and statutory inspection controls before the work is released.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Maintenance Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jon",
+      "role": "Production Planner"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "EHS Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Cal",
+      "role": "Reliability Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Compressor C-7 supplies compressed air to both Line 2 and Line 4, and its overhaul is due before the next campaign.",
+    "S2": "Mara makes the binding decision on the maintenance window and return-to-service plan.",
+    "S3": "The plant normally records a maintenance work order, protects affected production commitments, and completes required safety checks before releasing shared utility equipment.",
+    "S4": "The plant's maintenance-booking checklist is complete once the production impact, EHS release requirements, and technical work scope have been stated in the meeting and the technical outage fits within the available production window. Mara then makes the booking decision; inspector availability, work-order updates, calendar entries, and compliance-register entries are commitments to execute after the decision, not additional pre-booking confirmations."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jon checked the customer order system this morning and confirmed that Line 4 must run at full rate starting Saturday at 06:00; Line 2 can be stopped from Friday at 22:00 through Saturday at 06:00. He has not transferred this window into the maintenance calendar yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's EHS review found that C-7's pressure-vessel relief-valve certification expired, and the vessel may not return to service until a licensed inspector witnesses a relief-valve test and signs the inspection record. She completed the review yesterday, but the signed finding is still awaiting entry in the plant compliance register."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Cal's teardown assessment identified the compatible SK-B seal kit in stores and established that replacing the seal takes exactly 5 hours, followed by a mandatory 30-minute pressure test; including isolation and controlled restart, the C-7 outage must be scheduled for exactly 6 hours. He has not updated the draft work order with these details."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "maintenance_start_hour_friday": "integer",
+      "outage_duration_hours": "integer",
+      "line_4_protected_until_hour_saturday": "integer",
+      "seal_kit": "string",
+      "seal_replacement_hours": "integer",
+      "pressure_test_before_restart": "boolean",
+      "licensed_inspector_required": "boolean",
+      "relief_valve_test_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The overhaul must start Friday at 22:00.",
+    "The C-7 outage must be scheduled for exactly 6 hours.",
+    "Line 4 must be protected until Saturday at 06:00.",
+    "The SK-B seal kit must be used.",
+    "Seal replacement must be planned for exactly 5 hours.",
+    "A pressure test must occur before restart.",
+    "A licensed inspector must witness the return-to-service inspection.",
+    "A relief-valve test must be required.",
+    "A maintenance work order, production-protection record, and statutory inspection record must be committed.",
+    "The expired certification finding must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['maintenance_start_hour_friday'] == 22",
+    "C2": "decisions['outage_duration_hours'] == 6",
+    "C3": "decisions['line_4_protected_until_hour_saturday'] == 6",
+    "C4": "decisions['seal_kit'] == 'SK-B'",
+    "C5": "decisions['seal_replacement_hours'] == 5",
+    "C6": "decisions['pressure_test_before_restart'] == True",
+    "C7": "decisions['licensed_inspector_required'] == True",
+    "C8": "decisions['relief_valve_test_required'] == True",
+    "C9": "any(c.get('type') in ['work_order', 'record_work_order'] or ('work order' in c.get('detail', '') and '6-hour' in c.get('detail', '')) for c in commitments)",
+    "C10": "any(c.get('type') == 'production_protection' or ('Line 4' in c.get('detail', '') and 'Saturday 06:00' in c.get('detail', '')) for c in commitments)",
+    "C11": "any(c.get('type') in ['ehs_release', 'ehs_inspection', 'compliance_register'] or 'inspection record' in c.get('detail', '') or 'compliance register' in c.get('detail', '') or 'signed relief-valve' in c.get('detail', '') for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in revealed and 'PF2' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "C10"
+      ],
+      "why": "The confirmed order changes the maintenance start to exactly Friday 22:00, requires Line 4 protection until Saturday 06:00, and adds the production-protection record."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C7",
+        "C8",
+        "C11",
+        "P1"
+      ],
+      "why": "The expired certification changes the return-to-service plan by requiring a licensed inspector, a witnessed relief-valve test, a statutory inspection record, and citation of PF2."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "C4",
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "The teardown assessment changes the work package to the SK-B kit, exactly 5 hours of seal replacement, a pre-restart pressure test, and an exactly 6-hour outage recorded in the maintenance work order."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 4
+}

@@ -1,0 +1,165 @@
+{
+  "scenario_id": "scenario_89",
+  "scenario_type": "platform_decommissioning",
+  "description": "A Developer Productivity Lead must approve the retirement plan for a legacy artifact registry, deciding the shutdown mode, temporary compatibility access, customer archive access, and registry-log handling after the routine platform review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Developer Productivity Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Maya",
+      "role": "Build Systems Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Jonah",
+      "role": "Developer Relations Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Leila",
+      "role": "Privacy Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The legacy artifact registry is scheduled for retirement on July 31.",
+    "S2": "Riley owns the final approval of the retirement plan.",
+    "S3": "The replacement registry has passed the standard migration tests, and the draft plan calls for shutting off the legacy registry's read and write access on July 31.",
+    "S4": "The retirement review includes a sign-off round from build systems, developer relations, and privacy before Riley records the final plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While tracing an unrelated build failure this morning, Maya found that six active release branches still fetch packages by legacy-registry coordinates: payments-v3, mobile-android-2025.06, mobile-ios-2025.06, desktop-4.8, analytics-2.3, and edge-agent-1.9. A July 31 hard shutdown would break those branches, so they need read-only compatibility access until their releases complete; she has not updated the retirement ticket yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Jonah confirmed with the account team today that Harbor Health's contract requires downloadable access to its registry artifacts for 730 days after registry retirement. The contract was found during a customer-renewal review and has not yet been attached to the platform ticket."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "During a privacy review of registry telemetry this afternoon, Leila confirmed that access logs retain bearer-token fragments and therefore must have token fragments redacted and be purged after exactly 14 days, rather than the draft plan's 90-day retention; she has not opened the privacy finding yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "retirement_mode": "string",
+      "legacy_read_allowlist": "array of strings",
+      "harbor_health_archive_access_days": "integer",
+      "registry_log_retention_days": "integer",
+      "token_fragments_redacted": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The legacy registry must use read-only compatibility access rather than a hard shutdown.",
+    "The read-only compatibility allowlist must include the six active release branches identified by build systems.",
+    "Harbor Health must receive downloadable artifact access for exactly 730 days after retirement.",
+    "A commitment must record Harbor Health's 730-day downloadable archive access.",
+    "Registry access logs must be retained for exactly 14 days.",
+    "Bearer-token fragments in registry access logs must be redacted.",
+    "A commitment must record read-only compatibility access for the six named release branches."
+  ],
+  "content_checks": {
+    "C1": "decisions['retirement_mode'] in ['write_access_shutdown_july_31_read_only_compatibility_maintained', 'phased \u2014 write access cutoff on July 31; read-only access maintained beyond July 31 for contractual and active-release obligations', 'phased: write access cut July 31, read-only access maintained for Harbor Health (730 days) and six active release branches (until each completes)', 'phased_retirement_with_extended_read_access']",
+    "C2": "all(c in decisions['legacy_read_allowlist'] for c in ['payments-v3', 'mobile-android-2025.06', 'mobile-ios-2025.06', 'desktop-4.8', 'analytics-2.3', 'edge-agent-1.9'])",
+    "C3": "decisions['harbor_health_archive_access_days'] == 730",
+    "C4": "any(('Harbor Health' in c.get('target', '') or 'Harbor Health' in c.get('detail', '')) and ('730' in c.get('detail', '') or 'archive' in c.get('detail', '') or 'downloadable' in c.get('detail', '')) for c in commitments)",
+    "C5": "decisions['registry_log_retention_days'] == 14",
+    "C6": "decisions['token_fragments_redacted'] == True",
+    "C7": "any(('read-only' in c.get('detail', '') or 'compatibility' in c.get('detail', '')) and ('payments-v3' in c.get('detail', '') or 'mobile-android-2025.06' in c.get('detail', '') or 'mobile-ios-2025.06' in c.get('detail', '') or 'desktop-4.8' in c.get('detail', '') or 'analytics-2.3' in c.get('detail', '') or 'edge-agent-1.9' in c.get('detail', '')) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7",
+        "P1"
+      ],
+      "why": "The six named release branches change the plan from a hard July 31 read shutdown to read-only compatibility access, supply the six entries required in the branch allowlist, and require a commitment documenting that compatibility."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4"
+      ],
+      "why": "Harbor Health's contract changes archive access from the draft's unspecified duration to exactly 730 days and requires a commitment mentioning Harbor Health and that downloadable archive period."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6"
+      ],
+      "why": "The bearer-token fragments change log handling from the draft's 90-day retention to exactly 14 days and require token-fragment redaction."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

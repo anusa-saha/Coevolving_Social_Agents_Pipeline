@@ -1,0 +1,184 @@
+{
+  "scenario_id": "scenario_82",
+  "scenario_type": "security_patch_rollout",
+  "description": "A security engineering manager must approve the production rollout policy for a critical authentication-gateway patch, including rollout sequencing, customer exceptions, audit evidence, and follow-up commitments, after the standard cross-functional review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Rina",
+      "role": "Security Engineering Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mateo",
+      "role": "Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Leah",
+      "role": "Customer Operations Lead"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "A critical patch for the production authentication gateway is available and the current rollout proposal targets all production regions after a 10 percent canary.",
+    "S2": "The standard proposal starts the canary at 02:00 UTC, uses the previous gateway image for rollback, and records ordinary deployment logs.",
+    "S3": "Rina owns the final approval for the production rollout policy.",
+    "S4": "The change-control checklist requires review from platform engineering, customer operations, and compliance before production approval.",
+    "S5": "Before finalizing a change-control decision, the team routinely states operational constraints, discusses how the plan will incorporate them, and the final approver records the resulting policy."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While testing the patch against the service inventory this afternoon, Mateo confirmed that exactly 18 legacy services cannot restart safely until a compatibility bridge has run for 6 hours; he has not updated the rollout proposal because the test finished after the planning meeting."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Leah confirmed from customer maintenance calendars this morning that exactly two customers, Northstar and BluePeak, have blackout windows from 00:00 to 06:00 UTC; their gateway instances must be deferred until 06:00 UTC and both customers must receive direct notices, but she has not added the exception to the change record yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Owen confirmed during a compliance evidence review today that this patch requires a signed deployment manifest and immutable retention of its rollout evidence for exactly 180 days; he has not filed the evidence requirement because the security finding was only classified this afternoon."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 16,
+    "settle_eligibility": "Rina may settle once PF1, PF2, and PF3 have been revealed in the transcript and Rina has acknowledged all three findings and proposed a revised plan incorporating them. No formal sign-off statement from each contributor is required."
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rollout_mode": "string",
+      "legacy_bridge_hours": "integer",
+      "deferred_customers": [
+        "string"
+      ],
+      "deferred_rollout_time": "string",
+      "signed_manifest_required": "boolean",
+      "audit_retention_days": "integer",
+      "customer_notice_required": "boolean",
+      "deployment_evidence_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "customers": [
+          "string"
+        ],
+        "services": "integer",
+        "hours": "integer"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The rollout must use a staged compatibility mode.",
+    "The compatibility bridge must run for exactly 6 hours.",
+    "Exactly Northstar and BluePeak must be listed as deferred customers.",
+    "The deferred customer rollout must begin at exactly 06:00 UTC.",
+    "A signed deployment manifest must be required.",
+    "Rollout evidence must be retained immutably for exactly 180 days.",
+    "The settlement must include a commitment that Northstar and BluePeak will receive direct customer notices before deployment, or a decisions field indicating direct notices are required.",
+    "The settlement must include a commitment that a signed deployment manifest will be produced and immutable rollout evidence retained for 180 days, or a decisions field indicating these evidence requirements are required.",
+    "The compatibility constraint, customer blackout constraint, and compliance evidence requirement must each be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['legacy_bridge_hours'] == 6 and (('staged' in decisions['rollout_mode'] or 'compatibility' in decisions['rollout_mode'] or 'bridge' in decisions['rollout_mode']) or any(c['type'] == 'compatibility_bridge' and c.get('services') == 18 and c.get('hours') == 6 for c in commitments))",
+    "C2": "decisions['legacy_bridge_hours'] == 6",
+    "C3": "decisions['deferred_customers'] == ['Northstar', 'BluePeak']",
+    "C4": "decisions['deferred_rollout_time'] == '06:00 UTC'",
+    "C5": "decisions['signed_manifest_required'] == True",
+    "C6": "decisions['audit_retention_days'] == 180",
+    "C7": "any(c['type'] == 'direct_customer_notice' and c.get('customers') == ['Northstar', 'BluePeak'] for c in commitments) or decisions.get('customer_notice_required') == True",
+    "C8": "any(c['type'] == 'deployment_evidence' and c.get('hours') == 180 for c in commitments) or decisions.get('deployment_evidence_required') == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in justification_fact_ids",
+    "P3": "'PF3' in revealed and 'PF3' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The standard canary plan does not specify a compatibility stage or duration; PF1 changes the rollout mode to include a staged compatibility bridge and sets its duration to exactly 6 hours for exactly 18 legacy services."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C7",
+        "P2"
+      ],
+      "why": "The standard plan has no customer exceptions or targeted notices; PF2 changes the exception list to exactly Northstar and BluePeak, moves their rollout to exactly 06:00 UTC, and requires direct notices to both customers."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C8",
+        "P3"
+      ],
+      "why": "Ordinary deployment logging is insufficient; PF3 changes the policy to require a signed manifest and exactly 180 days of immutable evidence retention, plus a deployment-evidence commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

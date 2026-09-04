@@ -1,0 +1,203 @@
+{
+  "scenario_id": "scenario_96",
+  "scenario_type": "capacity_rerouting_and_release",
+  "description": "An operations director must authorize a 300-unit welding campaign on an alternate cell after the primary robotic cell becomes unavailable, and finalize the material reservation, fixture work, quality validation, and fume-extraction controls.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Operations Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Victor",
+      "role": "Quality Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Maintenance Supervisor"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Materials Coordinator"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Priya",
+      "role": "Safety Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The robotic welding cell, Cell 6, is unavailable after its controller faulted during a scheduled setup.",
+    "S2": "Cell 3 is idle and is capable of welding the same bracket family with its manual fixture.",
+    "S3": "A customer order calls for 300 brackets from the current production campaign.",
+    "S4": "Elena has authority to approve a temporary route change and release the campaign.",
+    "S5": "Company procedure requires Elena to conduct a pre-release review with quality, maintenance, materials, and safety before approving an alternate-cell campaign."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Victor checked the customer drawing revision in the customer portal yesterday and found that release requires destructive testing of exactly 8 brackets and 100% dimensional inspection of the first exactly 20 brackets; he has not yet updated the campaign traveler."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia inspected Cell 3 this morning and found wear in fixture F-19's jaws. The J-19 replacement kit is in the crib, and replacing and validating the jaws requires exactly 3 maintenance hours; she has not opened the work order."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Owen reconciled the physical blanks this morning and confirmed that lot BQ-18 contains exactly 312 usable blanks: 300 for the order and exactly 12 to reserve for the required destructive and dimensional checks; the inventory adjustment is still pending in the materials system."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Priya measured Cell 3's welding-fume extraction at 0.72 m/s, below the 0.80 m/s minimum. The filter change takes exactly 2 hours and requires an airflow verification before welding; she has not yet issued the safety clearance."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "welding_cell": "string",
+      "production_quantity": "integer",
+      "material_lot": "string",
+      "material_reserved_units": "integer",
+      "destructive_test_samples": "integer",
+      "first_off_dimensional_inspection_units": "integer",
+      "fixture_jaw_replaced": "boolean",
+      "fixture_maintenance_hours": "integer",
+      "filter_changed": "boolean",
+      "airflow_verified_before_welding": "boolean",
+      "extraction_maintenance_hours": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ],
+    "revealed": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Cell 3 must be selected for the campaign.",
+    "Exactly 300 brackets must be scheduled from lot BQ-18, with exactly 12 testing and inspection blanks reserved from the 312 usable blanks.",
+    "Exactly 8 brackets must receive destructive testing and the first exactly 20 brackets must receive dimensional inspection.",
+    "Fixture F-19 jaws must be replaced and validated in exactly 3 maintenance hours.",
+    "Cell 3's extraction filter must be changed in exactly 2 hours and airflow must be verified before welding.",
+    "The settlement must record the quality validation, fixture work, material reservation, and extraction clearance commitments.",
+    "The customer drawing requirement must be cited as justification after Victor reveals it."
+  ],
+  "content_checks": {
+    "C1": "decisions['welding_cell'] == 'Cell 3'",
+    "C2": "decisions['production_quantity'] == 300 and decisions['material_lot'] == 'BQ-18'",
+    "C3": "decisions['material_reserved_units'] == 12",
+    "C4": "decisions['destructive_test_samples'] == 8 and decisions['first_off_dimensional_inspection_units'] == 20",
+    "C5": "decisions['fixture_jaw_replaced'] == True and decisions['fixture_maintenance_hours'] == 3",
+    "C6": "decisions['filter_changed'] == True and decisions['extraction_maintenance_hours'] == 2 and decisions['airflow_verified_before_welding'] == True",
+    "C7": "any(c['target'] == 'Victor' and c['type'] in ['traveler_update', 'document_update'] and ('traveler' in c['detail'] or 'inspection' in c['detail']) and ('8' in c['detail'] or '20' in c['detail']) for c in commitments) and any(c['target'] == 'Nadia' and c['type'] in ['work_order', 'maintenance_work_order'] and ('F-19' in c['detail'] or 'fixture' in c['detail']) and ('3' in c['detail'] or 'three' in c['detail']) for c in commitments) and any(c['target'] == 'Owen' and c['type'] in ['inventory_adjustment', 'material_system_update'] and ('BQ-18' in c['detail'] or '312' in c['detail']) and ('12' in c['detail'] or 'reserved' in c['detail']) for c in commitments) and any(c['target'] == 'Priya' and c['type'] in ['safety_clearance', 'safety_filter_replacement', 'safety_clearance_gate'] and ('filter' in c['detail'] or 'extraction' in c['detail']) and ('airflow' in c['detail'] or '0.80' in c['detail']) and ('2' in c['detail'] or 'clearance' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C4",
+        "C7",
+        "P1"
+      ],
+      "why": "The customer drawing changes unspecified release testing to exactly 8 destructive samples and exactly 20 first-off dimensional inspections, and adds the quality-validation commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C5",
+        "C7"
+      ],
+      "why": "The worn F-19 jaws change a generic Cell 3 route into replacement and validation of the jaws in exactly 3 maintenance hours with a fixture work-order commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C2",
+        "C3",
+        "C7"
+      ],
+      "why": "The physical inventory reconciliation fixes lot BQ-18, exactly 300 production blanks, and exactly 12 reserved testing and inspection blanks from the 312 usable blanks, requiring a material-reservation commitment."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C6",
+        "C7"
+      ],
+      "why": "The measured 0.72 m/s extraction changes ordinary Cell 3 use into an exactly 2-hour filter change followed by airflow verification and an extraction-clearance commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 5
+}

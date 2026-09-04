@@ -1,0 +1,172 @@
+{
+  "scenario_id": "scenario_52",
+  "scenario_type": "architecture_and_infrastructure_plan",
+  "description": "A platform lead must approve the production migration plan for the company's build-artifact repository, deciding the storage tier, migration scope, budget, retention period, and immutability controls after the standard architecture review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Rina",
+      "role": "Platform Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marcus",
+      "role": "FinOps Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Talia",
+      "role": "Data Platform Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Owen",
+      "role": "Compliance Engineer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The build-artifact repository is at 92 percent of its current filesystem capacity.",
+    "S2": "A staging migration to object storage completed successfully for representative build artifacts.",
+    "S3": "The draft production plan moves all 100 CI pipeline artifact paths to archive object storage, assumes a monthly operating cost of 4,000 USD, deletes artifacts after 90 days, and does not enable immutability controls.",
+    "S4": "Rina owns the final platform decision, and the normal architecture review goes around the FinOps, data-platform, and compliance representatives for any operational requirements before the plan is approved."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A3",
+      "text": "While testing an unrelated CI plugin this morning, Talia confirmed that exactly 37 of the 100 pipelines depend on POSIX rename semantics that archive object storage cannot provide; the other 63 pipelines can migrate, but she has not updated the migration ticket yet."
+    },
+    "PF2": {
+      "owner": "A2",
+      "text": "Marcus reconciled the provider quote with the last six months of artifact-retrieval data during a billing review this afternoon and confirmed that archive storage would cost 7,800 USD per month after retrieval fees, while standard object storage would cost exactly 5,400 USD per month and remain below the approved 6,000 USD monthly cap; he has not posted the corrected model yet."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Owen confirmed with the audit team this morning that release artifacts for regulated products must be retained in immutable storage for exactly 730 days; the current 90-day deletion plan and unlocked object storage do not satisfy that requirement, and he has not opened the compliance finding yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "migration_approved": "boolean",
+      "storage_tier": "string",
+      "migrated_pipeline_count": "integer",
+      "filesystem_pipeline_count": "integer",
+      "monthly_budget_usd": "integer",
+      "retention_days": "integer",
+      "immutable_storage_enabled": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The artifact migration must be approved.",
+    "The production storage tier must be standard object storage.",
+    "Exactly 63 pipelines must migrate and exactly 37 pipelines must remain on the filesystem.",
+    "The monthly budget must be set to exactly 5,400 USD.",
+    "Artifacts must be retained for exactly 730 days.",
+    "Immutable storage must be enabled.",
+    "A commitment must document the 37-pipeline filesystem exception.",
+    "A commitment must document the corrected storage-cost review.",
+    "A commitment must document the compliance retention and immutability controls.",
+    "The compliance requirement must be explicitly cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['migration_approved'] == True",
+    "C2": "decisions['storage_tier'] == 'standard_object'",
+    "C3": "decisions['migrated_pipeline_count'] == 63",
+    "C4": "decisions['filesystem_pipeline_count'] == 37",
+    "C5": "decisions['monthly_budget_usd'] == 5400",
+    "C6": "decisions['retention_days'] == 730",
+    "C7": "decisions['immutable_storage_enabled'] == True",
+    "C8": "any(c['type'] == 'pipeline_compatibility_exception' for c in commitments)",
+    "C9": "any(c['type'] == 'storage_cost_review' for c in commitments)",
+    "C10": "any(c['type'] == 'compliance_retention_control' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C8"
+      ],
+      "why": "The exact compatibility result changes the scope from migrating all 100 pipelines to migrating exactly 63 and retaining exactly 37 on the filesystem, requiring a pipeline-compatibility exception commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5",
+        "C9"
+      ],
+      "why": "The reconciled retrieval-cost numbers change the storage choice from archive to standard object storage and set the monthly budget to exactly 5,400 USD, requiring a storage-cost review commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6",
+        "C7",
+        "C10",
+        "P1"
+      ],
+      "why": "The audit requirement changes retention from 90 to exactly 730 days and changes immutability from disabled to enabled, requiring a compliance-retention-control commitment and explicit citation of PF3."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 4
+}

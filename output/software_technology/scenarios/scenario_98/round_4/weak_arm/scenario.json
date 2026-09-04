@@ -1,0 +1,209 @@
+{
+  "scenario_id": "scenario_98",
+  "scenario_type": "api_rate_limiting_architecture",
+  "description": "A tech lead must approve the production rate-limiting and query-safety policy for a public GraphQL API, including tenant limits, failure behavior, rollback triggers, and security controls, after the normal cross-functional readiness review.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Riley",
+      "role": "Tech Lead"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Mei",
+      "role": "Platform Engineer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Owen",
+      "role": "Site Reliability Engineer"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Fatima",
+      "role": "Security Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Lucas",
+      "role": "Customer Success Lead"
+    }
+  ],
+  "shared_context": {
+    "S1": "The public GraphQL API is scheduled to move from pilot traffic to general production traffic on Monday.",
+    "S2": "Riley makes the binding decision on the production API policy.",
+    "S3": "The current draft allows 300 requests per minute with a burst of 30 requests, permits schema introspection, allows query depth 12, and has no tenant-specific rate tier.",
+    "S4": "The API readiness review checklist covers tenant rate tiers, dependency-failure behavior, query controls, and customer-specific limits before the Monday production launch."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While profiling traffic for an unrelated dashboard this afternoon, Mei found that the enterprise traffic pattern requires a general enterprise tier of exactly 600 requests per minute with a burst of exactly 120 requests; she has not updated the policy draft yet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "During a resilience rehearsal this morning, Owen confirmed that the limiter currently fails open when its Redis dependency is unavailable; the production policy must fail closed and trigger rollback when denied requests exceed exactly 2 percent for exactly 10 consecutive minutes, but he has not filed the rehearsal result."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing a security scan for another service, Fatima confirmed that production GraphQL introspection exposes the full schema and that depth 12 permits an expensive nested-query pattern; the API must disable introspection, set maximum query depth to exactly 8, and add a WAF query-depth rule, but she has not opened a security finding."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Lucas confirmed with Atlas Health's account team this morning that its integration contract requires a dedicated limit of exactly 1000 requests per minute with a burst of exactly 60 requests; the contract detail has not yet been added to the API readiness ticket."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "enterprise_requests_per_minute": "integer",
+      "enterprise_burst_requests": "integer",
+      "atlas_requests_per_minute": "integer",
+      "atlas_burst_requests": "integer",
+      "limiter_failure_mode": "string",
+      "rollback_denied_percentage": "integer",
+      "rollback_duration_minutes": "integer",
+      "graphql_introspection_enabled": "boolean",
+      "maximum_query_depth": "integer",
+      "waf_query_depth_rule_required": "boolean",
+      "atlas_rate_tier_commitment_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The enterprise tier must allow exactly 600 requests per minute.",
+    "The enterprise tier must allow exactly 120 burst requests.",
+    "The limiter must fail closed when Redis is unavailable.",
+    "Rollback must trigger above exactly 2 percent denied requests.",
+    "The rollback threshold must apply for exactly 10 consecutive minutes.",
+    "GraphQL introspection must be disabled in production.",
+    "Maximum GraphQL query depth must be exactly 8.",
+    "Atlas Health must receive exactly 1000 requests per minute with a burst of exactly 60 requests.",
+    "The settlement must require a WAF query-depth rule.",
+    "The settlement must require an Atlas Health-specific rate-tier commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['enterprise_requests_per_minute'] == 600",
+    "C2": "decisions['enterprise_burst_requests'] == 120",
+    "C3": "decisions['limiter_failure_mode'] in ['fail_closed', 'fail-closed', 'closed', 'fail closed']",
+    "C4": "decisions['rollback_denied_percentage'] == 2",
+    "C5": "decisions['rollback_duration_minutes'] == 10",
+    "C6": "decisions['graphql_introspection_enabled'] == False",
+    "C7": "decisions['maximum_query_depth'] == 8",
+    "C8": "decisions['atlas_requests_per_minute'] == 1000",
+    "C9": "decisions['atlas_burst_requests'] == 60",
+    "C10": "decisions['waf_query_depth_rule_required'] == True",
+    "C11": "decisions['atlas_rate_tier_commitment_required'] == True"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in revealed and 'PF1' in justification_fact_ids",
+    "P2": "'PF2' in revealed and 'PF2' in justification_fact_ids",
+    "P3": "'PF3' in revealed and 'PF3' in justification_fact_ids",
+    "P4": "'PF4' in revealed and 'PF4' in justification_fact_ids"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The draft's 300-per-minute and 30-burst defaults change to exactly 600 requests per minute and exactly 120 burst requests for the enterprise tier."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "P2"
+      ],
+      "why": "The limiter behavior changes from the draft's unspecified dependency failure handling to fail-closed operation with rollback above exactly 2 percent denied requests for exactly 10 minutes."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C6",
+        "C7",
+        "C10",
+        "P3"
+      ],
+      "why": "The production security settings change from enabled introspection and depth 12 to disabled introspection, exactly depth 8, and a required WAF query-depth rule."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C8",
+        "C9",
+        "C11",
+        "P4"
+      ],
+      "why": "Atlas Health's contract changes its tenant settings to exactly 1000 requests per minute and exactly 60 burst requests and requires an Atlas-specific rate-tier commitment."
+    }
+  ],
+  "domain": "software_technology",
+  "requested_num_agents": 5
+}

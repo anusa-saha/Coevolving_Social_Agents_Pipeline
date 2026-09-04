@@ -1,0 +1,201 @@
+{
+  "scenario_id": "scenario_92",
+  "scenario_type": "shipment_recovery_and_route_plan",
+  "description": "A supply chain director must recover an export shipment of finished motor housings after an ocean booking is cancelled, deciding the transport split, arrival commitments, pallet requirements, customs documentation, and required follow-up actions before releasing the recovery plan.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Mara",
+      "role": "Supply Chain Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Logistics Planner"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Priya",
+      "role": "Export Compliance Specialist"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Evan",
+      "role": "Packaging Engineer"
+    },
+    {
+      "agent_id": "A5",
+      "name": "Sofia",
+      "role": "Customer Fulfillment Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "A shipment of 3,600 finished motor housings is packed at the plant for an overseas customer.",
+    "S2": "The ocean booking for this shipment was cancelled, and the customer order is due this week.",
+    "S3": "Rail and dedicated road transport are both available recovery options, but each requires a new release plan and booking.",
+    "S4": "Mara makes the binding recovery decision.",
+    "S5": "The plant's normal pre-release process is a recorded round-robin huddle in which logistics, export compliance, packaging engineering, and customer fulfillment each enter their relevant constraints into the huddle record before the supply chain director signs the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas confirmed with the carriers this morning that an intermodal rail departure on Tuesday at 06:00 can carry exactly 2,400 units and arrive Thursday at 14:00, while a dedicated road convoy can carry the remaining 1,200 units if it departs Wednesday at 08:00 and arrives Thursday at 18:00; he has not entered the replacement bookings because Mara has not approved the recovery mode."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Priya's destination-customs review confirmed that this replacement shipment cannot be released without a commercial invoice, a certificate of origin, and a serial-number list; she received the customs broker's written confirmation yesterday but has not attached it to the shipment file."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Evan's packaging calculation confirmed that the customer specification allows exactly 30 housings per export pallet, so the 3,600-unit shipment requires exactly 120 pallets; 40 compliant reusable pallets are on site and exactly 80 compliant pallets must be rented, which he has not yet requested."
+    },
+    "PF4": {
+      "owner": "A5",
+      "text": "Sofia confirmed with the customer's receiving dock that it will accept a split delivery only if exactly 2,400 units arrive by Thursday at 14:00 and exactly 1,200 units arrive by Thursday at 18:00; she has not updated the customer appointment record because the replacement transport plan is still unsigned."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ],
+    "A5": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF4"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "turn_cap": 18
+  },
+  "settlement_schema": {
+    "decisions": {
+      "rail_units": "integer",
+      "road_units": "integer",
+      "rail_arrival": "string",
+      "road_arrival": "string",
+      "pallet_count": "integer",
+      "rented_pallets": "integer",
+      "customs_documents_complete": "boolean",
+      "customer_appointments_recorded": "boolean",
+      "replacement_bookings_entered": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Exactly 2,400 units must be assigned to intermodal rail.",
+    "Exactly 1,200 units must be assigned to the dedicated road convoy.",
+    "The rail shipment must be committed to arrive Thursday at 14:00.",
+    "The road shipment must be committed to arrive Thursday at 18:00.",
+    "The shipment must use exactly 120 export pallets.",
+    "Exactly 80 compliant pallets must be rented.",
+    "The commercial invoice, certificate of origin, and serial-number list must be marked complete.",
+    "The customer receiving appointments must be recorded for both split deliveries.",
+    "The replacement rail and road bookings must be marked entered."
+  ],
+  "content_checks": {
+    "C1": "decisions['rail_units'] == 2400",
+    "C2": "decisions['road_units'] == 1200",
+    "C3": "decisions['rail_arrival'] in ['Thursday 14:00', 'Thursday at 14:00'] and decisions['road_arrival'] in ['Thursday 18:00', 'Thursday at 18:00']",
+    "C4": "decisions['pallet_count'] == 120",
+    "C5": "decisions['rented_pallets'] == 80",
+    "C6": "decisions['customs_documents_complete'] == False and any(c['target'] == 'Priya' and c['type'] in ['document_attachment', 'document_securement', 'customs_documents', 'action'] for c in commitments)",
+    "C7": "decisions['customer_appointments_recorded'] == False and any(c['target'] == 'Sofia' and c['type'] in ['appointment_update', 'customer_appointment_update', 'customer_appointment', 'action'] for c in commitments)",
+    "C8": "decisions['replacement_bookings_entered'] == False and any(c['target'] == 'Jonas' and c['type'] in ['booking_entry', 'action'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "C8"
+      ],
+      "why": "The carrier confirmation changes the recovery from an unspecified route to exactly 2,400 rail units and 1,200 road units with Thursday 14:00 and 18:00 arrivals, and changes replacement bookings from unentered to a required booking-entry commitment."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C6",
+        "P1"
+      ],
+      "why": "The broker confirmation changes customs readiness to a pending state requiring the commercial invoice, certificate of origin, and serial-number list to be secured, and identifies PF2 as the required justification."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5"
+      ],
+      "why": "The packaging calculation changes the pallet plan to exactly 120 pallets, including exactly 80 rented compliant pallets rather than an unspecified pallet quantity."
+    },
+    {
+      "fact_id": "PF4",
+      "owner": "A5",
+      "flips": [
+        "C3",
+        "C7"
+      ],
+      "why": "The receiving-dock confirmation changes the delivery plan to the exact Thursday 14:00 and 18:00 split appointments and changes appointment recording from unnecessary to a required appointment-update commitment."
+    }
+  ],
+  "domain": "manufacturing",
+  "requested_num_agents": 5
+}
