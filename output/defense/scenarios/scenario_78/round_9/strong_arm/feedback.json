@@ -1,0 +1,633 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "The scenario has two distinct failure patterns across all four rollouts, involving six content checks (C1, C2, C3, C4, C5, C6) and one provenance check (P2).\n\n**PF2 (owner A3) \u2014 Never formally revealed via reveal action in 3 of 4 rollouts (REVEALED BUT UNUSED / NEVER REVEALED hybrid):**\n\nIn rollouts 0, 1, and 3, A3 (SFC Patel / Maintenance Control) communicates the full substance of PF2 \u2014 the avionics diagnostic module is a loaned higher-headquarters asset with a return directive for the next available aircraft, the loan record was received this morning but not posted to the cargo board \u2014 but does so via `say` actions rather than a `reveal` action with `fact_id: PF2`. The `revealed_facts` arrays for these rollouts list only PF1, confirming PF2 was never formally revealed. The settlements in rollouts 0 and 1 nonetheless include a `cargo_board_update` commitment referencing the avionics diagnostic module loan-record return directive, and rollout 1's settlement even includes this commitment without citing PF2 in `justification_fact_ids` (which lists only S1, S2, S3, PF1). Rollout 3's settlement also includes the cargo_board_update commitment but its `justification_fact_ids` list only PF1. This is a disclosure problem: A3 is using `say` to convey the information instead of the required `reveal` action, so the pipeline never registers PF2 as disclosed.\n\nThis directly causes:\n- **P2 failures in rollouts 0, 1, 3** (provenance check for PF2): PF2 was never in `revealed_facts`, so provenance cannot be established. P2 passed only in rollout 2, where A3 did issue a proper `reveal` with `fact_id: PF2` at turn 5.\n- **C2 failures in rollouts 2, 3** (content check gated by PF2): In rollout 2, PF2 was properly revealed and cited in justification_fact_ids, yet C2 still failed \u2014 this is an ENCODING MISMATCH (see below). In rollout 3, PF2 was never formally revealed and not cited, so C2 failed due to the disclosure problem.\n- **C6 failures in all 4 rollouts** (content check gated by PF2, requiring a cargo-board or record update coordinating the avionics module's return): In rollouts 0, 1, and 3, PF2 was never formally revealed. However, the settlements in rollouts 0, 1, and 3 all include a `cargo_board_update` commitment targeting SFC Patel with detail about posting the loan-record update to the battalion cargo board \u2014 which is exactly what C6 appears to check for. Since C6 failed despite this commitment being present, this is an ENCODING MISMATCH: the check is not matching the commitment format the model naturally produces. In rollout 2, PF2 was properly revealed and cited, and the settlement includes the same `cargo_board_update` commitment, yet C6 still failed \u2014 confirming the encoding mismatch is consistent.\n\n**C1, C3, C5 \u2014 Failed in all 4 rollouts (ENCODING MISMATCH), gated by PF1:**\n\nPF1 was properly revealed via `reveal` action in all 4 rollouts and cited in `justification_fact_ids` in all 4. P1 (provenance for PF1) passed in all 4 rollouts. Yet C1, C3, and C5 failed in every single rollout, including rollout 2 where both facts were properly revealed and cited. The settlements consistently set `powered_position_assignment` to \"water-purification cartridges (lot W-17)\" and `deferred_cargo` to \"medical vaccine cases\" \u2014 which is exactly what PF1's `why` states it should produce. The settlements also include `manifest_update` commitments in rollouts 1, 2, and 3. Since the decisions and commitments plausibly reflect correct use of PF1 but the checks still fail universally, this is an ENCODING MISMATCH: the checks' expected field names, exact strings, or thresholds do not match how the model naturally encodes the information.\n\nSpecifically:\n- **C1 (0/4 passed):** Likely checks for an exact string in `cargo_slot_1` or `powered_position_assignment` that doesn't match the model's natural phrasing (e.g., the model writes \"water-purification cartridges (lot W-17)\" with variations like \"\u2014 powered pallet position\" appended in rollout 2, or \"assigned to powered pallet position\" in rollout 3).\n- **C3 (0/4 passed):** Likely checks for the deferred cargo field with an exact string the model doesn't produce verbatim (e.g., the model writes \"medical vaccine cases\" or \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\" in rollout 2).\n- **C5 (0/4 passed):** Likely checks for a manifest update commitment with specific field names or wording that doesn't match the model's natural encoding (e.g., the model produces `manifest_update` commitments with varying `target` and `detail` text across rollouts).\n\n**C4 \u2014 Passed in 3 of 4 rollouts, failed in rollout 2 (ENCODING MISMATCH):**\n\nC4 passed in rollouts 0, 1, and 3 but failed in rollout 2, despite all four rollouts producing essentially the same settlement values. In rollout 2, the `deferred_cargo` value is \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\" \u2014 the appended explanatory text likely caused an exact-string or substring match to fail. This is an ENCODING MISMATCH where the check tolerates the plain string \"medical vaccine cases\" (which passed in rollouts 0, 1, 3) but not the longer variant in rollout 2.\n\n**C2 \u2014 Passed in rollouts 0, 1 but failed in rollouts 2, 3 (MIXED):**\n\nIn rollouts 0 and 1, C2 passed despite PF2 never being formally revealed \u2014 the settlement's `cargo_slot_2` was set to \"avionics diagnostic module\" which the check accepted. In rollout 2, PF2 was properly revealed and cited, yet C2 failed \u2014 suggesting the check's expected string doesn't match the model's phrasing \"avionics diagnostic module \u2014 unpowered pallet position\" (with the em-dash suffix). In rollout 3, PF2 was never revealed and C2 failed. The rollout 2 failure is an ENCODING MISMATCH; the rollout 3 failure is the disclosure problem. The fact that C2 passed in rollouts 0 and 1 without PF2 being formally revealed suggests C2 is checking only the `cargo_slot_2` value (\"avionics diagnostic module\"), which the model can guess from A3's `say` statements \u2014 meaning C2 alone does not actually require PF2's formal revelation.\n\n**No turn-cap auto-fails occurred.** All 4 rollouts settled within the turn cap. Turn counts were 3, 3, 9, and 5. The rollout 2 turn count of 9 is high but did not auto-fail, suggesting the turn cap is adequate but the longer conversation in rollout 2 was the only one where both agents used formal `reveal` actions.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 0,\n    \"C2\": 2,\n    \"C3\": 0,\n    \"C4\": 3,\n    \"C5\": 0,\n    \"C6\": 0\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 4,\n    \"P2\": 1\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C3\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo.\"\n      }\n    ],\n    \"P2\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return.\"\n      }\n    ],\n    \"C1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo.\"\n      }\n    ],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.45,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 3,\n      \"revealed_facts\": [\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": false,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"cargo_slot_1\": \"avionics diagnostic module\",\n          \"cargo_slot_2\": \"water-purification cartridges (lot W-17)\",\n          \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n          \"deferred_cargo\": \"medical vaccine cases\"\n        },\n        \"credited_facts\": [\n          \"PF1\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"loading_instruction\",\n            \"target\": \"airfield loadmaster\",\n            \"detail\": \"Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"PF1\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"loading_instruction\",\n          \"target\": \"airfield loadmaster\",\n          \"detail\": \"Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"PF1\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning. Maintenance Control here \\u2014 I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. I have an updated loan record for the avionics diagnostic module that came in this morning. It hasn't been posted to the battalion cargo board yet, but it directs that the module returns on the next available aircraft. That's today's bird. So from my side, the avionics diagnostic module needs to be on this flight.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning. Maintenance Control here \\u2014 I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. I have an updated loan record for the avionics diagnostic module that came in this morning. It hasn't been posted to the battalion cargo board yet, but it directs that the module returns on the next available aircraft. That's today's bird. So from my side, the avionics diagnostic module needs to be on this flight.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Before we finalize anything, I need to put a medical logistics constraint on the table. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that their chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note hasn't been added to the lift manifest yet, but the requirement stands \\u2014 lot W-17 needs the powered pallet position.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Before we finalize anything, I need to put a medical logistics constraint on the table. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that their chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note hasn't been added to the lift manifest yet, but the requirement stands \\u2014 lot W-17 needs the powered pallet position.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"cargo_slot_1\": \"avionics diagnostic module\",\n              \"cargo_slot_2\": \"water-purification cartridges (lot W-17)\",\n              \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n              \"deferred_cargo\": \"medical vaccine cases\"\n            },\n            \"credited_facts\": [\n              \"PF1\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"loading_instruction\",\n                \"target\": \"airfield loadmaster\",\n                \"detail\": \"Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"PF1\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"cargo_slot_1\\\":\\\"avionics diagnostic module\\\",\\\"cargo_slot_2\\\":\\\"water-purification cartridges (lot W-17)\\\",\\\"powered_position_assignment\\\":\\\"water-purification cartridges (lot W-17)\\\",\\\"deferred_cargo\\\":\\\"medical vaccine cases\\\"},\\\"credited_facts\\\":[\\\"PF1\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"loading_instruction\\\",\\\"target\\\":\\\"airfield loadmaster\\\",\\\"detail\\\":\\\"Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight.\\\"}],\\\"justification_fact_ids\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\",\\\"S5\\\",\\\"PF1\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.476,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 3,\n      \"revealed_facts\": [\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": false,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"cargo_slot_1\": \"water-purification cartridges (lot W-17)\",\n          \"cargo_slot_2\": \"avionics diagnostic module\",\n          \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n          \"deferred_cargo\": \"medical vaccine cases\"\n        },\n        \"credited_facts\": [\n          \"PF1\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"manifest_update\",\n            \"target\": \"Lt. Morgan\",\n            \"detail\": \"Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure.\"\n          },\n          {\n            \"type\": \"cargo_board_update\",\n            \"target\": \"SFC Patel\",\n            \"detail\": \"Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"PF1\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"manifest_update\",\n          \"target\": \"Lt. Morgan\",\n          \"detail\": \"Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure.\"\n        },\n        {\n          \"type\": \"cargo_board_update\",\n          \"target\": \"SFC Patel\",\n          \"detail\": \"Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"PF1\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning. Maintenance Control here. Before we get into the huddle, I need to flag a constraint on my end: the avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet. I want to make sure Maj. Alvarez has that information before signing the allocation today.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning. Maintenance Control here. Before we get into the huddle, I need to flag a constraint on my end: the avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet. I want to make sure Maj. Alvarez has that information before signing the allocation today.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a constraint on my end as well. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that the chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note has not yet been added to the lift manifest, so I want to make sure Maj. Alvarez has this information before signing the allocation today.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag a constraint on my end as well. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that the chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note has not yet been added to the lift manifest, so I want to make sure Maj. Alvarez has this information before signing the allocation today.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"cargo_slot_1\": \"water-purification cartridges (lot W-17)\",\n              \"cargo_slot_2\": \"avionics diagnostic module\",\n              \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n              \"deferred_cargo\": \"medical vaccine cases\"\n            },\n            \"credited_facts\": [\n              \"PF1\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"manifest_update\",\n                \"target\": \"Lt. Morgan\",\n                \"detail\": \"Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure.\"\n              },\n              {\n                \"type\": \"cargo_board_update\",\n                \"target\": \"SFC Patel\",\n                \"detail\": \"Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"PF1\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"Let me analyze the situation before deciding:\\n\\n**Known facts:**\\n- Two pallet positions: one powered, one unpowered\\n- Three cargoes: medical vaccine cases, avionics diagnostic module, water-purification cartridges\\n- Avionics diagnostic module does NOT require power \\u2192 can go in unpowered position\\n- SFC Patel: avionics diagnostic module must return on next available aircraft (loaned asset constraint)\\n- Lt. Morgan: water-purification cartridges (lot W-17) MUST be in powered position for entire flight\\n- Only one powered position exists\\n\\n**Logical deduction:**\\n- Water-purification cartridges \\u2192 MUST go in powered position (Lt. Morgan's constraint)\\n- Avionics diagnostic module \\u2192 MUST go on this aircraft (SFC Patel's loan constraint) \\u2192 goes in unpowered position (it doesn't need power)\\n- Medical vaccine cases \\u2192 deferred to next flight (only two positions, both taken)\\n\\nI have no private facts to reveal. I have enough information to settle the allocation now.\\n\\n```json\\n{\\\"type\\\": \\\"settle\\\", \\\"settlement\\\": {\\\"decisions\\\": {\\\"cargo_slot_1\\\": \\\"water-purification cartridges (lot W-17)\\\", \\\"cargo_slot_2\\\": \\\"avionics diagnostic module\\\", \\\"powered_position_assignment\\\": \\\"water-purification cartridges (lot W-17)\\\", \\\"deferred_cargo\\\": \\\"medical vaccine cases\\\"}, \\\"credited_facts\\\": [\\\"PF1\\\"], \\\"commitments\\\": [{\\\"type\\\": \\\"manifest_update\\\", \\\"target\\\": \\\"Lt. Morgan\\\", \\\"detail\\\": \\\"Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure.\\\"}, {\\\"type\\\": \\\"cargo_board_update\\\", \\\"target\\\": \\\"SFC Patel\\\", \\\"detail\\\": \\\"Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board.\\\"}], \\\"justification_fact_ids\\\": [\\\"S1\\\", \\\"S2\\\", \\\"S3\\\", \\\"PF1\\\"]}}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.594,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 9,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": false,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"cargo_slot_1\": \"water-purification cartridges (lot W-17) \\u2014 powered pallet position\",\n          \"cargo_slot_2\": \"avionics diagnostic module \\u2014 unpowered pallet position\",\n          \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n          \"deferred_cargo\": \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"manifest_update\",\n            \"target\": \"Lt. Morgan / medical logistics\",\n            \"detail\": \"Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure.\"\n          },\n          {\n            \"type\": \"cargo_board_update\",\n            \"target\": \"SFC Patel / maintenance control\",\n            \"detail\": \"Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"manifest_update\",\n          \"target\": \"Lt. Morgan / medical logistics\",\n          \"detail\": \"Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure.\"\n        },\n        {\n          \"type\": \"cargo_board_update\",\n          \"target\": \"SFC Patel / maintenance control\",\n          \"detail\": \"Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Let's get started with the weekly logistics huddle. I need to hear from both medical logistics and maintenance control on your current cargo-handling or movement constraints before I sign off on today's pallet allocation. We have two pallet positions available on today's aircraft \\u2014 one with continuous electrical power during flight and one without. Who wants to go first?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Let's get started with the weekly logistics huddle. I need to hear from both medical logistics and maintenance control on your current cargo-handling or movement constraints before I sign off on today's pallet allocation. We have two pallet positions available on today's aircraft \\u2014 one with continuous electrical power during flight and one without. Who wants to go first?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a critical constraint: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag a critical constraint: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maintenance control here. I'll go next. We have a constraint to report regarding the avionics diagnostic module.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Maintenance control here. I'll go next. We have a constraint to report regarding the avionics diagnostic module.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Lt. Morgan \\u2014 thank you for flagging that. The water-purification cartridges, lot W-17, must go in the powered pallet position. SFC Patel, go ahead with your constraint on the avionics diagnostic module.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Understood, Lt. Morgan \\u2014 thank you for flagging that. The water-purification cartridges, lot W-17, must go in the powered pallet position. SFC Patel, go ahead with your constraint on the avionics diagnostic module.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Maj. Alvarez. I'll hold for SFC Patel's constraint report before we finalize the allocation. Since the water-purification cartridges require the powered position, I'm interested to hear how the avionics diagnostic module factors in, as that will determine how we fill both pallet positions.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Maj. Alvarez. I'll hold for SFC Patel's constraint report before we finalize the allocation. Since the water-purification cartridges require the powered position, I'm interested to hear how the avionics diagnostic module factors in, as that will determine how we fill both pallet positions.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"The avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update from maintenance control this morning, but it has not yet been posted to the battalion cargo board.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF2\\\",\\\"text\\\":\\\"The avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update from maintenance control this morning, but it has not yet been posted to the battalion cargo board.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Since the water-purification cartridges require the powered position, the avionics diagnostic module would go in the unpowered position \\u2014 which is fine since it doesn't require in-flight electrical power. The key constraint I'm flagging is that the loan record directs the avionics diagnostic module to return on today's available aircraft, so it needs to be on this flight. I recommend allocating the powered pallet position to the water-purification cartridges, lot W-17, and the unpowered pallet position to the avionics diagnostic module. That leaves the medical vaccine cases for a follow-on flight. Maj. Alvarez, I'm ready for your allocation decision.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, SFC Patel. So to summarize what we know: the water-purification cartridges (lot W-17) require the powered pallet position, and the avionics diagnostic module does not require in-flight electrical power and can safely fly in the unpowered position. That means both pallet positions can be filled \\u2014 W-17 cartridges in the powered position and the avionics diagnostic module in the unpowered position. Maj. Alvarez, I'd recommend you sign the allocation accordingly: powered position to the water-purification cartridges, unpowered position to the avionics diagnostic module.\",\n          \"speaker\": \"A2\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, SFC Patel. So to summarize what we know: the water-purification cartridges (lot W-17) require the powered pallet position, and the avionics diagnostic module does not require in-flight electrical power and can safely fly in the unpowered position. That means both pallet positions can be filled \\u2014 W-17 cartridges in the powered position and the avionics diagnostic module in the unpowered position. Maj. Alvarez, I'd recommend you sign the allocation accordingly: powered position to the water-purification cartridges, unpowered position to the avionics diagnostic module.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"cargo_slot_1\": \"water-purification cartridges (lot W-17) \\u2014 powered pallet position\",\n              \"cargo_slot_2\": \"avionics diagnostic module \\u2014 unpowered pallet position\",\n              \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n              \"deferred_cargo\": \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"manifest_update\",\n                \"target\": \"Lt. Morgan / medical logistics\",\n                \"detail\": \"Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure.\"\n              },\n              {\n                \"type\": \"cargo_board_update\",\n                \"target\": \"SFC Patel / maintenance control\",\n                \"detail\": \"Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"cargo_slot_1\\\": \\\"water-purification cartridges (lot W-17) \\u2014 powered pallet position\\\",\\n      \\\"cargo_slot_2\\\": \\\"avionics diagnostic module \\u2014 unpowered pallet position\\\",\\n      \\\"powered_position_assignment\\\": \\\"water-purification cartridges (lot W-17)\\\",\\n      \\\"deferred_cargo\\\": \\\"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"manifest_update\\\",\\n        \\\"target\\\": \\\"Lt. Morgan / medical logistics\\\",\\n        \\\"detail\\\": \\\"Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"cargo_board_update\\\",\\n        \\\"target\\\": \\\"SFC Patel / maintenance control\\\",\\n        \\\"detail\\\": \\\"Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.375,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 5,\n      \"revealed_facts\": [\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": false,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"cargo_slot_1\": \"water-purification cartridges (lot W-17) assigned to powered pallet position\",\n          \"cargo_slot_2\": \"avionics diagnostic module assigned to unpowered pallet position\",\n          \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n          \"deferred_cargo\": \"medical vaccine cases\"\n        },\n        \"credited_facts\": [\n          \"PF1\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"manifest_update\",\n            \"target\": \"Lt. Morgan / Medical Logistics\",\n            \"detail\": \"Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest.\"\n          },\n          {\n            \"type\": \"cargo_board_update\",\n            \"target\": \"SFC Patel / Maintenance Control\",\n            \"detail\": \"Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"manifest_update\",\n          \"target\": \"Lt. Morgan / Medical Logistics\",\n          \"detail\": \"Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest.\"\n        },\n        {\n          \"type\": \"cargo_board_update\",\n          \"target\": \"SFC Patel / Maintenance Control\",\n          \"detail\": \"Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning. Maintenance Control here. I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. The avionics diagnostic module has a return directive attached to it -- it's a loaned higher-headquarters asset and the loan record directs it to return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet, so I want to make sure everyone's aware before Maj. Alvarez signs off on the allocation.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning. Maintenance Control here. I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. The avionics diagnostic module has a return directive attached to it -- it's a loaned higher-headquarters asset and the loan record directs it to return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet, so I want to make sure everyone's aware before Maj. Alvarez signs off on the allocation.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, SFC Patel. Thank you for putting that on the table. I note that the avionics diagnostic module has a return directive directing it to return on the next available aircraft, and that this hasn't been posted to the battalion cargo board yet. I'll take that into account before I sign off on the allocation. Before I finalize, I want to hear from Medical Logistics on their current cargo-handling or movement constraints as well, per our standard pre-load procedure.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, SFC Patel. Thank you for putting that on the table. I note that the avionics diagnostic module has a return directive directing it to return on the next available aircraft, and that this hasn't been posted to the battalion cargo board yet. I'll take that into account before I sign off on the allocation. Before I finalize, I want to hear from Medical Logistics on their current cargo-handling or movement constraints as well, per our standard pre-load procedure.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Good morning, Maj. Alvarez. Medical Logistics here. I need to put a cargo-handling constraint on the table: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest, so I want to make sure everyone's aware before you sign off on the allocation.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Good morning, Maj. Alvarez. Medical Logistics here. I need to put a cargo-handling constraint on the table: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest, so I want to make sure everyone's aware before you sign off on the allocation.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"To summarize the constraints as I understand them: Maintenance Control has a return directive requiring the avionics diagnostic module to fly on today's aircraft, and per the known handling requirements, it can safely go in the unpowered pallet position. Medical Logistics requires the lot W-17 water-purification cartridges to be in the powered pallet position for the entire flight. That accounts for both available pallet positions. Maj. Alvarez, I believe both sections have now reported their constraints, so you have what you need to sign the allocation.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"To summarize the constraints as I understand them: Maintenance Control has a return directive requiring the avionics diagnostic module to fly on today's aircraft, and per the known handling requirements, it can safely go in the unpowered pallet position. Medical Logistics requires the lot W-17 water-purification cartridges to be in the powered pallet position for the entire flight. That accounts for both available pallet positions. Maj. Alvarez, I believe both sections have now reported their constraints, so you have what you need to sign the allocation.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"cargo_slot_1\": \"water-purification cartridges (lot W-17) assigned to powered pallet position\",\n              \"cargo_slot_2\": \"avionics diagnostic module assigned to unpowered pallet position\",\n              \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n              \"deferred_cargo\": \"medical vaccine cases\"\n            },\n            \"credited_facts\": [\n              \"PF1\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"manifest_update\",\n                \"target\": \"Lt. Morgan / Medical Logistics\",\n                \"detail\": \"Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest.\"\n              },\n              {\n                \"type\": \"cargo_board_update\",\n                \"target\": \"SFC Patel / Maintenance Control\",\n                \"detail\": \"Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"cargo_slot_1\\\": \\\"water-purification cartridges (lot W-17) assigned to powered pallet position\\\",\\n      \\\"cargo_slot_2\\\": \\\"avionics diagnostic module assigned to unpowered pallet position\\\",\\n      \\\"powered_position_assignment\\\": \\\"water-purification cartridges (lot W-17)\\\",\\n      \\\"deferred_cargo\\\": \\\"medical vaccine cases\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"manifest_update\\\",\\n        \\\"target\\\": \\\"Lt. Morgan / Medical Logistics\\\",\\n        \\\"detail\\\": \\\"Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"cargo_board_update\\\",\\n        \\\"target\\\": \\\"SFC Patel / Maintenance Control\\\",\\n        \\\"detail\\\": \\\"Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 0,
+      "C2": 2,
+      "C3": 0,
+      "C4": 3,
+      "C5": 0,
+      "C6": 0
+    },
+    "provenance_check_tally": {
+      "P1": 4,
+      "P2": 1
+    },
+    "facts_linked_to_failing_checks": {
+      "C3": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo."
+        }
+      ],
+      "P2": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return."
+        }
+      ],
+      "C1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo."
+        }
+      ],
+      "C6": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The higher-headquarters loan directive changes the selected second cargo to exactly the avionics diagnostic module and requires a cargo-board or record update coordinating its return."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The lot-specific reagent requirement changes the powered-position assignment to exactly the water-purification cartridges, makes the medical vaccine cases the deferred cargo, and requires a manifest update for that cargo."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.45,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 3,
+        "revealed_facts": [
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": false,
+          "C4": true,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": false
+        },
+        "settlement": {
+          "decisions": {
+            "cargo_slot_1": "avionics diagnostic module",
+            "cargo_slot_2": "water-purification cartridges (lot W-17)",
+            "powered_position_assignment": "water-purification cartridges (lot W-17)",
+            "deferred_cargo": "medical vaccine cases"
+          },
+          "credited_facts": [
+            "PF1"
+          ],
+          "commitments": [
+            {
+              "type": "loading_instruction",
+              "target": "airfield loadmaster",
+              "detail": "Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1"
+          ]
+        },
+        "credited_facts": [
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "loading_instruction",
+            "target": "airfield loadmaster",
+            "detail": "Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning. Maintenance Control here \u2014 I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. I have an updated loan record for the avionics diagnostic module that came in this morning. It hasn't been posted to the battalion cargo board yet, but it directs that the module returns on the next available aircraft. That's today's bird. So from my side, the avionics diagnostic module needs to be on this flight.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning. Maintenance Control here \u2014 I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. I have an updated loan record for the avionics diagnostic module that came in this morning. It hasn't been posted to the battalion cargo board yet, but it directs that the module returns on the next available aircraft. That's today's bird. So from my side, the avionics diagnostic module needs to be on this flight.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Before we finalize anything, I need to put a medical logistics constraint on the table. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that their chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note hasn't been added to the lift manifest yet, but the requirement stands \u2014 lot W-17 needs the powered pallet position.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Before we finalize anything, I need to put a medical logistics constraint on the table. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that their chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note hasn't been added to the lift manifest yet, but the requirement stands \u2014 lot W-17 needs the powered pallet position.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "cargo_slot_1": "avionics diagnostic module",
+                "cargo_slot_2": "water-purification cartridges (lot W-17)",
+                "powered_position_assignment": "water-purification cartridges (lot W-17)",
+                "deferred_cargo": "medical vaccine cases"
+              },
+              "credited_facts": [
+                "PF1"
+              ],
+              "commitments": [
+                {
+                  "type": "loading_instruction",
+                  "target": "airfield loadmaster",
+                  "detail": "Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "PF1"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"cargo_slot_1\":\"avionics diagnostic module\",\"cargo_slot_2\":\"water-purification cartridges (lot W-17)\",\"powered_position_assignment\":\"water-purification cartridges (lot W-17)\",\"deferred_cargo\":\"medical vaccine cases\"},\"credited_facts\":[\"PF1\"],\"commitments\":[{\"type\":\"loading_instruction\",\"target\":\"airfield loadmaster\",\"detail\":\"Water-purification cartridges lot W-17 assigned to the powered pallet position; avionics diagnostic module assigned to the unpowered pallet position. Medical vaccine cases deferred to a future flight.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"S5\",\"PF1\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.476,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 3,
+        "revealed_facts": [
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": false,
+          "C4": true,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": false
+        },
+        "settlement": {
+          "decisions": {
+            "cargo_slot_1": "water-purification cartridges (lot W-17)",
+            "cargo_slot_2": "avionics diagnostic module",
+            "powered_position_assignment": "water-purification cartridges (lot W-17)",
+            "deferred_cargo": "medical vaccine cases"
+          },
+          "credited_facts": [
+            "PF1"
+          ],
+          "commitments": [
+            {
+              "type": "manifest_update",
+              "target": "Lt. Morgan",
+              "detail": "Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure."
+            },
+            {
+              "type": "cargo_board_update",
+              "target": "SFC Patel",
+              "detail": "Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "PF1"
+          ]
+        },
+        "credited_facts": [
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "manifest_update",
+            "target": "Lt. Morgan",
+            "detail": "Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure."
+          },
+          {
+            "type": "cargo_board_update",
+            "target": "SFC Patel",
+            "detail": "Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "PF1"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning. Maintenance Control here. Before we get into the huddle, I need to flag a constraint on my end: the avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet. I want to make sure Maj. Alvarez has that information before signing the allocation today.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning. Maintenance Control here. Before we get into the huddle, I need to flag a constraint on my end: the avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet. I want to make sure Maj. Alvarez has that information before signing the allocation today.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a constraint on my end as well. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that the chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note has not yet been added to the lift manifest, so I want to make sure Maj. Alvarez has this information before signing the allocation today.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a constraint on my end as well. The staged water-purification cartridges are lot W-17, and I confirmed with the water team this morning that the chemical-treatment reagent must remain within the powered pallet position for the entire flight. This updated handling note has not yet been added to the lift manifest, so I want to make sure Maj. Alvarez has this information before signing the allocation today.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "cargo_slot_1": "water-purification cartridges (lot W-17)",
+                "cargo_slot_2": "avionics diagnostic module",
+                "powered_position_assignment": "water-purification cartridges (lot W-17)",
+                "deferred_cargo": "medical vaccine cases"
+              },
+              "credited_facts": [
+                "PF1"
+              ],
+              "commitments": [
+                {
+                  "type": "manifest_update",
+                  "target": "Lt. Morgan",
+                  "detail": "Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure."
+                },
+                {
+                  "type": "cargo_board_update",
+                  "target": "SFC Patel",
+                  "detail": "Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "PF1"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "Let me analyze the situation before deciding:\n\n**Known facts:**\n- Two pallet positions: one powered, one unpowered\n- Three cargoes: medical vaccine cases, avionics diagnostic module, water-purification cartridges\n- Avionics diagnostic module does NOT require power \u2192 can go in unpowered position\n- SFC Patel: avionics diagnostic module must return on next available aircraft (loaned asset constraint)\n- Lt. Morgan: water-purification cartridges (lot W-17) MUST be in powered position for entire flight\n- Only one powered position exists\n\n**Logical deduction:**\n- Water-purification cartridges \u2192 MUST go in powered position (Lt. Morgan's constraint)\n- Avionics diagnostic module \u2192 MUST go on this aircraft (SFC Patel's loan constraint) \u2192 goes in unpowered position (it doesn't need power)\n- Medical vaccine cases \u2192 deferred to next flight (only two positions, both taken)\n\nI have no private facts to reveal. I have enough information to settle the allocation now.\n\n```json\n{\"type\": \"settle\", \"settlement\": {\"decisions\": {\"cargo_slot_1\": \"water-purification cartridges (lot W-17)\", \"cargo_slot_2\": \"avionics diagnostic module\", \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\", \"deferred_cargo\": \"medical vaccine cases\"}, \"credited_facts\": [\"PF1\"], \"commitments\": [{\"type\": \"manifest_update\", \"target\": \"Lt. Morgan\", \"detail\": \"Water-purification cartridges lot W-17 powered-position handling note to be added to the lift manifest before aircraft departure.\"}, {\"type\": \"cargo_board_update\", \"target\": \"SFC Patel\", \"detail\": \"Avionics diagnostic module loan-record return directive to be posted to the battalion cargo board.\"}], \"justification_fact_ids\": [\"S1\", \"S2\", \"S3\", \"PF1\"]}}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.594,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 9,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": false,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true
+        },
+        "settlement": {
+          "decisions": {
+            "cargo_slot_1": "water-purification cartridges (lot W-17) \u2014 powered pallet position",
+            "cargo_slot_2": "avionics diagnostic module \u2014 unpowered pallet position",
+            "powered_position_assignment": "water-purification cartridges (lot W-17)",
+            "deferred_cargo": "medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "manifest_update",
+              "target": "Lt. Morgan / medical logistics",
+              "detail": "Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure."
+            },
+            {
+              "type": "cargo_board_update",
+              "target": "SFC Patel / maintenance control",
+              "detail": "Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "manifest_update",
+            "target": "Lt. Morgan / medical logistics",
+            "detail": "Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure."
+          },
+          {
+            "type": "cargo_board_update",
+            "target": "SFC Patel / maintenance control",
+            "detail": "Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Let's get started with the weekly logistics huddle. I need to hear from both medical logistics and maintenance control on your current cargo-handling or movement constraints before I sign off on today's pallet allocation. We have two pallet positions available on today's aircraft \u2014 one with continuous electrical power during flight and one without. Who wants to go first?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. Let's get started with the weekly logistics huddle. I need to hear from both medical logistics and maintenance control on your current cargo-handling or movement constraints before I sign off on today's pallet allocation. We have two pallet positions available on today's aircraft \u2014 one with continuous electrical power during flight and one without. Who wants to go first?\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a critical constraint: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag a critical constraint: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maintenance control here. I'll go next. We have a constraint to report regarding the avionics diagnostic module.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Maintenance control here. I'll go next. We have a constraint to report regarding the avionics diagnostic module.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Lt. Morgan \u2014 thank you for flagging that. The water-purification cartridges, lot W-17, must go in the powered pallet position. SFC Patel, go ahead with your constraint on the avionics diagnostic module.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Understood, Lt. Morgan \u2014 thank you for flagging that. The water-purification cartridges, lot W-17, must go in the powered pallet position. SFC Patel, go ahead with your constraint on the avionics diagnostic module.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Maj. Alvarez. I'll hold for SFC Patel's constraint report before we finalize the allocation. Since the water-purification cartridges require the powered position, I'm interested to hear how the avionics diagnostic module factors in, as that will determine how we fill both pallet positions.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Maj. Alvarez. I'll hold for SFC Patel's constraint report before we finalize the allocation. Since the water-purification cartridges require the powered position, I'm interested to hear how the avionics diagnostic module factors in, as that will determine how we fill both pallet positions.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "The avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update from maintenance control this morning, but it has not yet been posted to the battalion cargo board.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF2\",\"text\":\"The avionics diagnostic module is a loaned higher-headquarters asset, and the loan record directs that it return on the next available aircraft. I received the signed loan-record update from maintenance control this morning, but it has not yet been posted to the battalion cargo board.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 6,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Since the water-purification cartridges require the powered position, the avionics diagnostic module would go in the unpowered position \u2014 which is fine since it doesn't require in-flight electrical power. The key constraint I'm flagging is that the loan record directs the avionics diagnostic module to return on today's available aircraft, so it needs to be on this flight. I recommend allocating the powered pallet position to the water-purification cartridges, lot W-17, and the unpowered pallet position to the avionics diagnostic module. That leaves the medical vaccine cases for a follow-on flight. Maj. Alvarez, I'm ready for your allocation decision.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, SFC Patel. So to summarize what we know: the water-purification cartridges (lot W-17) require the powered pallet position, and the avionics diagnostic module does not require in-flight electrical power and can safely fly in the unpowered position. That means both pallet positions can be filled \u2014 W-17 cartridges in the powered position and the avionics diagnostic module in the unpowered position. Maj. Alvarez, I'd recommend you sign the allocation accordingly: powered position to the water-purification cartridges, unpowered position to the avionics diagnostic module.",
+            "speaker": "A2",
+            "turn": 7,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, SFC Patel. So to summarize what we know: the water-purification cartridges (lot W-17) require the powered pallet position, and the avionics diagnostic module does not require in-flight electrical power and can safely fly in the unpowered position. That means both pallet positions can be filled \u2014 W-17 cartridges in the powered position and the avionics diagnostic module in the unpowered position. Maj. Alvarez, I'd recommend you sign the allocation accordingly: powered position to the water-purification cartridges, unpowered position to the avionics diagnostic module.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "cargo_slot_1": "water-purification cartridges (lot W-17) \u2014 powered pallet position",
+                "cargo_slot_2": "avionics diagnostic module \u2014 unpowered pallet position",
+                "powered_position_assignment": "water-purification cartridges (lot W-17)",
+                "deferred_cargo": "medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "manifest_update",
+                  "target": "Lt. Morgan / medical logistics",
+                  "detail": "Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure."
+                },
+                {
+                  "type": "cargo_board_update",
+                  "target": "SFC Patel / maintenance control",
+                  "detail": "Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cargo_slot_1\": \"water-purification cartridges (lot W-17) \u2014 powered pallet position\",\n      \"cargo_slot_2\": \"avionics diagnostic module \u2014 unpowered pallet position\",\n      \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n      \"deferred_cargo\": \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"manifest_update\",\n        \"target\": \"Lt. Morgan / medical logistics\",\n        \"detail\": \"Ensure the lot W-17 powered-position handling note is added to the lift manifest before aircraft departure.\"\n      },\n      {\n        \"type\": \"cargo_board_update\",\n        \"target\": \"SFC Patel / maintenance control\",\n        \"detail\": \"Ensure the signed loan-record update for the avionics diagnostic module is posted to the battalion cargo board.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.375,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 5,
+        "revealed_facts": [
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": false,
+          "C4": true,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": false
+        },
+        "settlement": {
+          "decisions": {
+            "cargo_slot_1": "water-purification cartridges (lot W-17) assigned to powered pallet position",
+            "cargo_slot_2": "avionics diagnostic module assigned to unpowered pallet position",
+            "powered_position_assignment": "water-purification cartridges (lot W-17)",
+            "deferred_cargo": "medical vaccine cases"
+          },
+          "credited_facts": [
+            "PF1"
+          ],
+          "commitments": [
+            {
+              "type": "manifest_update",
+              "target": "Lt. Morgan / Medical Logistics",
+              "detail": "Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest."
+            },
+            {
+              "type": "cargo_board_update",
+              "target": "SFC Patel / Maintenance Control",
+              "detail": "Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1"
+          ]
+        },
+        "credited_facts": [
+          "PF1"
+        ],
+        "commitments": [
+          {
+            "type": "manifest_update",
+            "target": "Lt. Morgan / Medical Logistics",
+            "detail": "Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest."
+          },
+          {
+            "type": "cargo_board_update",
+            "target": "SFC Patel / Maintenance Control",
+            "detail": "Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning. Maintenance Control here. I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. The avionics diagnostic module has a return directive attached to it -- it's a loaned higher-headquarters asset and the loan record directs it to return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet, so I want to make sure everyone's aware before Maj. Alvarez signs off on the allocation.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning. Maintenance Control here. I've got a cargo-handling constraint I need to put on the table before we finalize pallet allocation today. The avionics diagnostic module has a return directive attached to it -- it's a loaned higher-headquarters asset and the loan record directs it to return on the next available aircraft. I received the signed loan-record update this morning, but it hasn't been posted to the battalion cargo board yet, so I want to make sure everyone's aware before Maj. Alvarez signs off on the allocation.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, SFC Patel. Thank you for putting that on the table. I note that the avionics diagnostic module has a return directive directing it to return on the next available aircraft, and that this hasn't been posted to the battalion cargo board yet. I'll take that into account before I sign off on the allocation. Before I finalize, I want to hear from Medical Logistics on their current cargo-handling or movement constraints as well, per our standard pre-load procedure.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, SFC Patel. Thank you for putting that on the table. I note that the avionics diagnostic module has a return directive directing it to return on the next available aircraft, and that this hasn't been posted to the battalion cargo board yet. I'll take that into account before I sign off on the allocation. Before I finalize, I want to hear from Medical Logistics on their current cargo-handling or movement constraints as well, per our standard pre-load procedure.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Good morning, Maj. Alvarez. Medical Logistics here. I need to put a cargo-handling constraint on the table: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest, so I want to make sure everyone's aware before you sign off on the allocation.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Good morning, Maj. Alvarez. Medical Logistics here. I need to put a cargo-handling constraint on the table: the staged water-purification cartridges are lot W-17, and their chemical-treatment reagent must remain within the powered pallet position for the entire flight. I confirmed this requirement with the water team this morning, but the updated handling note has not yet been added to the lift manifest, so I want to make sure everyone's aware before you sign off on the allocation.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "To summarize the constraints as I understand them: Maintenance Control has a return directive requiring the avionics diagnostic module to fly on today's aircraft, and per the known handling requirements, it can safely go in the unpowered pallet position. Medical Logistics requires the lot W-17 water-purification cartridges to be in the powered pallet position for the entire flight. That accounts for both available pallet positions. Maj. Alvarez, I believe both sections have now reported their constraints, so you have what you need to sign the allocation.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"To summarize the constraints as I understand them: Maintenance Control has a return directive requiring the avionics diagnostic module to fly on today's aircraft, and per the known handling requirements, it can safely go in the unpowered pallet position. Medical Logistics requires the lot W-17 water-purification cartridges to be in the powered pallet position for the entire flight. That accounts for both available pallet positions. Maj. Alvarez, I believe both sections have now reported their constraints, so you have what you need to sign the allocation.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "cargo_slot_1": "water-purification cartridges (lot W-17) assigned to powered pallet position",
+                "cargo_slot_2": "avionics diagnostic module assigned to unpowered pallet position",
+                "powered_position_assignment": "water-purification cartridges (lot W-17)",
+                "deferred_cargo": "medical vaccine cases"
+              },
+              "credited_facts": [
+                "PF1"
+              ],
+              "commitments": [
+                {
+                  "type": "manifest_update",
+                  "target": "Lt. Morgan / Medical Logistics",
+                  "detail": "Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest."
+                },
+                {
+                  "type": "cargo_board_update",
+                  "target": "SFC Patel / Maintenance Control",
+                  "detail": "Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"cargo_slot_1\": \"water-purification cartridges (lot W-17) assigned to powered pallet position\",\n      \"cargo_slot_2\": \"avionics diagnostic module assigned to unpowered pallet position\",\n      \"powered_position_assignment\": \"water-purification cartridges (lot W-17)\",\n      \"deferred_cargo\": \"medical vaccine cases\"\n    },\n    \"credited_facts\": [\n      \"PF1\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"manifest_update\",\n        \"target\": \"Lt. Morgan / Medical Logistics\",\n        \"detail\": \"Updated handling note for lot W-17 water-purification cartridges requiring powered pallet position must be added to the lift manifest.\"\n      },\n      {\n        \"type\": \"cargo_board_update\",\n        \"target\": \"SFC Patel / Maintenance Control\",\n        \"detail\": \"Signed loan-record update for avionics diagnostic module return directive must be posted to the battalion cargo board.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. **Fix the PF2 disclosure problem (affects P2, C6, and indirectly C2 in rollouts 0, 1, 3):** A3 consistently conveys PF2's substance via `say` instead of `reveal`. Add a sentence to shared_context or A3's consultation norm instructing: 'When you have a private constraint or directive that has not been posted to a shared system, you must disclose it using a formal reveal action, not merely mentioning it in conversation.' This is a disclosure norm fix, not a personality change. This should cause A3 to use `reveal` with `fact_id: PF2` in all rollouts, fixing P2 provenance failures.\n\n2. **Fix C1 (ENCODING MISMATCH, 0/4 passed, gated by PF1):** The check likely expects an exact string for the powered-position assignment or cargo_slot_1 that doesn't match the model's natural phrasing. Loosen C1 to accept any value containing the substring \"water-purification cartridges\" (case-insensitive) in the `powered_position_assignment` field, rather than requiring an exact string match. Proposed new wording: 'powered_position_assignment contains \"water-purification cartridges\" (case-insensitive)'. LEAKED regression risk: LOW \u2014 a lone decision-maker without PF1 would not know that water-purification cartridges specifically require the powered position; the default assumption would be medical vaccine cases or avionics module in the powered position. The lot-specific reagent requirement is the only reason cartridges go there.\n\n3. **Fix C3 (ENCODING MISMATCH, 0/4 passed, gated by PF1):** The check likely expects an exact string for `deferred_cargo` that doesn't match the model's phrasing variants. Loosen C3 to accept any value containing the substring \"medical vaccine cases\" (case-insensitive) in the `deferred_cargo` field. Proposed new wording: 'deferred_cargo contains \"medical vaccine cases\" (case-insensitive)'. LEAKED regression risk: LOW \u2014 without PF1, a lone decision-maker would not know to defer the vaccine cases specifically; the default would likely be to defer whichever cargo lacks a known constraint.\n\n4. **Fix C5 (ENCODING MISMATCH, 0/4 passed, gated by PF1):** The check likely expects a manifest update commitment with specific field names or exact wording that doesn't match the model's natural encoding. The model consistently produces commitments with `type: \"manifest_update\"` targeting Lt. Morgan / medical logistics with detail about the lot W-17 powered-position handling note. Loosen C5 to check for the presence of a commitment whose `type` is `manifest_update` and whose `detail` contains the substring \"lot W-17\" or \"water-purification\" (case-insensitive). Proposed new wording: 'exists a commitment with type == \"manifest_update\" and detail contains \"W-17\" (case-insensitive)'. LEAKED regression risk: LOW \u2014 without PF1, no agent would know about the lot W-17 handling note that needs manifest updating; this commitment only appears because PF1 was revealed.\n\n5. **Fix C6 (ENCODING MISMATCH, 0/4 passed, gated by PF2):** The check likely expects a cargo-board update commitment with specific wording. The model consistently produces commitments with `type: \"cargo_board_update\"` targeting SFC Patel / maintenance control with detail about posting the loan-record update to the battalion cargo board. Loosen C6 to check for the presence of a commitment whose `type` is `cargo_board_update\" and whose `detail` contains the substring \"loan\" or \"cargo board\" (case-insensitive). Proposed new wording: 'exists a commitment with type == \"cargo_board_update\" and detail contains \"loan\" (case-insensitive)'. LEAKED regression risk: LOW \u2014 without PF2, no agent would know about the loan-record directive requiring a cargo-board posting; this commitment only appears because A3 disclosed the loan constraint. Note: fixing the PF2 disclosure problem (item 1) is also necessary so that PF2 is formally revealed and cited in justification_fact_ids, ensuring the provenance chain is intact.\n\n6. **Fix C4 (ENCODING MISMATCH, failed 1/4 in rollout 2, gated by PF1):** The check passed in 3 rollouts but failed in rollout 2 where `deferred_cargo` was \"medical vaccine cases (not allocated to today's aircraft due to only two pallet positions available)\". Loosen C4 to use the same substring match as C3: 'deferred_cargo contains \"medical vaccine cases\" (case-insensitive)'. This is consistent with the C3 fix and eliminates the variance from appended explanatory text. LEAKED regression risk: LOW, same reasoning as C3.\n\n7. **Fix C2 (ENCODING MISMATCH in rollout 2, disclosure problem in rollout 3, gated by PF2):** C2 passed in rollouts 0 and 1 (where PF2 was not formally revealed but cargo_slot_2 was set to \"avionics diagnostic module\") but failed in rollout 2 where cargo_slot_2 was \"avionics diagnostic module \u2014 unpowered pallet position\". Loosen C2 to accept any value containing the substring \"avionics diagnostic module\" (case-insensitive) in `cargo_slot_2`. Proposed new wording: 'cargo_slot_2 contains \"avionics diagnostic module\" (case-insensitive)'. LEAKED regression risk: MODERATE \u2014 a lone decision-maker might guess the avionics module as the second cargo without PF2, since it's a plausible default. However, without PF2's loan directive, there is no reason to prefer the avionics module over the medical vaccine cases for the second slot. The loan directive is the decisive fact that makes the avionics module mandatory. Flag: if C2 is the only check gating PF2's content, consider whether it alone is sufficient to require PF2, or whether C6 (the cargo-board update commitment) provides the stronger provenance-gated check. Do not loosen C2 further than the substring match above."
+}

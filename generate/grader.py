@@ -6,7 +6,10 @@ ALLOWED_METHODS = {"values", "keys", "items", "get"}
 
 
 def validate_check(check_str: str) -> ast.AST:
-    tree = ast.parse(check_str, mode="eval")
+    try:
+        tree = ast.parse(check_str, mode="eval")
+    except SyntaxError as e:
+        raise ValueError(f"Check is not valid Python syntax: {e} in {check_str!r}")
 
     bound_names = set()
     for node in ast.walk(tree):

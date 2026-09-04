@@ -14,28 +14,17 @@ def _settle_allowed_now(scenario: dict, speaker: str, transcript: list, dm_list:
     return non_dm_agents.issubset(spoken)
 
 
-def _next_speaker(speaker_queue: list, agent_ids: list) -> str:
-    """Pop the next speaker from a shuffled queue, refilling and reshuffling
-    whenever it runs out. Every agent gets a turn each round, but the order
-    within a round is randomized each time -- not a fixed, predictable cycle."""
-    if not speaker_queue:
-        speaker_queue.extend(agent_ids)
-        random.shuffle(speaker_queue)
-    return speaker_queue.pop(0)
-
-
 def run_strong_arm_rollout(scenario: dict) -> dict:
     temperature = round(random.uniform(*config.STRONG_ARM_TEMPERATURE_RANGE), 3)
     transcript = []
-    agent_ids = [a["agent_id"] for a in scenario["agents"]]
-    speaker_queue: list = []
+    turn_order = scenario["interaction_config"]["turn_order"]
     turn_cap = scenario["interaction_config"]["turn_cap"]
     dm_list = _dm_list(scenario)
     settlement = None
     settled = False
 
     for t in range(turn_cap):
-        speaker = _next_speaker(speaker_queue, agent_ids)
+        speaker = turn_order[t % len(turn_order)]
         settle_allowed = _settle_allowed_now(scenario, speaker, transcript, dm_list)
 
         messages = build_turn_prompt(scenario, speaker, transcript, settle_allowed)

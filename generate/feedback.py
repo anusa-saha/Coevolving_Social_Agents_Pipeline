@@ -44,24 +44,26 @@ Return ONLY a JSON object of this exact shape, no other text:
 
 
 STRONG_ARM_SYSTEM_PROMPT = """You are the diagnostic module of a benchmark-generation pipeline that tests whether multi-agent scenarios genuinely require several agents surfacing hidden information together.
+
 A candidate scenario just failed its Strong Arm gate. Below are complete group-conversation rollouts: full transcripts (every say/reveal/settle event, in order), the resulting settlement, every content and provenance check result, and which facts were actually revealed. The gate requires most of these rollouts to pass; too many failures means the group could not reliably surface and use the hidden information.
+
 You are given the scenario's decisive_facts (which facts are supposed to be required, which checks they gate, and why) and the complete data for every rollout: the full transcript, the settlement broken out into credited_facts, commitments, and justification_fact_ids, which facts were revealed, whether the rollout auto-failed on the turn cap, and its turn count.
-For every check that failed, read the actual transcript and settlement and determine the EXACT failure mode -- do this for EVERY failing check, not just the first or most obvious one. A diagnosis that covers 2 of 4 failing checks leaves the other 2 to fail again next round, costing an entire wasted revision cycle for a problem you already had the evidence for:
+
+For every check that failed, read the actual transcript and settlement and determine the EXACT failure mode:
 - NEVER REVEALED: the fact's owner never disclosed it via a reveal action, and the settlement never cited it in justification_fact_ids.
 - TELEPATHY: the settlement cites the fact in justification_fact_ids even though it was never revealed in the transcript -- the model guessed a plausible answer instead of deriving it from the conversation.
 - REVEALED BUT UNUSED: the fact was revealed by its owner, but the settlement never cited it as justification.
-- ENCODING MISMATCH: the fact was both revealed and cited, the settlement's value plausibly reflects an attempt to use it, yet the check still failed because the check's threshold, field name, or wording does not match how a model naturally encodes that information once told (e.g., the check expects an exact string the fact never states verbatim, or a field name the model reasonably called something else).
-- MISAPPLIED: the fact was revealed and properly cited in justification_fact_ids, the check's wording is sound, but the settlement's actual value still contradicts what the fact implies -- the group had the right information and reached the wrong conclusion anyway. Do not recommend loosening the check for this failure mode. If it's consistent across multiple rollouts, name it as a possible sign the decisive fact's implication isn't stated unambiguously enough, not as a check-wording problem.
+- ENCODING MISMATCH: the fact was both revealed and cited, yet the check still failed -- meaning the check's threshold, field name, or wording does not match how a model naturally encodes that information once told.
+
 Also identify any rollout that hit the turn cap without ever settling, and judge whether that looks like a pacing problem (turn_cap too low for every fact-holder to get a natural turn) or a structural problem (the settle-eligibility condition rarely triggers).
+
 Rules:
 - Ground every claim strictly in the data given. Never invent a fact, check, or event not present in it.
 - Reference exact check IDs and exact fact IDs whenever the data names them. Do not write "some checks" when the data is specific.
-- Distinguish disclosure problems (fix shared_context / the consultation norm, never an agent's personality) from encoding problems (fix the check's wording) from misapplied problems (the decisive fact's implication may need to be stated less ambiguously) from telepathy (the scenario may be too predictable from public facts alone, or a narrative trope is doing the work instead of genuine information use).
-- For turn-cap auto-fails, tie the classification to a concrete fix: a pacing problem calls for a specific turn_cap increase (name a number); a structural problem calls for loosening the settle-eligibility condition, not just raising turn_cap.
-- Recommend changes only to the specific checks, facts, or shared_context sentences implicated by a failure you actually found. Do not suggest improving anything that passed in all 4 rollouts -- an unrelated change to an already-working part of the scenario can silently break it, costing a full extra round of rollouts to notice.
-- If a fix would loosen a check's threshold or wording to make it reachable, say so explicitly and name the exact new wording -- and flag whether that loosening risks making the check newly guessable by a lone decision-maker without the fact (a LEAKED regression). Leaving the exact rewording to the Challenger's guess risks it either undershooting (still failing) or overshooting (reopening LEAKED), either of which costs another full round.
+- Distinguish disclosure problems (fix shared_context / the consultation norm, never an agent's personality) from encoding problems (fix the check's wording) from telepathy (the scenario may be too predictable from public facts alone, or a narrative trope is doing the work instead of genuine information use).
+
 Return ONLY a JSON object of this exact shape, no other text:
-{"diagnosis": "one entry per failing check: which failure mode it was and what specifically happened -- not a single 2-4 sentence summary that only covers part of the failures", "fix_instructions": "one concrete instruction per check named in diagnosis, naming exact check IDs and fact IDs, and stating which failure mode drove each one -- addressing only some of them wastes the revision cycle on the ones left out"}"""
+{"diagnosis": "2-4 sentences describing exactly what happened across the rollouts and why the gate failed, naming exact check IDs and fact IDs", "fix_instructions": "specific, actionable revision instructions, naming exact check IDs and fact IDs, and stating which failure mode drove each one"}"""
 
 def _call_weak_arm_llm(scenario: dict, evidence: dict) -> tuple[str, str]:
     user_message = json.dumps({"decisive_facts": scenario.get("decisive_facts", []), **evidence}, indent=2)

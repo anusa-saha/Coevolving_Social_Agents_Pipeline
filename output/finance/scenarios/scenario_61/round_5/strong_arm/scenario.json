@@ -1,0 +1,157 @@
+{
+  "scenario_id": "scenario_61",
+  "scenario_type": "supplier_finance_program_approval",
+  "description": "A chief financial officer must approve and structure a supplier early-payment program, deciding the eligible invoice pool, quarterly cash limit, accounting treatment, and operating controls with input from procurement, treasury, and tax.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Chief Financial Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Procurement Finance Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Treasury Manager"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Ravi",
+      "role": "Tax Accounting Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company is considering a supplier early-payment program covering a submitted invoice pool of $10,000,000.",
+    "S2": "The proposed program would pay participating suppliers before normal due dates in exchange for discounts.",
+    "S3": "The draft proposal uses the full submitted invoice pool and does not specify a quarterly cash cap, accounting classification, or invoice-exclusion control.",
+    "S4": "Maya makes the final sign-off, and the company's routine pre-authorization huddle obtains a check from procurement, treasury, and tax accounting before she signs."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "While reviewing supplier contracts this week, Jonas found $2,400,000 of invoices subject to public-procurement clauses that prohibit early-payment discounts; the eligible invoice pool is therefore exactly $7,600,000, and the restricted invoices must be excluded."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena confirmed this morning with cash management that only $4,500,000 can be used for early supplier payments during the quarter without drawing on the operating liquidity buffer; the program must therefore carry an exact quarterly early-payment cap of $4,500,000."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Ravi received a tax-accounting memo yesterday stating that supplier discounts under this program must be recorded as finance costs rather than procurement expense, with a quarterly finance-cost reconciliation required; the memo has not yet been attached to the approval file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 16
+  },
+  "settlement_schema": {
+    "decisions": {
+      "program_approved": "boolean",
+      "eligible_invoice_pool_usd": "integer",
+      "quarterly_early_payment_cap_usd": "integer",
+      "accounting_treatment": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The early-payment program must be approved.",
+    "The eligible invoice pool must be exactly $7,600,000.",
+    "The quarterly early-payment cap must be exactly $4,500,000.",
+    "Supplier discounts must be classified as finance costs.",
+    "The settlement must include an exclusion control for invoices barred by public-procurement clauses.",
+    "The settlement must include a quarterly finance-cost reconciliation commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['program_approved'] == True",
+    "C2": "decisions['eligible_invoice_pool_usd'] == 7600000",
+    "C3": "decisions['quarterly_early_payment_cap_usd'] == 4500000",
+    "C4": "'finance cost' in decisions['accounting_treatment']",
+    "C5": "any(c['type'] == 'invoice_exclusion_control' or c['type'] == 'invoice-exclusion control' or ('$2,400,000' in c['detail'] and 'public-procurement clauses' in c['detail'] and 'exclud' in c['detail']) for c in commitments)",
+    "C6": "any('finance' in c['detail'] and 'reconciliation' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The submitted pool is $10,000,000, but PF1 changes eligible_invoice_pool_usd to exactly $7,600,000 and adds the required exclusion control for $2,400,000 of restricted invoices."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3"
+      ],
+      "why": "The draft has no cash limit, but PF2 changes quarterly_early_payment_cap_usd to exactly $4,500,000 so the program does not consume the operating liquidity buffer."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C6"
+      ],
+      "why": "The draft does not set an accounting classification or reconciliation, while PF3 changes accounting_treatment to finance costs and requires a quarterly finance-cost reconciliation commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

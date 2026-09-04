@@ -1,0 +1,143 @@
+{
+  "scenario_id": "scenario_57",
+  "scenario_type": "financial_reporting_reserve_decision",
+  "description": "A corporate controller must finalize the year-end accounting treatment for a litigation reserve, deciding how much to release, how much to retain, and what tax and disclosure controls to record, with input from legal and tax.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Corporate Controller"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "General Counsel"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Tax Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has a $3,000,000 litigation reserve on its year-end trial balance.",
+    "S2": "A draft close memo assumes the matter will cost $600,000 and proposes releasing $2,400,000 of the reserve.",
+    "S3": "Maya makes the final accounting decision for the year-end close.",
+    "S4": "As part of the reserve-release review, Maya conducts a routine round-robin check with legal and tax before posting the journal entry.",
+    "S5": "Before posting the journal entry, Maya must state the complete reserve arithmetic: starting reserve minus release amount equals the resulting remaining balance.",
+    "S6": "Before finalizing, Maya must assign at least three separate action items: one for legal document upload, one for tax memo circulation and disclosure work, and one for the journal entry posting."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "A signed settlement term sheet received by Jonas this morning confirms a cash settlement of $1,800,000; the document has not yet been uploaded to the litigation file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena received a tax memo this morning confirming that the $1,800,000 litigation settlement is nondeductible, requiring a $1,800,000 current-tax add-back and a related footnote disclosure; the memo has not yet been circulated to the close team."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "reserve_release_usd": "integer",
+      "remaining_litigation_reserve_usd": "integer",
+      "current_tax_add_back_usd": "integer",
+      "tax_footnote_disclosure_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The reserve release must be exactly $1,200,000.",
+    "The remaining litigation reserve must be exactly $1,800,000.",
+    "The current-tax add-back must be exactly $1,800,000.",
+    "A tax footnote disclosure must be required.",
+    "The settlement accounting and tax disclosure actions must be recorded as commitments."
+  ],
+  "content_checks": {
+    "C1": "decisions['reserve_release_usd'] == 1200000",
+    "C2": "decisions['remaining_litigation_reserve_usd'] == 1800000",
+    "C3": "decisions['current_tax_add_back_usd'] == 1800000",
+    "C4": "decisions['tax_footnote_disclosure_required'] == True",
+    "C5": "any(c['target'] == 'Maya' and (c['type'] == 'journal entry posting' or c['type'] == 'journal_entry_posting' or c['type'] == 'journal_entry' or c['type'] == 'settlement_accounting_entry' or c['type'] == 'journal_entry_revision') for c in commitments)",
+    "C6": "decisions['current_tax_add_back_usd'] == 1800000 and decisions['tax_footnote_disclosure_required'] == True and any(c['target'] == 'Elena' and (c['type'] == 'tax memo circulation and disclosure work' or c['type'] == 'tax_memo_circulation_and_disclosure' or c['type'] == 'tax_footnote_disclosure' or c['type'] == 'disclosure' or c['type'] == 'documentation' or c['type'] == 'document_circulation') for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The draft assumes a $600,000 settlement and a $2,400,000 release, while PF1 changes the settlement amount to exactly $1,800,000 and therefore changes the release to exactly $1,200,000, the retained reserve to exactly $1,800,000, and the required journal-entry action."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6",
+        "P2"
+      ],
+      "why": "The draft close memo specifies no tax add-back or tax footnote, while PF2 changes the current-tax add-back to exactly $1,800,000, requires the tax footnote disclosure, and requires the tax memo circulation and disclosure commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

@@ -1,0 +1,865 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "C6 (gated by PF3, owner A4) failed in rollouts 0 and 2. In both, PF3 was revealed by A4 and cited in justification_fact_ids, and the settlement's generator_transport_method is \"contracted low-loader\" and generator_move_window is \"0900-1000 Friday\" \u2014 both correct. The commitment in rollout 0 is type \"record_update\" with detail \"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\" The commitment in rollout 2 is type \"transport_method_change\" with detail \"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\" In rollout 1 (C6 passed), the commitment is type \"schedule\" with detail \"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\" In rollout 3 (C6 passed), the commitment is type \"plan_update\" with detail \"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday.\" The passing rollouts' commitments explicitly reference changing FROM the base forklift TO the low-loader; the failing rollouts' commitments do not mention the base forklift at all. This is an ENCODING MISMATCH: C6 likely requires the commitment to explicitly mention the change from the standard base forklift to the contracted low-loader, but the check wording does not guide the model to include that contrast, so when the model writes a shorter commitment that only names the low-loader, the check fails even though the underlying decision is correct.\n\nC7 (gated by PF1, owner A2) failed in rollouts 0 and 2. In both, PF1 was revealed by A2 and cited in justification_fact_ids, and clinic_supply_move_window is correctly \"1400-1500 Friday.\" The commitment in rollout 0 is type \"record_update\" with detail \"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\" The commitment in rollout 2 is type \"dock_scheduling\" with detail \"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\" In rollout 1 (C7 passed), the commitment is type \"schedule\" with detail \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\" In rollout 3 (C7 passed), the commitment is type \"plan_update\" with detail \"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday.\" The difference is subtle: the passing commitments use the word \"reserved\" or explicitly frame it as a scheduling/dock-reservation action, while the failing ones frame it as a \"record_update\" or use \"reserved\" but with a different commitment type. This is an ENCODING MISMATCH: C7 likely keys on a specific commitment type or wording pattern (e.g., requiring a \"schedule\" type or the word \"reserved\") that the model does not consistently produce.\n\nC3 (gated by PF1, owner A2) failed in rollout 1 only. PF1 was revealed by A2 at turn 2 and cited in justification_fact_ids. The settlement's clinic_supply_move_window is \"1400-1500 Friday (east loading dock confirmed receiving appointment)\" \u2014 the correct time window with parenthetical context. The commitment is type \"schedule\" with detail \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\" This is an ENCODING MISMATCH: the decision value includes a parenthetical annotation that may cause C3's matcher (likely expecting a clean time string like \"1400-1500 Friday\") to fail on the extra text.\n\nC4 (gated by PF2, owner A3) failed in rollout 1 only. PF2 was revealed by A3 at turn 0 and cited in justification_fact_ids. The settlement's command_post_move_window is \"1630-1700 Friday (after network cutover completes at 1630)\" \u2014 the correct window with parenthetical context. The commitment is type \"schedule\" with detail \"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\" This is an ENCODING MISMATCH: same pattern as C3 \u2014 the parenthetical annotation in the decision value likely causes C4's matcher to fail.\n\nC8 (gated by PF2, owner A3) failed in rollout 1 only. PF2 was revealed and cited. The settlement's post_cutover_network_test_required is true, and the commitment detail says \"network test required after the move.\" In the passing rollouts (0, 2, 3), the commitment detail uses the phrase \"post-cutover network test\" or \"post-move network test\" or \"followed by a network test.\" In rollout 1, the commitment says \"network test required after the move\" \u2014 semantically equivalent but worded differently. This is an ENCODING MISMATCH: C8 likely requires specific wording (e.g., \"post-cutover network test\") that the model did not use in this instance.\n\nNo rollouts hit the turn cap. All four settled successfully. Rollout 2 took 15 turns due to an unparsable model output at turn 5 that caused a re-confirmation cycle, but this is a transient parsing error, not a structural or pacing problem. No TELEPATHY, NEVER REVEALED, REVEALED BUT UNUSED, or MISAPPLIED failures were found in any rollout.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 1,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 4,\n    \"C2\": 4,\n    \"C3\": 3,\n    \"C4\": 3,\n    \"C5\": 4,\n    \"C6\": 2,\n    \"C7\": 2,\n    \"C8\": 3\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 4\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C6\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The generator's exact 4,800-kilogram weight and confirmed 0900-1000 low-loader booking change its transport method from the standard forklift to a contracted low-loader, fix its movement window, and require a low-loader booking commitment.\"\n      }\n    ],\n    \"C8\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The 1600-1630 network cutover changes the command-post movement window to exactly 1630-1700 Friday, makes a post-cutover network test required, requires a network-test commitment, and supplies the fact that must be cited.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The 1600-1630 network cutover changes the command-post movement window to exactly 1630-1700 Friday, makes a post-cutover network test required, requires a network-test commitment, and supplies the fact that must be cited.\"\n      }\n    ],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The confirmed 1400-1500 east-dock appointment changes the clinic supply movement window to exactly 1400-1500 Friday and requires an east-dock coordination commitment.\"\n      }\n    ],\n    \"C7\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The confirmed 1400-1500 east-dock appointment changes the clinic supply movement window to exactly 1400-1500 Friday and requires an east-dock coordination commitment.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.496,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false,\n        \"C7\": false,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"generator_transport_method\": \"contracted low-loader\",\n          \"generator_move_window\": \"0900-1000 Friday\",\n          \"clinic_supply_move_window\": \"1400-1500 Friday\",\n          \"command_post_move_window\": \"1630-1700 Friday\",\n          \"post_cutover_network_test_required\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_update\",\n            \"target\": \"SFC Morgan / Facilities\",\n            \"detail\": \"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\"\n          },\n          {\n            \"type\": \"record_update\",\n            \"target\": \"WO1 Patel / Signal\",\n            \"detail\": \"Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief.\"\n          },\n          {\n            \"type\": \"record_update\",\n            \"target\": \"SSG Brooks / Supply\",\n            \"detail\": \"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_update\",\n          \"target\": \"SFC Morgan / Facilities\",\n          \"detail\": \"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\"\n        },\n        {\n          \"type\": \"record_update\",\n          \"target\": \"WO1 Patel / Signal\",\n          \"detail\": \"Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief.\"\n        },\n        {\n          \"type\": \"record_update\",\n          \"target\": \"SSG Brooks / Supply\",\n          \"detail\": \"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Facilities update for the relocation brief: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Facilities update for the relocation brief: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, SFC Morgan. To be clear, that facilities update needs to be recorded on the relocation board before I can incorporate it into the final plan. Please make sure it gets added during this brief. I still need to hear updates from signal and supply as well before I can issue the final relocation plan.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, SFC Morgan. To be clear, that facilities update needs to be recorded on the relocation board before I can incorporate it into the final plan. Please make sure it gets added during this brief. I still need to hear updates from signal and supply as well before I can issue the final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Signal update for the relocation brief: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it has not yet been added to the relocation brief slide. I'll make sure it gets recorded on the relocation board during this brief.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Signal update for the relocation brief: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it has not yet been added to the relocation brief slide. I'll make sure it gets recorded on the relocation board during this brief.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"Supply update for the relocation brief: the generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900-1000 on Friday for moving the generator. I have the supplier confirmation in the shipment file, but the transport method has not yet been updated in the plan. I'll make sure this gets recorded on the relocation board during this brief.\",\n          \"speaker\": \"A4\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"Supply update for the relocation brief: the generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900-1000 on Friday for moving the generator. I have the supplier confirmation in the shipment file, but the transport method has not yet been updated in the plan. I'll make sure this gets recorded on the relocation board during this brief.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Maj. Alvarez. I'll make sure the east loading dock receiving appointment for clinic supply crates from 1400 to 1500 on Friday gets recorded on the relocation board during this brief right now.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Understood, Maj. Alvarez. I'll make sure the east loading dock receiving appointment for clinic supply crates from 1400 to 1500 on Friday gets recorded on the relocation board during this brief right now.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"generator_transport_method\": \"contracted low-loader\",\n              \"generator_move_window\": \"0900-1000 Friday\",\n              \"clinic_supply_move_window\": \"1400-1500 Friday\",\n              \"command_post_move_window\": \"1630-1700 Friday\",\n              \"post_cutover_network_test_required\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_update\",\n                \"target\": \"SFC Morgan / Facilities\",\n                \"detail\": \"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\"\n              },\n              {\n                \"type\": \"record_update\",\n                \"target\": \"WO1 Patel / Signal\",\n                \"detail\": \"Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief.\"\n              },\n              {\n                \"type\": \"record_update\",\n                \"target\": \"SSG Brooks / Supply\",\n                \"detail\": \"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"generator_transport_method\\\": \\\"contracted low-loader\\\",\\n      \\\"generator_move_window\\\": \\\"0900-1000 Friday\\\",\\n      \\\"clinic_supply_move_window\\\": \\\"1400-1500 Friday\\\",\\n      \\\"command_post_move_window\\\": \\\"1630-1700 Friday\\\",\\n      \\\"post_cutover_network_test_required\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"record_update\\\",\\n        \\\"target\\\": \\\"SFC Morgan / Facilities\\\",\\n        \\\"detail\\\": \\\"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"record_update\\\",\\n        \\\"target\\\": \\\"WO1 Patel / Signal\\\",\\n        \\\"detail\\\": \\\"Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"record_update\\\",\\n        \\\"target\\\": \\\"SSG Brooks / Supply\\\",\\n        \\\"detail\\\": \\\"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.583,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": false,\n        \"C4\": false,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"generator_transport_method\": \"Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)\",\n          \"generator_move_window\": \"0900-1000 Friday\",\n          \"clinic_supply_move_window\": \"1400-1500 Friday (east loading dock confirmed receiving appointment)\",\n          \"command_post_move_window\": \"1630-1700 Friday (after network cutover completes at 1630)\",\n          \"post_cutover_network_test_required\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"schedule\",\n            \"target\": \"SSG Brooks / Supply\",\n            \"detail\": \"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\"\n          },\n          {\n            \"type\": \"schedule\",\n            \"target\": \"SFC Morgan / Facilities\",\n            \"detail\": \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\"\n          },\n          {\n            \"type\": \"schedule\",\n            \"target\": \"WO1 Patel / Signal\",\n            \"detail\": \"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"schedule\",\n          \"target\": \"SSG Brooks / Supply\",\n          \"detail\": \"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\"\n        },\n        {\n          \"type\": \"schedule\",\n          \"target\": \"SFC Morgan / Facilities\",\n          \"detail\": \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\"\n        },\n        {\n          \"type\": \"schedule\",\n          \"target\": \"WO1 Patel / Signal\",\n          \"detail\": \"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to put this on the board. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday. That means our command-post equipment can't be moved until after 1630 \\u2014 we'll need the 1630-1700 window for the move, followed by a network test. This is not yet on the relocation brief slide, so I'm formally entering it as signal's update for the brief.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to put this on the board. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday. That means our command-post equipment can't be moved until after 1630 \\u2014 we'll need the 1630-1700 window for the move, followed by a network test. This is not yet on the relocation brief slide, so I'm formally entering it as signal's update for the brief.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, WO1 Patel. I've noted signal's formal update for the brief \\u2014 the command-post network cutover from 1600 to 1630 on Friday, with the CP equipment move shifted to the 1630-1700 window followed by a network test. I still need to hear formal updates from facilities and supply before I can issue the final relocation plan. Who's ready with their section's update?\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, WO1 Patel. I've noted signal's formal update for the brief \\u2014 the command-post network cutover from 1600 to 1630 on Friday, with the CP equipment move shifted to the 1630-1700 window followed by a network test. I still need to hear formal updates from facilities and supply before I can issue the final relocation plan. Who's ready with their section's update?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to formally enter facilities' update for the brief. I received a confirmed booking confirmation this morning: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. This appointment has not yet been added to the relocation board, so I'm formally revealing it as facilities' update for the brief.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to formally enter facilities' update for the brief. I received a confirmed booking confirmation this morning: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. This appointment has not yet been added to the relocation board, so I'm formally revealing it as facilities' update for the brief.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to formally enter supply's update for the brief. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900 to 1000 on Friday, and I have the supplier confirmation in the shipment file. This transport method change has not yet been updated in the relocation plan, so I'm formally revealing it as supply's update for the brief.\",\n          \"speaker\": \"A4\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to formally enter supply's update for the brief. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900 to 1000 on Friday, and I have the supplier confirmation in the shipment file. This transport method change has not yet been updated in the relocation plan, so I'm formally revealing it as supply's update for the brief.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"All three sections have now provided their formal updates for the brief. Signal's update is the CP network cutover from 1600 to 1630 Friday with the equipment move shifted to 1630-1700. Facilities' update is the east loading dock confirmed receiving appointment for clinic supply crates from 1400 to 1500. Supply's update is the generator weight exceeding the forklift rating and the contracted low-loader booked from 0900 to 1000. Maj. Alvarez, you now have all three section updates \\u2014 facilities, signal, and supply \\u2014 so you're clear to issue the final relocation plan whenever you're ready.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"All three sections have now provided their formal updates for the brief. Signal's update is the CP network cutover from 1600 to 1630 Friday with the equipment move shifted to 1630-1700. Facilities' update is the east loading dock confirmed receiving appointment for clinic supply crates from 1400 to 1500. Supply's update is the generator weight exceeding the forklift rating and the contracted low-loader booked from 0900 to 1000. Maj. Alvarez, you now have all three section updates \\u2014 facilities, signal, and supply \\u2014 so you're clear to issue the final relocation plan whenever you're ready.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"That's correct, WO1 Patel. All three section updates have been formally entered \\u2014 facilities, signal, and supply. Maj. Alvarez, whenever you're ready to issue the final plan, supply is standing by.\",\n          \"speaker\": \"A4\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"That's correct, WO1 Patel. All three section updates have been formally entered \\u2014 facilities, signal, and supply. Maj. Alvarez, whenever you're ready to issue the final plan, supply is standing by.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"generator_transport_method\": \"Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)\",\n              \"generator_move_window\": \"0900-1000 Friday\",\n              \"clinic_supply_move_window\": \"1400-1500 Friday (east loading dock confirmed receiving appointment)\",\n              \"command_post_move_window\": \"1630-1700 Friday (after network cutover completes at 1630)\",\n              \"post_cutover_network_test_required\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"schedule\",\n                \"target\": \"SSG Brooks / Supply\",\n                \"detail\": \"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\"\n              },\n              {\n                \"type\": \"schedule\",\n                \"target\": \"SFC Morgan / Facilities\",\n                \"detail\": \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\"\n              },\n              {\n                \"type\": \"schedule\",\n                \"target\": \"WO1 Patel / Signal\",\n                \"detail\": \"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"generator_transport_method\\\": \\\"Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)\\\",\\n      \\\"generator_move_window\\\": \\\"0900-1000 Friday\\\",\\n      \\\"clinic_supply_move_window\\\": \\\"1400-1500 Friday (east loading dock confirmed receiving appointment)\\\",\\n      \\\"command_post_move_window\\\": \\\"1630-1700 Friday (after network cutover completes at 1630)\\\",\\n      \\\"post_cutover_network_test_required\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"schedule\\\",\\n        \\\"target\\\": \\\"SSG Brooks / Supply\\\",\\n        \\\"detail\\\": \\\"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"schedule\\\",\\n        \\\"target\\\": \\\"SFC Morgan / Facilities\\\",\\n        \\\"detail\\\": \\\"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"schedule\\\",\\n        \\\"target\\\": \\\"WO1 Patel / Signal\\\",\\n        \\\"detail\\\": \\\"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.481,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 15,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false,\n        \"C7\": false,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"generator_transport_method\": \"contracted low-loader\",\n          \"generator_move_window\": \"0900-1000 Friday\",\n          \"clinic_supply_move_window\": \"1400-1500 Friday\",\n          \"command_post_move_window\": \"1630-1700 Friday\",\n          \"post_cutover_network_test_required\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"transport_method_change\",\n            \"target\": \"generator\",\n            \"detail\": \"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\"\n          },\n          {\n            \"type\": \"dock_scheduling\",\n            \"target\": \"east loading dock\",\n            \"detail\": \"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\"\n          },\n          {\n            \"type\": \"network_cutover\",\n            \"target\": \"command-post\",\n            \"detail\": \"Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"transport_method_change\",\n          \"target\": \"generator\",\n          \"detail\": \"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\"\n        },\n        {\n          \"type\": \"dock_scheduling\",\n          \"target\": \"east loading dock\",\n          \"detail\": \"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\"\n        },\n        {\n          \"type\": \"network_cutover\",\n          \"target\": \"command-post\",\n          \"detail\": \"Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. I have a supply update for the relocation brief that I need to get on the board. I'm ready to share it whenever we're ready to start.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. I have a supply update for the relocation brief that I need to get on the board. I'm ready to share it whenever we're ready to start.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"SSG Brooks, good morning. I have a signal update for the relocation brief as well. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. This needs to go on the relocation board.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"SSG Brooks, good morning. I have a signal update for the relocation brief as well. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. This needs to go on the relocation board.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Good morning. I have a facilities update for the relocation brief. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Good morning. I have a facilities update for the relocation brief. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you all for the updates. Let me confirm what I'm hearing: SFC Morgan, facilities has a confirmed booking for the east loading dock from 1400 to 1500 Friday for clinic supply crates \\u2014 please get that on the board. WO1 Patel, signal has a cutover notice for 1600-1630 Friday, meaning command-post equipment moves 1630-1700 followed by a network test \\u2014 please get that on the board. SSG Brooks, go ahead and share your supply update so we can get it recorded as well. Once all three updates are on the board, I'll issue the final relocation plan.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\",\\\"text\\\":\\\"Thank you all for the updates. Let me confirm what I'm hearing: SFC Morgan, facilities has a confirmed booking for the east loading dock from 1400 to 1500 Friday for clinic supply crates \\u2014 please get that on the board. WO1 Patel, signal has a cutover notice for 1600-1630 Friday, meaning command-post equipment moves 1630-1700 followed by a network test \\u2014 please get that on the board. SSG Brooks, go ahead and share your supply update so we can get it recorded as well. Once all three updates are on the board, I'll issue the final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Maj. Alvarez. I'll get the signal cutover notice on the relocation board right away \\u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for SSG Brooks's supply update and the final plan.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Understood, Maj. Alvarez. I'll get the signal cutover notice on the relocation board right away \\u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for SSG Brooks's supply update and the final plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Understood, Maj. Alvarez. I'll get the east loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, on the relocation board right away. Standing by for SSG Brooks's supply update and the final plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"SFC Morgan, I didn't catch your last transmission \\u2014 it came through garbled. Could you repeat your facilities update? Also, SSG Brooks, we're still waiting on your supply update whenever you're ready. Once both are on the board, I'll issue the final plan.\",\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"SFC Morgan, I didn't catch your last transmission \\u2014 it came through garbled. Could you repeat your facilities update? Also, SSG Brooks, we're still waiting on your supply update whenever you're ready. Once both are on the board, I'll issue the final plan.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"Maj. Alvarez, here is my supply update for the relocation board. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900 to 1000 on Friday to move the generator. I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan and needs to be changed from the base forklift to the contracted low-loader. Please get this on the relocation board.\",\n          \"speaker\": \"A4\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"Maj. Alvarez, here is my supply update for the relocation board. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900 to 1000 on Friday to move the generator. I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan and needs to be changed from the base forklift to the contracted low-loader. Please get this on the relocation board.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, SSG Brooks. That's a critical update \\u2014 the generator exceeds the base forklift's rating, so we'll need to use the contracted low-loader from 0900 to 1000 on Friday. Please get that on the relocation board. SFC Morgan, I still need your facilities update repeated \\u2014 your last transmission was garbled. Once I have confirmation that all three updates \\u2014 facilities, signal, and supply \\u2014 are on the board, I'll issue the final relocation plan.\",\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, SSG Brooks. That's a critical update \\u2014 the generator exceeds the base forklift's rating, so we'll need to use the contracted low-loader from 0900 to 1000 on Friday. Please get that on the relocation board. SFC Morgan, I still need your facilities update repeated \\u2014 your last transmission was garbled. Once I have confirmation that all three updates \\u2014 facilities, signal, and supply \\u2014 are on the board, I'll issue the final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maj. Alvarez, I'll repeat my facilities update for the relocation board. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board. I'll get it recorded right away.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Maj. Alvarez, I'll repeat my facilities update for the relocation board. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board. I'll get it recorded right away.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maj. Alvarez, I'll get the supply update on the relocation board right away \\u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. I have the supplier confirmation in the shipment file. Standing by for confirmation that all three updates are on the board and for the final relocation plan.\",\n          \"speaker\": \"A4\",\n          \"turn\": 10,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\",\\\"text\\\": \\\"Maj. Alvarez, I'll get the supply update on the relocation board right away \\u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. I have the supplier confirmation in the shipment file. Standing by for confirmation that all three updates are on the board and for the final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maj. Alvarez, the signal cutover notice is confirmed on the relocation board \\u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for confirmation from SFC Morgan and SSG Brooks that their updates are on the board, and for your final relocation plan.\",\n          \"speaker\": \"A3\",\n          \"turn\": 11,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Maj. Alvarez, the signal cutover notice is confirmed on the relocation board \\u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for confirmation from SFC Morgan and SSG Brooks that their updates are on the board, and for your final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maj. Alvarez, the facilities update is confirmed on the relocation board \\u2014 east loading dock receiving appointment for clinic supply crates, 1400 to 1500 Friday. All three section updates are now recorded: facilities, signal, and supply. Standing by for your final relocation plan.\",\n          \"speaker\": \"A2\",\n          \"turn\": 12,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Maj. Alvarez, the facilities update is confirmed on the relocation board \\u2014 east loading dock receiving appointment for clinic supply crates, 1400 to 1500 Friday. All three section updates are now recorded: facilities, signal, and supply. Standing by for your final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Maj. Alvarez, the supply update is confirmed on the relocation board \\u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. All three section updates \\u2014 facilities, signal, and supply \\u2014 are now recorded on the board. Standing by for your final relocation plan.\",\n          \"speaker\": \"A4\",\n          \"turn\": 13,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Maj. Alvarez, the supply update is confirmed on the relocation board \\u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. All three section updates \\u2014 facilities, signal, and supply \\u2014 are now recorded on the board. Standing by for your final relocation plan.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"generator_transport_method\": \"contracted low-loader\",\n              \"generator_move_window\": \"0900-1000 Friday\",\n              \"clinic_supply_move_window\": \"1400-1500 Friday\",\n              \"command_post_move_window\": \"1630-1700 Friday\",\n              \"post_cutover_network_test_required\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"transport_method_change\",\n                \"target\": \"generator\",\n                \"detail\": \"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\"\n              },\n              {\n                \"type\": \"dock_scheduling\",\n                \"target\": \"east loading dock\",\n                \"detail\": \"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\"\n              },\n              {\n                \"type\": \"network_cutover\",\n                \"target\": \"command-post\",\n                \"detail\": \"Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 14,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"generator_transport_method\\\": \\\"contracted low-loader\\\",\\n      \\\"generator_move_window\\\": \\\"0900-1000 Friday\\\",\\n      \\\"clinic_supply_move_window\\\": \\\"1400-1500 Friday\\\",\\n      \\\"command_post_move_window\\\": \\\"1630-1700 Friday\\\",\\n      \\\"post_cutover_network_test_required\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"transport_method_change\\\",\\n        \\\"target\\\": \\\"generator\\\",\\n        \\\"detail\\\": \\\"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"dock_scheduling\\\",\\n        \\\"target\\\": \\\"east loading dock\\\",\\n        \\\"detail\\\": \\\"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"network_cutover\\\",\\n        \\\"target\\\": \\\"command-post\\\",\\n        \\\"detail\\\": \\\"Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.599,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 4,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": true,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"generator_transport_method\": \"contracted low-loader\",\n          \"generator_move_window\": \"0900-1000 Friday\",\n          \"clinic_supply_move_window\": \"1400-1500 Friday\",\n          \"command_post_move_window\": \"1630-1700 Friday\",\n          \"post_cutover_network_test_required\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"plan_update\",\n            \"target\": \"relocation_board\",\n            \"detail\": \"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday\"\n          },\n          {\n            \"type\": \"plan_update\",\n            \"target\": \"relocation_brief\",\n            \"detail\": \"Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test\"\n          },\n          {\n            \"type\": \"plan_update\",\n            \"target\": \"relocation_plan\",\n            \"detail\": \"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"plan_update\",\n          \"target\": \"relocation_board\",\n          \"detail\": \"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday\"\n        },\n        {\n          \"type\": \"plan_update\",\n          \"target\": \"relocation_brief\",\n          \"detail\": \"Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test\"\n        },\n        {\n          \"type\": \"plan_update\",\n          \"target\": \"relocation_plan\",\n          \"detail\": \"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag a constraint for the relocation plan. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900-1000 Friday, and I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan.\",\n          \"speaker\": \"A4\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to flag a constraint for the relocation plan. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900-1000 Friday, and I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to formally reveal a facilities constraint for the relocation plan. The east loading dock has a confirmed receiving appointment for the clinic supply crates from exactly 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but this appointment has not yet been added to the relocation board.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"I need to formally reveal a facilities constraint for the relocation plan. The east loading dock has a confirmed receiving appointment for the clinic supply crates from exactly 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but this appointment has not yet been added to the relocation board.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to formally reveal a signal constraint for the relocation plan. The command-post network cutover is scheduled from exactly 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it is not yet on the relocation brief slide.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to formally reveal a signal constraint for the relocation plan. The command-post network cutover is scheduled from exactly 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it is not yet on the relocation brief slide.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"generator_transport_method\": \"contracted low-loader\",\n              \"generator_move_window\": \"0900-1000 Friday\",\n              \"clinic_supply_move_window\": \"1400-1500 Friday\",\n              \"command_post_move_window\": \"1630-1700 Friday\",\n              \"post_cutover_network_test_required\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"plan_update\",\n                \"target\": \"relocation_board\",\n                \"detail\": \"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday\"\n              },\n              {\n                \"type\": \"plan_update\",\n                \"target\": \"relocation_brief\",\n                \"detail\": \"Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test\"\n              },\n              {\n                \"type\": \"plan_update\",\n                \"target\": \"relocation_plan\",\n                \"detail\": \"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"Let me analyze what has been formally revealed:\\n\\n1. **PF3 (SSG Brooks)**: Generator weighs 4,800 kg, exceeds base forklift's 4,000 kg rating. Confirmed contracted low-loader booked for 0900-1000 Friday. Transport method not yet updated in plan.\\n\\n2. **PF1 (SFC Morgan)**: East loading dock has confirmed receiving appointment for clinic supply crates from 1400-1500 Friday. Not yet added to relocation board.\\n\\n3. **PF2 (WO1 Patel)**: Command-post network cutover scheduled 1600-1630 Friday. Command-post equipment must be moved during 1630-1700 window, followed by network test. Not yet on relocation brief slide.\\n\\nAll three sections (facilities, signal, supply) have provided their formal updates during this brief. Per S4, I may now issue the final plan.\\n\\nLet me settle the relocation plan:\\n\\n- **Generator transport method**: Contracted low-loader (PF3 confirms generator exceeds forklift rating, low-loader booked)\\n- **Generator move window**: 0900-1000 Friday (PF3 confirms low-loader booking)\\n- **Clinic supply move window**: 1400-1500 Friday (PF1 confirms east loading dock receiving appointment)\\n- **Command post move window**: 1630-1700 Friday (PF2 confirms cutover constraint)\\n- **Post-cutover network test required**: true (PF2 confirms network test required after move)\\n\\nAll three sections have formally revealed their constraints during the brief. The standard plan (east loading dock, base forklift) is modified based on these revealed constraints. The generator requires the contracted low-loader instead of the base forklift. The clinic supply crates use the east loading dock during the confirmed appointment. The command-post equipment moves after the network cutover, with a network test to follow.\\n\\n```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"generator_transport_method\\\": \\\"contracted low-loader\\\",\\n      \\\"generator_move_window\\\": \\\"0900-1000 Friday\\\",\\n      \\\"clinic_supply_move_window\\\": \\\"1400-1500 Friday\\\",\\n      \\\"command_post_move_window\\\": \\\"1630-1700 Friday\\\",\\n      \\\"post_cutover_network_test_required\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"plan_update\\\",\\n        \\\"target\\\": \\\"relocation_board\\\",\\n        \\\"detail\\\": \\\"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"plan_update\\\",\\n        \\\"target\\\": \\\"relocation_brief\\\",\\n        \\\"detail\\\": \\\"Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"plan_update\\\",\\n        \\\"target\\\": \\\"relocation_plan\\\",\\n        \\\"detail\\\": \\\"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 1,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 4,
+      "C2": 4,
+      "C3": 3,
+      "C4": 3,
+      "C5": 4,
+      "C6": 2,
+      "C7": 2,
+      "C8": 3
+    },
+    "provenance_check_tally": {
+      "P1": 4
+    },
+    "facts_linked_to_failing_checks": {
+      "C6": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The generator's exact 4,800-kilogram weight and confirmed 0900-1000 low-loader booking change its transport method from the standard forklift to a contracted low-loader, fix its movement window, and require a low-loader booking commitment."
+        }
+      ],
+      "C8": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The 1600-1630 network cutover changes the command-post movement window to exactly 1630-1700 Friday, makes a post-cutover network test required, requires a network-test commitment, and supplies the fact that must be cited."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The 1600-1630 network cutover changes the command-post movement window to exactly 1630-1700 Friday, makes a post-cutover network test required, requires a network-test commitment, and supplies the fact that must be cited."
+        }
+      ],
+      "C3": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The confirmed 1400-1500 east-dock appointment changes the clinic supply movement window to exactly 1400-1500 Friday and requires an east-dock coordination commitment."
+        }
+      ],
+      "C7": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The confirmed 1400-1500 east-dock appointment changes the clinic supply movement window to exactly 1400-1500 Friday and requires an east-dock coordination commitment."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.496,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false,
+          "C7": false,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "generator_transport_method": "contracted low-loader",
+            "generator_move_window": "0900-1000 Friday",
+            "clinic_supply_move_window": "1400-1500 Friday",
+            "command_post_move_window": "1630-1700 Friday",
+            "post_cutover_network_test_required": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "record_update",
+              "target": "SFC Morgan / Facilities",
+              "detail": "East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief."
+            },
+            {
+              "type": "record_update",
+              "target": "WO1 Patel / Signal",
+              "detail": "Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief."
+            },
+            {
+              "type": "record_update",
+              "target": "SSG Brooks / Supply",
+              "detail": "Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1",
+            "PF2",
+            "PF3"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "record_update",
+            "target": "SFC Morgan / Facilities",
+            "detail": "East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief."
+          },
+          {
+            "type": "record_update",
+            "target": "WO1 Patel / Signal",
+            "detail": "Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief."
+          },
+          {
+            "type": "record_update",
+            "target": "SSG Brooks / Supply",
+            "detail": "Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Facilities update for the relocation brief: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Facilities update for the relocation brief: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, SFC Morgan. To be clear, that facilities update needs to be recorded on the relocation board before I can incorporate it into the final plan. Please make sure it gets added during this brief. I still need to hear updates from signal and supply as well before I can issue the final relocation plan.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, SFC Morgan. To be clear, that facilities update needs to be recorded on the relocation board before I can incorporate it into the final plan. Please make sure it gets added during this brief. I still need to hear updates from signal and supply as well before I can issue the final relocation plan.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Signal update for the relocation brief: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it has not yet been added to the relocation brief slide. I'll make sure it gets recorded on the relocation board during this brief.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Signal update for the relocation brief: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it has not yet been added to the relocation brief slide. I'll make sure it gets recorded on the relocation board during this brief.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "Supply update for the relocation brief: the generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900-1000 on Friday for moving the generator. I have the supplier confirmation in the shipment file, but the transport method has not yet been updated in the plan. I'll make sure this gets recorded on the relocation board during this brief.",
+            "speaker": "A4",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"Supply update for the relocation brief: the generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900-1000 on Friday for moving the generator. I have the supplier confirmation in the shipment file, but the transport method has not yet been updated in the plan. I'll make sure this gets recorded on the relocation board during this brief.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Maj. Alvarez. I'll make sure the east loading dock receiving appointment for clinic supply crates from 1400 to 1500 on Friday gets recorded on the relocation board during this brief right now.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Understood, Maj. Alvarez. I'll make sure the east loading dock receiving appointment for clinic supply crates from 1400 to 1500 on Friday gets recorded on the relocation board during this brief right now.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "generator_transport_method": "contracted low-loader",
+                "generator_move_window": "0900-1000 Friday",
+                "clinic_supply_move_window": "1400-1500 Friday",
+                "command_post_move_window": "1630-1700 Friday",
+                "post_cutover_network_test_required": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "record_update",
+                  "target": "SFC Morgan / Facilities",
+                  "detail": "East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief."
+                },
+                {
+                  "type": "record_update",
+                  "target": "WO1 Patel / Signal",
+                  "detail": "Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief."
+                },
+                {
+                  "type": "record_update",
+                  "target": "SSG Brooks / Supply",
+                  "detail": "Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "PF1",
+                "PF2",
+                "PF3"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"generator_transport_method\": \"contracted low-loader\",\n      \"generator_move_window\": \"0900-1000 Friday\",\n      \"clinic_supply_move_window\": \"1400-1500 Friday\",\n      \"command_post_move_window\": \"1630-1700 Friday\",\n      \"post_cutover_network_test_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"record_update\",\n        \"target\": \"SFC Morgan / Facilities\",\n        \"detail\": \"East loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, to be recorded on the relocation board during this brief.\"\n      },\n      {\n        \"type\": \"record_update\",\n        \"target\": \"WO1 Patel / Signal\",\n        \"detail\": \"Command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-cutover network test, to be recorded on the relocation board during this brief.\"\n      },\n      {\n        \"type\": \"record_update\",\n        \"target\": \"SSG Brooks / Supply\",\n        \"detail\": \"Generator transport via contracted low-loader, 0900-1000 Friday, to be recorded on the relocation board during this brief.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.583,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF2",
+          "PF1",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": false,
+          "C4": false,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "generator_transport_method": "Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)",
+            "generator_move_window": "0900-1000 Friday",
+            "clinic_supply_move_window": "1400-1500 Friday (east loading dock confirmed receiving appointment)",
+            "command_post_move_window": "1630-1700 Friday (after network cutover completes at 1630)",
+            "post_cutover_network_test_required": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "schedule",
+              "target": "SSG Brooks / Supply",
+              "detail": "Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator."
+            },
+            {
+              "type": "schedule",
+              "target": "SFC Morgan / Facilities",
+              "detail": "Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment."
+            },
+            {
+              "type": "schedule",
+              "target": "WO1 Patel / Signal",
+              "detail": "Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "schedule",
+            "target": "SSG Brooks / Supply",
+            "detail": "Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator."
+          },
+          {
+            "type": "schedule",
+            "target": "SFC Morgan / Facilities",
+            "detail": "Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment."
+          },
+          {
+            "type": "schedule",
+            "target": "WO1 Patel / Signal",
+            "detail": "Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to put this on the board. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday. That means our command-post equipment can't be moved until after 1630 \u2014 we'll need the 1630-1700 window for the move, followed by a network test. This is not yet on the relocation brief slide, so I'm formally entering it as signal's update for the brief.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to put this on the board. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday. That means our command-post equipment can't be moved until after 1630 \u2014 we'll need the 1630-1700 window for the move, followed by a network test. This is not yet on the relocation brief slide, so I'm formally entering it as signal's update for the brief.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, WO1 Patel. I've noted signal's formal update for the brief \u2014 the command-post network cutover from 1600 to 1630 on Friday, with the CP equipment move shifted to the 1630-1700 window followed by a network test. I still need to hear formal updates from facilities and supply before I can issue the final relocation plan. Who's ready with their section's update?",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, WO1 Patel. I've noted signal's formal update for the brief \u2014 the command-post network cutover from 1600 to 1630 on Friday, with the CP equipment move shifted to the 1630-1700 window followed by a network test. I still need to hear formal updates from facilities and supply before I can issue the final relocation plan. Who's ready with their section's update?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to formally enter facilities' update for the brief. I received a confirmed booking confirmation this morning: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. This appointment has not yet been added to the relocation board, so I'm formally revealing it as facilities' update for the brief.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to formally enter facilities' update for the brief. I received a confirmed booking confirmation this morning: the east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. This appointment has not yet been added to the relocation board, so I'm formally revealing it as facilities' update for the brief.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to formally enter supply's update for the brief. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900 to 1000 on Friday, and I have the supplier confirmation in the shipment file. This transport method change has not yet been updated in the relocation plan, so I'm formally revealing it as supply's update for the brief.",
+            "speaker": "A4",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to formally enter supply's update for the brief. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900 to 1000 on Friday, and I have the supplier confirmation in the shipment file. This transport method change has not yet been updated in the relocation plan, so I'm formally revealing it as supply's update for the brief.\"}"
+          },
+          {
+            "type": "say",
+            "text": "All three sections have now provided their formal updates for the brief. Signal's update is the CP network cutover from 1600 to 1630 Friday with the equipment move shifted to 1630-1700. Facilities' update is the east loading dock confirmed receiving appointment for clinic supply crates from 1400 to 1500. Supply's update is the generator weight exceeding the forklift rating and the contracted low-loader booked from 0900 to 1000. Maj. Alvarez, you now have all three section updates \u2014 facilities, signal, and supply \u2014 so you're clear to issue the final relocation plan whenever you're ready.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"All three sections have now provided their formal updates for the brief. Signal's update is the CP network cutover from 1600 to 1630 Friday with the equipment move shifted to 1630-1700. Facilities' update is the east loading dock confirmed receiving appointment for clinic supply crates from 1400 to 1500. Supply's update is the generator weight exceeding the forklift rating and the contracted low-loader booked from 0900 to 1000. Maj. Alvarez, you now have all three section updates \u2014 facilities, signal, and supply \u2014 so you're clear to issue the final relocation plan whenever you're ready.\"}"
+          },
+          {
+            "type": "say",
+            "text": "That's correct, WO1 Patel. All three section updates have been formally entered \u2014 facilities, signal, and supply. Maj. Alvarez, whenever you're ready to issue the final plan, supply is standing by.",
+            "speaker": "A4",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"That's correct, WO1 Patel. All three section updates have been formally entered \u2014 facilities, signal, and supply. Maj. Alvarez, whenever you're ready to issue the final plan, supply is standing by.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "generator_transport_method": "Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)",
+                "generator_move_window": "0900-1000 Friday",
+                "clinic_supply_move_window": "1400-1500 Friday (east loading dock confirmed receiving appointment)",
+                "command_post_move_window": "1630-1700 Friday (after network cutover completes at 1630)",
+                "post_cutover_network_test_required": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "schedule",
+                  "target": "SSG Brooks / Supply",
+                  "detail": "Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator."
+                },
+                {
+                  "type": "schedule",
+                  "target": "SFC Morgan / Facilities",
+                  "detail": "Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment."
+                },
+                {
+                  "type": "schedule",
+                  "target": "WO1 Patel / Signal",
+                  "detail": "Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"generator_transport_method\": \"Contracted low-loader (generator exceeds base forklift's 4,000 kg rating at 4,800 kg; low-loader booked 0900-1000 Friday)\",\n      \"generator_move_window\": \"0900-1000 Friday\",\n      \"clinic_supply_move_window\": \"1400-1500 Friday (east loading dock confirmed receiving appointment)\",\n      \"command_post_move_window\": \"1630-1700 Friday (after network cutover completes at 1630)\",\n      \"post_cutover_network_test_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"schedule\",\n        \"target\": \"SSG Brooks / Supply\",\n        \"detail\": \"Generator moves via contracted low-loader from 0900 to 1000 on Friday; base forklift will not be used for the generator.\"\n      },\n      {\n        \"type\": \"schedule\",\n        \"target\": \"SFC Morgan / Facilities\",\n        \"detail\": \"Clinic supply crates received at east loading dock from 1400 to 1500 on Friday; dock must be reserved for that appointment.\"\n      },\n      {\n        \"type\": \"schedule\",\n        \"target\": \"WO1 Patel / Signal\",\n        \"detail\": \"Command-post equipment moves during 1630-1700 window on Friday following the 1600-1630 network cutover; network test required after the move.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.481,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 15,
+        "revealed_facts": [
+          "PF2",
+          "PF1",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false,
+          "C7": false,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "generator_transport_method": "contracted low-loader",
+            "generator_move_window": "0900-1000 Friday",
+            "clinic_supply_move_window": "1400-1500 Friday",
+            "command_post_move_window": "1630-1700 Friday",
+            "post_cutover_network_test_required": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "transport_method_change",
+              "target": "generator",
+              "detail": "Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating."
+            },
+            {
+              "type": "dock_scheduling",
+              "target": "east loading dock",
+              "detail": "East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment."
+            },
+            {
+              "type": "network_cutover",
+              "target": "command-post",
+              "detail": "Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "transport_method_change",
+            "target": "generator",
+            "detail": "Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating."
+          },
+          {
+            "type": "dock_scheduling",
+            "target": "east loading dock",
+            "detail": "East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment."
+          },
+          {
+            "type": "network_cutover",
+            "target": "command-post",
+            "detail": "Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. I have a supply update for the relocation brief that I need to get on the board. I'm ready to share it whenever we're ready to start.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning everyone. I have a supply update for the relocation brief that I need to get on the board. I'm ready to share it whenever we're ready to start.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "SSG Brooks, good morning. I have a signal update for the relocation brief as well. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. This needs to go on the relocation board.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"SSG Brooks, good morning. I have a signal update for the relocation brief as well. The signal shop sent me a cutover notice this morning: the command-post network cutover is scheduled from 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. This needs to go on the relocation board.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Good morning. I have a facilities update for the relocation brief. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Good morning. I have a facilities update for the relocation brief. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you all for the updates. Let me confirm what I'm hearing: SFC Morgan, facilities has a confirmed booking for the east loading dock from 1400 to 1500 Friday for clinic supply crates \u2014 please get that on the board. WO1 Patel, signal has a cutover notice for 1600-1630 Friday, meaning command-post equipment moves 1630-1700 followed by a network test \u2014 please get that on the board. SSG Brooks, go ahead and share your supply update so we can get it recorded as well. Once all three updates are on the board, I'll issue the final relocation plan.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\",\"text\":\"Thank you all for the updates. Let me confirm what I'm hearing: SFC Morgan, facilities has a confirmed booking for the east loading dock from 1400 to 1500 Friday for clinic supply crates \u2014 please get that on the board. WO1 Patel, signal has a cutover notice for 1600-1630 Friday, meaning command-post equipment moves 1630-1700 followed by a network test \u2014 please get that on the board. SSG Brooks, go ahead and share your supply update so we can get it recorded as well. Once all three updates are on the board, I'll issue the final relocation plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Maj. Alvarez. I'll get the signal cutover notice on the relocation board right away \u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for SSG Brooks's supply update and the final plan.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Understood, Maj. Alvarez. I'll get the signal cutover notice on the relocation board right away \u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for SSG Brooks's supply update and the final plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Understood, Maj. Alvarez. I'll get the east loading dock receiving appointment for clinic supply crates, 1400-1500 Friday, on the relocation board right away. Standing by for SSG Brooks's supply update and the final plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "SFC Morgan, I didn't catch your last transmission \u2014 it came through garbled. Could you repeat your facilities update? Also, SSG Brooks, we're still waiting on your supply update whenever you're ready. Once both are on the board, I'll issue the final plan.",
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "{\"type\":\"say\",\"text\":\"SFC Morgan, I didn't catch your last transmission \u2014 it came through garbled. Could you repeat your facilities update? Also, SSG Brooks, we're still waiting on your supply update whenever you're ready. Once both are on the board, I'll issue the final plan.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "Maj. Alvarez, here is my supply update for the relocation board. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900 to 1000 on Friday to move the generator. I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan and needs to be changed from the base forklift to the contracted low-loader. Please get this on the relocation board.",
+            "speaker": "A4",
+            "turn": 7,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"Maj. Alvarez, here is my supply update for the relocation board. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. A contracted low-loader is confirmed for exactly 0900 to 1000 on Friday to move the generator. I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan and needs to be changed from the base forklift to the contracted low-loader. Please get this on the relocation board.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, SSG Brooks. That's a critical update \u2014 the generator exceeds the base forklift's rating, so we'll need to use the contracted low-loader from 0900 to 1000 on Friday. Please get that on the relocation board. SFC Morgan, I still need your facilities update repeated \u2014 your last transmission was garbled. Once I have confirmation that all three updates \u2014 facilities, signal, and supply \u2014 are on the board, I'll issue the final relocation plan.",
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, SSG Brooks. That's a critical update \u2014 the generator exceeds the base forklift's rating, so we'll need to use the contracted low-loader from 0900 to 1000 on Friday. Please get that on the relocation board. SFC Morgan, I still need your facilities update repeated \u2014 your last transmission was garbled. Once I have confirmation that all three updates \u2014 facilities, signal, and supply \u2014 are on the board, I'll issue the final relocation plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maj. Alvarez, I'll repeat my facilities update for the relocation board. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board. I'll get it recorded right away.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Maj. Alvarez, I'll repeat my facilities update for the relocation board. The east loading dock has a confirmed receiving appointment for the clinic supply crates from 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but it has not yet been added to the relocation board. This needs to go on the board. I'll get it recorded right away.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maj. Alvarez, I'll get the supply update on the relocation board right away \u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. I have the supplier confirmation in the shipment file. Standing by for confirmation that all three updates are on the board and for the final relocation plan.",
+            "speaker": "A4",
+            "turn": 10,
+            "raw_output": "{\"type\": \"say\",\"text\": \"Maj. Alvarez, I'll get the supply update on the relocation board right away \u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. I have the supplier confirmation in the shipment file. Standing by for confirmation that all three updates are on the board and for the final relocation plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maj. Alvarez, the signal cutover notice is confirmed on the relocation board \u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for confirmation from SFC Morgan and SSG Brooks that their updates are on the board, and for your final relocation plan.",
+            "speaker": "A3",
+            "turn": 11,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Maj. Alvarez, the signal cutover notice is confirmed on the relocation board \u2014 command-post network cutover 1600-1630 Friday, command-post equipment move 1630-1700, followed by a network test. Standing by for confirmation from SFC Morgan and SSG Brooks that their updates are on the board, and for your final relocation plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maj. Alvarez, the facilities update is confirmed on the relocation board \u2014 east loading dock receiving appointment for clinic supply crates, 1400 to 1500 Friday. All three section updates are now recorded: facilities, signal, and supply. Standing by for your final relocation plan.",
+            "speaker": "A2",
+            "turn": 12,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Maj. Alvarez, the facilities update is confirmed on the relocation board \u2014 east loading dock receiving appointment for clinic supply crates, 1400 to 1500 Friday. All three section updates are now recorded: facilities, signal, and supply. Standing by for your final relocation plan.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Maj. Alvarez, the supply update is confirmed on the relocation board \u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. All three section updates \u2014 facilities, signal, and supply \u2014 are now recorded on the board. Standing by for your final relocation plan.",
+            "speaker": "A4",
+            "turn": 13,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Maj. Alvarez, the supply update is confirmed on the relocation board \u2014 generator move via contracted low-loader, 0900 to 1000 Friday, due to the 4,800-kilogram weight exceeding the base forklift's 4,000-kilogram rating. All three section updates \u2014 facilities, signal, and supply \u2014 are now recorded on the board. Standing by for your final relocation plan.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "generator_transport_method": "contracted low-loader",
+                "generator_move_window": "0900-1000 Friday",
+                "clinic_supply_move_window": "1400-1500 Friday",
+                "command_post_move_window": "1630-1700 Friday",
+                "post_cutover_network_test_required": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "transport_method_change",
+                  "target": "generator",
+                  "detail": "Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating."
+                },
+                {
+                  "type": "dock_scheduling",
+                  "target": "east loading dock",
+                  "detail": "East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment."
+                },
+                {
+                  "type": "network_cutover",
+                  "target": "command-post",
+                  "detail": "Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 14,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"generator_transport_method\": \"contracted low-loader\",\n      \"generator_move_window\": \"0900-1000 Friday\",\n      \"clinic_supply_move_window\": \"1400-1500 Friday\",\n      \"command_post_move_window\": \"1630-1700 Friday\",\n      \"post_cutover_network_test_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"transport_method_change\",\n        \"target\": \"generator\",\n        \"detail\": \"Generator transport method changed from base forklift to contracted low-loader due to 4,800 kg weight exceeding the forklift's 4,000 kg rating.\"\n      },\n      {\n        \"type\": \"dock_scheduling\",\n        \"target\": \"east loading dock\",\n        \"detail\": \"East loading dock reserved 1400-1500 Friday for clinic supply crate receiving appointment.\"\n      },\n      {\n        \"type\": \"network_cutover\",\n        \"target\": \"command-post\",\n        \"detail\": \"Command-post network cutover 1600-1630 Friday; command-post equipment moves 1630-1700 followed by network test.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.599,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 4,
+        "revealed_facts": [
+          "PF3",
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": true,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "generator_transport_method": "contracted low-loader",
+            "generator_move_window": "0900-1000 Friday",
+            "clinic_supply_move_window": "1400-1500 Friday",
+            "command_post_move_window": "1630-1700 Friday",
+            "post_cutover_network_test_required": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3"
+          ],
+          "commitments": [
+            {
+              "type": "plan_update",
+              "target": "relocation_board",
+              "detail": "Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday"
+            },
+            {
+              "type": "plan_update",
+              "target": "relocation_brief",
+              "detail": "Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test"
+            },
+            {
+              "type": "plan_update",
+              "target": "relocation_plan",
+              "detail": "Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3"
+        ],
+        "commitments": [
+          {
+            "type": "plan_update",
+            "target": "relocation_board",
+            "detail": "Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday"
+          },
+          {
+            "type": "plan_update",
+            "target": "relocation_brief",
+            "detail": "Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test"
+          },
+          {
+            "type": "plan_update",
+            "target": "relocation_plan",
+            "detail": "Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag a constraint for the relocation plan. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900-1000 Friday, and I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan.",
+            "speaker": "A4",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to flag a constraint for the relocation plan. The generator weighs 4,800 kilograms, which exceeds the base forklift's 4,000-kilogram rating. I have a confirmed contracted low-loader booked for exactly 0900-1000 Friday, and I have the supplier confirmation in the shipment file. The transport method for the generator has not yet been updated in the plan.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to formally reveal a facilities constraint for the relocation plan. The east loading dock has a confirmed receiving appointment for the clinic supply crates from exactly 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but this appointment has not yet been added to the relocation board.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to formally reveal a facilities constraint for the relocation plan. The east loading dock has a confirmed receiving appointment for the clinic supply crates from exactly 1400 to 1500 on Friday. I received the facilities booking confirmation this morning, but this appointment has not yet been added to the relocation board.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to formally reveal a signal constraint for the relocation plan. The command-post network cutover is scheduled from exactly 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it is not yet on the relocation brief slide.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to formally reveal a signal constraint for the relocation plan. The command-post network cutover is scheduled from exactly 1600 to 1630 on Friday, which means the command-post equipment must be moved during the 1630-1700 window and followed by a network test. I received this cutover notice from the signal shop this morning, but it is not yet on the relocation brief slide.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "generator_transport_method": "contracted low-loader",
+                "generator_move_window": "0900-1000 Friday",
+                "clinic_supply_move_window": "1400-1500 Friday",
+                "command_post_move_window": "1630-1700 Friday",
+                "post_cutover_network_test_required": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3"
+              ],
+              "commitments": [
+                {
+                  "type": "plan_update",
+                  "target": "relocation_board",
+                  "detail": "Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday"
+                },
+                {
+                  "type": "plan_update",
+                  "target": "relocation_brief",
+                  "detail": "Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test"
+                },
+                {
+                  "type": "plan_update",
+                  "target": "relocation_plan",
+                  "detail": "Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "Let me analyze what has been formally revealed:\n\n1. **PF3 (SSG Brooks)**: Generator weighs 4,800 kg, exceeds base forklift's 4,000 kg rating. Confirmed contracted low-loader booked for 0900-1000 Friday. Transport method not yet updated in plan.\n\n2. **PF1 (SFC Morgan)**: East loading dock has confirmed receiving appointment for clinic supply crates from 1400-1500 Friday. Not yet added to relocation board.\n\n3. **PF2 (WO1 Patel)**: Command-post network cutover scheduled 1600-1630 Friday. Command-post equipment must be moved during 1630-1700 window, followed by network test. Not yet on relocation brief slide.\n\nAll three sections (facilities, signal, supply) have provided their formal updates during this brief. Per S4, I may now issue the final plan.\n\nLet me settle the relocation plan:\n\n- **Generator transport method**: Contracted low-loader (PF3 confirms generator exceeds forklift rating, low-loader booked)\n- **Generator move window**: 0900-1000 Friday (PF3 confirms low-loader booking)\n- **Clinic supply move window**: 1400-1500 Friday (PF1 confirms east loading dock receiving appointment)\n- **Command post move window**: 1630-1700 Friday (PF2 confirms cutover constraint)\n- **Post-cutover network test required**: true (PF2 confirms network test required after move)\n\nAll three sections have formally revealed their constraints during the brief. The standard plan (east loading dock, base forklift) is modified based on these revealed constraints. The generator requires the contracted low-loader instead of the base forklift. The clinic supply crates use the east loading dock during the confirmed appointment. The command-post equipment moves after the network cutover, with a network test to follow.\n\n```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"generator_transport_method\": \"contracted low-loader\",\n      \"generator_move_window\": \"0900-1000 Friday\",\n      \"clinic_supply_move_window\": \"1400-1500 Friday\",\n      \"command_post_move_window\": \"1630-1700 Friday\",\n      \"post_cutover_network_test_required\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"plan_update\",\n        \"target\": \"relocation_board\",\n        \"detail\": \"Add east loading dock receiving appointment for clinic supply crates 1400-1500 Friday\"\n      },\n      {\n        \"type\": \"plan_update\",\n        \"target\": \"relocation_brief\",\n        \"detail\": \"Add command-post network cutover 1600-1630 Friday and command-post move window 1630-1700 with post-move network test\"\n      },\n      {\n        \"type\": \"plan_update\",\n        \"target\": \"relocation_plan\",\n        \"detail\": \"Update generator transport method from base forklift to contracted low-loader for 0900-1000 Friday\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "C6 (ENCODED MISMATCH, rollouts 0 and 2): Loosen the check to accept commitments that name \"low-loader\" or \"contracted low-loader\" for the generator without requiring explicit mention of the base forklift. If the check currently requires the word \"forklift\" or a phrase like \"changed from...to...\", broaden the matcher to accept any commitment whose detail contains \"low-loader\" and (\"generator\" or \"0900\"). Flag: this loosening does NOT risk a LEAKED regression because the standard plan defaults to the base forklift \u2014 a lone decision-maker without PF3 would not know to mention a low-loader at all, so requiring \"low-loader\" in the commitment still gates on PF3.\n\nC7 (ENCODING MISMATCH, rollouts 0 and 2): Loosen the check to accept any commitment whose detail contains both a time reference matching \"1400\" and \"1500\" and either \"east loading dock\" or \"clinic supply.\" Do not require a specific commitment type (\"schedule\" vs \"record_update\" vs \"dock_scheduling\") or the exact word \"reserved.\" Flag: this loosening does NOT risk LEAKED because the east-dock appointment and 1400-1500 window are not in the standard plan \u2014 they come solely from PF1.\n\nC3 (ENCODING MISMATCH, rollout 1): Loosen the check to strip parenthetical annotations from the clinic_supply_move_window value before matching, or match on a regex like \"1400.?1500.?Friday\" that tolerates trailing parenthetical text. The exact new matching logic: extract the first occurrence of a \\d{4}-\\d{4}\\s+Friday pattern from the field value and compare that, ignoring any parenthetical suffix. Flag: no LEAKED risk \u2014 the 1400-1500 window is not derivable without PF1.\n\nC4 (ENCODING MISMATCH, rollout 1): Apply the same fix as C3 \u2014 strip parenthetical annotations from command_post_move_window before matching, or use a regex like \"1630.?1700.?Friday\" that tolerates trailing parenthetical text. Flag: no LEAKED risk \u2014 the 1630-1700 window is not derivable without PF2.\n\nC8 (ENCODING MISMATCH, rollout 1): Loosen the check to accept commitment details containing \"network test\" in combination with \"after\" or \"post\" or \"following,\" rather than requiring the exact phrase \"post-cutover network test.\" The exact new matching logic: match if the commitment detail contains \"network test\" AND (\"after\" OR \"post\" OR \"following\" OR \"cutover\"). Flag: no LEAKED risk \u2014 the requirement for a post-cutover network test comes solely from PF2; the standard plan has no network cutover at all."
+}

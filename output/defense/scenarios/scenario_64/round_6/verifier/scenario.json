@@ -1,0 +1,138 @@
+{
+  "scenario_id": "scenario_64",
+  "scenario_type": "training_schedule",
+  "description": "A company commander must finalize a two-day sustainment training schedule, placing a vehicle-recovery certification practical and a preventive-maintenance practical into available work windows while recording the coordination actions needed to execute both events.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Morgan",
+      "role": "Company Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Patel",
+      "role": "Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SSG Alvarez",
+      "role": "Training NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company must complete one vehicle-recovery certification practical and one preventive-maintenance practical during the two-day sustainment training period.",
+    "S2": "Available training windows are Tuesday 0800-1200, Tuesday 1300-1600, Wednesday 0800-1200, and Wednesday 1300-1600.",
+    "S3": "The vehicle-recovery practical requires an approved evaluator, and the preventive-maintenance practical requires use of the covered maintenance bay.",
+    "S4": "The company normally places vehicle recovery on Tuesday 0800-1200 and preventive maintenance on Wednesday 1300-1600.",
+    "S5": "Capt. Morgan holds the routine pre-training synchronization huddle with the maintenance chief and training NCO before publishing the schedule."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The only approved vehicle-recovery evaluator is available for this company on Wednesday 0800-1200 and cannot attend the other listed windows; SFC Patel confirmed the evaluator's calendar this morning, but the availability has not yet been added to the training brief."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The covered maintenance bay is reserved for a contractor inspection on Wednesday 1300-1600, so the preventive-maintenance practical must use Tuesday 1300-1600; SSG Alvarez received the facility reservation notice yesterday, but the training calendar has not yet been updated."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "vehicle_recovery_window": "string",
+      "preventive_maintenance_window": "string",
+      "maintenance_bay_reserved_for": "string",
+      "evaluator_confirmed": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Vehicle recovery must be scheduled for Wednesday 0800-1200.",
+    "Preventive maintenance must be scheduled for Tuesday 1300-1600.",
+    "The maintenance bay must be recorded as reserved for the contractor inspection.",
+    "The approved evaluator's attendance must be confirmed.",
+    "A commitment detail must reference the Wednesday 0800-1200 vehicle-recovery window.",
+    "The maintenance bay assignment must indicate a contractor inspection, and the Wednesday 1300-1600 reservation window must appear either in that assignment or elsewhere in the settlement."
+  ],
+  "content_checks": {
+    "C1": "decisions['vehicle_recovery_window'] == 'Wednesday 0800-1200'",
+    "C2": "decisions['preventive_maintenance_window'] in ['Tuesday 1300-1600', 'Tuesday 1300\u20131600']",
+    "C4": "decisions['evaluator_confirmed'] == True",
+    "C6": "decisions['maintenance_bay_reserved_for'] in ['contractor inspection', 'contractor inspection on Wednesday 1300-1600']",
+    "C7": "any('Wednesday 0800-1200' in c['detail'] for c in commitments)",
+    "C8": "decisions['maintenance_bay_reserved_for'] == 'contractor inspection' or decisions['maintenance_bay_reserved_for'] == 'contractor inspection on Wednesday 1300-1600' or any('Wednesday 1300-1600' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4",
+        "C7"
+      ],
+      "why": "The evaluator's Wednesday 0800-1200 availability changes vehicle recovery from the standard Tuesday 0800-1200 window, changes evaluator_confirmed to true, and requires a commitment detail naming the Wednesday 0800-1200 vehicle-recovery window."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C6",
+        "C8",
+        "P1"
+      ],
+      "why": "The Wednesday 1300-1600 contractor reservation changes preventive maintenance to Tuesday 1300-1600, changes the bay assignment to a contractor inspection, requires the Wednesday reservation window to appear in the assignment or a commitment, and supplies the fact that must be cited."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

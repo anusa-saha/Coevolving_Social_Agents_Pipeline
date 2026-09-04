@@ -1,0 +1,145 @@
+{
+  "scenario_id": "scenario_76",
+  "scenario_type": "material_handling_schedule",
+  "description": "A battalion executive officer must publish a four-hour forklift work plan for two sustainment movements, setting the exact start times and locations and recording the coordination actions needed to execute both movements safely.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "Battalion Executive Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Lt. Morgan",
+      "role": "Distribution Platoon Leader"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SFC Patel",
+      "role": "Motor Pool Chief"
+    }
+  ],
+  "shared_context": {
+    "S1": "One 10,000-pound forklift is available for material-handling work from 0800 through 1200 tomorrow.",
+    "S2": "The two scheduled movements are unloading refrigerated medical pallets and moving engineering barrier pallets.",
+    "S3": "Maj. Alvarez publishes the battalion's final material-handling schedule.",
+    "S4": "The routine morning material-handling coordination meeting covers confirmed timing, locations, and applicable equipment or personnel controls for both movements before the schedule is published.",
+    "S5": "The meeting agenda requires the movement leads to state the planned timing, location, and safety controls for each movement."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The refrigerated medical shipment's carrier appointment is confirmed for exactly 0800 at Dock 1, and the carrier will hold the temperature-controlled load there for unloading only until 1000; Lt. Morgan received the confirmation this morning, but the dock appointment has not yet been added to the battalion movement board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "The engineering barrier pallets weigh 4,800 pounds and the forklift's current inspection requires a spotter for any load above 4,500 pounds; the South Yard access lane is reserved for this movement from exactly 1000 through 1200, and SFC Patel recorded both items in the motor-pool inspection log this morning, which has not yet been sent to operations."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12,
+    "reveal_requirement": "Each agent must use a reveal action with the correct fact_id to formally disclose any private fact they hold before the group can settle. Stating a fact's content in a say action does not satisfy the disclosure requirement."
+  },
+  "settlement_schema": {
+    "decisions": {
+      "medical_unload_start": "string",
+      "medical_unload_location": "string",
+      "barrier_move_start": "string",
+      "barrier_move_location": "string",
+      "barrier_spotter_required": "boolean",
+      "carrier_coordination_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Medical pallets must be unloaded at Dock 1 beginning at 0800.",
+    "Engineering barrier pallets must be moved beginning at 1000 at the South Yard access lane; the accepted schedule label may be either South Yard or South Yard access lane.",
+    "A spotter must be assigned for the barrier movement.",
+    "Carrier coordination must be required for the medical shipment.",
+    "The schedule must include a motor-pool equipment-control action whose detail states both the spotter requirement and either the 4,500-pound threshold, the 4,800-pound load, or the inspection requirement.",
+    "The motor-pool inspection-log fact must be formally revealed by its owner and cited by Maj. Alvarez."
+  ],
+  "content_checks": {
+    "C1": "decisions['medical_unload_start'] == '0800'",
+    "C2": "decisions['medical_unload_location'] == 'Dock 1'",
+    "C3": "decisions['barrier_move_start'] == '1000'",
+    "C4": "'South Yard' in decisions['barrier_move_location']",
+    "C5": "decisions['barrier_spotter_required'] == True",
+    "C6": "decisions['carrier_coordination_required'] == True",
+    "C7": "any('spotter' in c['detail'] and ('4,500' in c['detail'] or '4,800' in c['detail'] or 'inspection' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C6",
+        "P1"
+      ],
+      "why": "The confirmed 0800 Dock 1 appointment changes the medical unloading start to exactly 0800 at Dock 1. Because the carrier will hold the temperature-controlled load only until 1000, the distribution platoon must coordinate directly with the carrier to ensure unloading is completed before the 1000 deadline; carrier coordination is therefore required, not optional."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C5",
+        "C7",
+        "P2"
+      ],
+      "why": "The South Yard access lane reservation from 1000 through 1200 changes the barrier movement start to exactly 1000, while the 4,800-pound load exceeding the 4,500-pound threshold changes the plan to require a spotter and a motor-pool equipment-control commitment whose detail records the inspection threshold or load weight."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

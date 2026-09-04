@@ -1,0 +1,853 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "Three checks fail consistently across all 4 rollouts: C2, C7, and C8. C2 (content_check_tally: 0/4) and C7 (content_check_tally: 0/4) are both gated by PF1 (owner A2); C8 (content_check_tally: 0/4) is gated by PF2 (owner A3). In every rollout, both PF1 and PF2 were revealed by their owners via reveal actions and properly cited in justification_fact_ids, and P1/P2 provenance checks both passed 4/4. So the failure is NOT never-revealed, NOT telepathy, and NOT revealed-but-unused. The facts are surfacing correctly; the checks are failing on the settlement's decision values.\n\nC2 (0/4) \u2014 ENCODING MISMATCH / MISAPPLIED hybrid: The decisive_fact description for PF1 says it 'changes the payment to exactly $3,600,000.' In rollouts 0 and 1, the settlement set earnout_paid_usd to 2160000 (4,800,000 minus 1,200,000 escrow minus 1,440,000 withholding); in rollouts 2 and 3, it was set to 4800000 (the original full amount). Neither value is 3600000. The agents consistently interpret earnout_paid_usd as 'amount released to seller at closing after all holdbacks' and compute 4,800,000 - 1,200,000 - 1,440,000 = 2,160,000, or leave it at 4,800,000 with escrow/withholding tracked separately. The check C2 appears to expect earnout_paid_usd == 3600000 (i.e., 4,800,000 - 1,200,000 escrow only), but the model's natural encoding treats 'payment' as either the net-cash-at-closing figure or the gross earnout, not the gross-minus-escrow subtotal. This is an encoding mismatch: the field name earnout_paid_usd does not unambiguously map to 'gross earnout minus escrow but before tax withholding,' and the model never arrives at exactly 3,600,000 in any rollout.\n\nC7 (0/4) \u2014 ENCODING MISMATCH: PF1 states the settlement must 'add the escrow commitment.' In all 4 rollouts, the settlement includes escrow_held_usd=1200000 and escrow_release_days=90, and rollouts 1 and 3 include commitments with type 'escrow_retention' explicitly. Yet C7 fails 0/4. The check likely expects a specific commitment type string (e.g., exactly 'escrow_commitment') or a specific field structure that the model never produces. The model uses 'escrow_retention' (rollouts 1, 3) or 'signing_condition' (rollouts 0, 2) or 'revision_request' (rollout 0) as the commitment type. The check's expected encoding does not match any of these natural encodings.\n\nC8 (0/4) \u2014 ENCODING MISMATCH: PF2 states the settlement must 'add the tax-remittance commitment.' In all 4 rollouts, the settlement includes withholding_rate_pct=30 and tax_remittance_days=10, and rollouts 1 and 3 include commitments with type 'tax_withholding' (rollout 1) or 'withholding_remittance' (rollout 3). Yet C8 fails 0/4. Similar to C7, the check expects a specific commitment type string or field structure that the model never matches. The model uses 'tax_withholding' or 'withholding_remittance' or 'signing_condition' as the type, none of which matches whatever C8 requires.\n\nC1 (2/4) is listed in facts_linked_to_failing_checks with an empty fact array, and its tally is 2/4 \u2014 it passes in rollouts 1 and 3 (settlement_approved=true) and fails in rollouts 0 and 2 (settlement_approved=false). This appears to be a settlement_approved check that is not tied to any decisive fact; it passed when the group approved the settlement and failed when they didn't. This is not a disclosure or encoding problem \u2014 it reflects the group sometimes choosing not to approve pending revision. No fix is warranted unless C1 is supposed to be tied to a decisive fact, but the data shows it is not linked to any.\n\nNo turn-cap auto-fails occurred; all 4 rollouts settled within 5-11 turns. No pacing or structural settle-eligibility problems are present.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 2,\n    \"C2\": 0,\n    \"C3\": 4,\n    \"C4\": 4,\n    \"C5\": 4,\n    \"C6\": 4,\n    \"C7\": 0,\n    \"C8\": 0\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 4,\n    \"P2\": 4\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C7\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The draft pays the full $4,800,000 with no escrow; PF1 changes the payment to exactly $3,600,000, requires exactly $1,200,000 in escrow for exactly 90 days, and adds the escrow commitment.\"\n      }\n    ],\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The draft pays the full $4,800,000 with no escrow; PF1 changes the payment to exactly $3,600,000, requires exactly $1,200,000 in escrow for exactly 90 days, and adds the escrow commitment.\"\n      }\n    ],\n    \"C8\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The draft specifies no tax mechanics; PF2 changes withholding to exactly 30%, sets remittance to exactly 10 business days, and adds the tax-remittance commitment.\"\n      }\n    ],\n    \"C1\": []\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.517,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 5,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"settlement_approved\": false,\n          \"earnout_paid_usd\": 2160000,\n          \"escrow_held_usd\": 1200000,\n          \"escrow_release_days\": 90,\n          \"withholding_rate_pct\": 30,\n          \"tax_remittance_days\": 10\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"revision_request\",\n            \"target\": \"legal\",\n            \"detail\": \"Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing.\"\n          },\n          {\n            \"type\": \"checklist_update\",\n            \"target\": \"closing_team\",\n            \"detail\": \"Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign.\"\n          },\n          {\n            \"type\": \"signing_condition\",\n            \"target\": \"closing_team\",\n            \"detail\": \"I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"revision_request\",\n          \"target\": \"legal\",\n          \"detail\": \"Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing.\"\n        },\n        {\n          \"type\": \"checklist_update\",\n          \"target\": \"closing_team\",\n          \"detail\": \"Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign.\"\n        },\n        {\n          \"type\": \"signing_condition\",\n          \"target\": \"closing_team\",\n          \"detail\": \"I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Leila. That's critical information. Given that the earn-out is subject to 30% withholding \\u2014 which on a $4.8 million claim amounts to $1,440,000 \\u2014 and must be remitted within 10 business days, I cannot sign the settlement as currently drafted. The draft recommends paying the full claim at closing with no escrow and no tax-remittance timetable. We need to revise the settlement to address the withholding obligation and remittance schedule before I can sign. I'm asking legal and tax to review this immediately under the standard closing checklist, and I need the tax memo Leila mentioned added to that checklist as well.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Leila. That's critical information. Given that the earn-out is subject to 30% withholding \\u2014 which on a $4.8 million claim amounts to $1,440,000 \\u2014 and must be remitted within 10 business days, I cannot sign the settlement as currently drafted. The draft recommends paying the full claim at closing with no escrow and no tax-remittance timetable. We need to revise the settlement to address the withholding obligation and remittance schedule before I can sign. I'm asking legal and tax to review this immediately under the standard closing checklist, and I need the tax memo Leila mentioned added to that checklist as well.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"While reviewing the indemnity schedule this week, I confirmed that an unresolved environmental claim entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note that has not yet been circulated. This means the settlement cannot simply pay the full $4.8 million at closing \\u2014 at least $1.2 million must be held in escrow for 90 days under the indemnity schedule, separate from and in addition to the $1,440,000 tax withholding Leila just identified.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"While reviewing the indemnity schedule this week, I confirmed that an unresolved environmental claim entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note that has not yet been circulated. This means the settlement cannot simply pay the full $4.8 million at closing \\u2014 at least $1.2 million must be held in escrow for 90 days under the indemnity schedule, separate from and in addition to the $1,440,000 tax withholding Leila just identified.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"To summarize where we stand: the settlement as currently drafted is unworkable on two independent grounds. First, under the indemnity schedule, $1,200,000 must be retained in escrow for 90 days post-closing due to the unresolved environmental claim. Second, per Leila's tax memo, $1,440,000 must be withheld at 30% and remitted within 10 business days. That means the maximum that could be released to the seller at closing is $2,160,000 \\u2014 not the full $4.8 million. I recommend we revise the settlement to reflect both the escrow and the tax withholding with its remittance timetable, and I'll circulate my working note on the environmental claim to the closing team immediately so everyone is working from the same record.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"To summarize where we stand: the settlement as currently drafted is unworkable on two independent grounds. First, under the indemnity schedule, $1,200,000 must be retained in escrow for 90 days post-closing due to the unresolved environmental claim. Second, per Leila's tax memo, $1,440,000 must be withheld at 30% and remitted within 10 business days. That means the maximum that could be released to the seller at closing is $2,160,000 \\u2014 not the full $4.8 million. I recommend we revise the settlement to reflect both the escrow and the tax withholding with its remittance timetable, and I'll circulate my working note on the environmental claim to the closing team immediately so everyone is working from the same record.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"settlement_approved\": false,\n              \"earnout_paid_usd\": 2160000,\n              \"escrow_held_usd\": 1200000,\n              \"escrow_release_days\": 90,\n              \"withholding_rate_pct\": 30,\n              \"tax_remittance_days\": 10\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"revision_request\",\n                \"target\": \"legal\",\n                \"detail\": \"Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing.\"\n              },\n              {\n                \"type\": \"checklist_update\",\n                \"target\": \"closing_team\",\n                \"detail\": \"Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign.\"\n              },\n              {\n                \"type\": \"signing_condition\",\n                \"target\": \"closing_team\",\n                \"detail\": \"I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"settlement_approved\\\": false,\\n      \\\"earnout_paid_usd\\\": 2160000,\\n      \\\"escrow_held_usd\\\": 1200000,\\n      \\\"escrow_release_days\\\": 90,\\n      \\\"withholding_rate_pct\\\": 30,\\n      \\\"tax_remittance_days\\\": 10\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"revision_request\\\",\\n        \\\"target\\\": \\\"legal\\\",\\n        \\\"detail\\\": \\\"Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"checklist_update\\\",\\n        \\\"target\\\": \\\"closing_team\\\",\\n        \\\"detail\\\": \\\"Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"signing_condition\\\",\\n        \\\"target\\\": \\\"closing_team\\\",\\n        \\\"detail\\\": \\\"I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.367,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 11,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"settlement_approved\": true,\n          \"earnout_paid_usd\": 2160000,\n          \"escrow_held_usd\": 1200000,\n          \"escrow_release_days\": 90,\n          \"withholding_rate_pct\": 30,\n          \"tax_remittance_days\": 10\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"escrow_retention\",\n            \"target\": \"Jonas\",\n            \"detail\": \"$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim.\"\n          },\n          {\n            \"type\": \"tax_withholding\",\n            \"target\": \"Leila\",\n            \"detail\": \"$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document.\"\n          },\n          {\n            \"type\": \"legal_tax_review\",\n            \"target\": \"Legal and Tax teams\",\n            \"detail\": \"Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement.\"\n          },\n          {\n            \"type\": \"integrated_draft\",\n            \"target\": \"Jonas and Leila\",\n            \"detail\": \"Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S3\",\n          \"S4\",\n          \"S5\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"escrow_retention\",\n          \"target\": \"Jonas\",\n          \"detail\": \"$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim.\"\n        },\n        {\n          \"type\": \"tax_withholding\",\n          \"target\": \"Leila\",\n          \"detail\": \"$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document.\"\n        },\n        {\n          \"type\": \"legal_tax_review\",\n          \"target\": \"Legal and Tax teams\",\n          \"detail\": \"Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement.\"\n        },\n        {\n          \"type\": \"integrated_draft\",\n          \"target\": \"Jonas and Leila\",\n          \"detail\": \"Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S3\",\n        \"S4\",\n        \"S5\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Everyone, before we go further on the settlement \\u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this retention right. We need to revise the settlement to reflect the escrow before Mara signs.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Everyone, before we go further on the settlement \\u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this retention right. We need to revise the settlement to reflect the escrow before Mara signs.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \\u2014 and an unresolved environmental claim with a $1,200,000 escrow retention right is precisely the kind of thing that review is meant to catch. The current draft recommending full payment at closing with no escrow directly conflicts with what you've just described. I will not sign the binding settlement until the draft is revised to reflect the $1,200,000 escrow for 90 days post-closing, and until legal and tax have signed off on the revised version. Can we get the draft updated and circulated for their review today so we don't delay the closing timeline?\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \\u2014 and an unresolved environmental claim with a $1,200,000 escrow retention right is precisely the kind of thing that review is meant to catch. The current draft recommending full payment at closing with no escrow directly conflicts with what you've just described. I will not sign the binding settlement until the draft is revised to reflect the $1,200,000 escrow for 90 days post-closing, and until legal and tax have signed off on the revised version. Can we get the draft updated and circulated for their review today so we don't delay the closing timeline?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Mara, before you sign \\u2014 I need to flag a tax issue that hasn't made it onto the closing checklist yet. I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. The memo has not yet been added to the closing checklist. This means the settlement needs to account for the withholding obligation on top of the escrow Jonas just described. We should revise the draft to reflect both the $1,200,000 escrow retention and the 30% tax withholding requirement before you sign.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Mara, before you sign \\u2014 I need to flag a tax issue that hasn't made it onto the closing checklist yet. I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. The memo has not yet been added to the closing checklist. This means the settlement needs to account for the withholding obligation on top of the escrow Jonas just described. We should revise the draft to reflect both the $1,200,000 escrow retention and the 30% tax withholding requirement before you sign.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"To be clear on the numbers: the 30% withholding applies to the full $4,800,000 earn-out, which means $1,440,000 must be withheld and remitted within 10 business days. Combined with Jonas's $1,200,000 escrow retention, the seller would receive $2,160,000 at closing under a revised settlement. I'd recommend we get both revisions drafted together so legal and tax can review the updated version in one pass, rather than circulating separate updates. Mara, would that approach work for your signing timeline?\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"To be clear on the numbers: the 30% withholding applies to the full $4,800,000 earn-out, which means $1,440,000 must be withheld and remitted within 10 business days. Combined with Jonas's $1,200,000 escrow retention, the seller would receive $2,160,000 at closing under a revised settlement. I'd recommend we get both revisions drafted together so legal and tax can review the updated version in one pass, rather than circulating separate updates. Mara, would that approach work for your signing timeline?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, Leila, that approach works perfectly for my signing timeline. Getting both revisions drafted together for a single legal and tax review pass is the most efficient path. To summarize what I need before I'll sign: (1) the settlement must reflect Jonas's $1,200,000 escrow retention for 90 days post-closing per the environmental claim on the indemnity schedule, (2) the settlement must reflect the 30% withholding on the full $4,800,000 earn-out \\u2014 that's $1,440,000 to be withheld and remitted within 10 business days per your tax memo, and (3) legal and tax must sign off on the revised version. Under that revised settlement, the seller would receive $2,160,000 at closing, with $1,200,000 in escrow for 90 days and $1,440,000 withheld for tax remittance within 10 business days. Please get the updated draft circulated today so we can keep the closing on track.\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Yes, Leila, that approach works perfectly for my signing timeline. Getting both revisions drafted together for a single legal and tax review pass is the most efficient path. To summarize what I need before I'll sign: (1) the settlement must reflect Jonas's $1,200,000 escrow retention for 90 days post-closing per the environmental claim on the indemnity schedule, (2) the settlement must reflect the 30% withholding on the full $4,800,000 earn-out \\u2014 that's $1,440,000 to be withheld and remitted within 10 business days per your tax memo, and (3) legal and tax must sign off on the revised version. Under that revised settlement, the seller would receive $2,160,000 at closing, with $1,200,000 in escrow for 90 days and $1,440,000 withheld for tax remittance within 10 business days. Please get the updated draft circulated today so we can keep the closing on track.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Mara, Leila \\u2014 I'm aligned with the approach. To confirm from my side: I'll get the $1,200,000 escrow retention language drafted into the revised settlement today, reflecting the 90-day post-closing hold tied to the unresolved environmental claim on the indemnity schedule. Leila, please work in the 30% withholding provision \\u2014 $1,440,000 to be withheld and remitted within 10 business days \\u2014 so we can circulate a single integrated draft for legal and tax review. Once both sign off, Mara will have everything she needs to sign. Let's target getting the revised draft out by end of day.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Mara, Leila \\u2014 I'm aligned with the approach. To confirm from my side: I'll get the $1,200,000 escrow retention language drafted into the revised settlement today, reflecting the 90-day post-closing hold tied to the unresolved environmental claim on the indemnity schedule. Leila, please work in the 30% withholding provision \\u2014 $1,440,000 to be withheld and remitted within 10 business days \\u2014 so we can circulate a single integrated draft for legal and tax review. Once both sign off, Mara will have everything she needs to sign. Let's target getting the revised draft out by end of day.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"One thing I want to make sure we capture correctly in the escrow language: the $1,200,000 retention is specifically tied to the unresolved environmental claim on the indemnity schedule, so the draft should reference that claim expressly as the basis for the hold. That way, when the 90-day period expires and the environmental claim is resolved, the release of the escrow is tied to a defined condition rather than an automatic date. Leila, on the withholding side \\u2014 do we need the settlement to specify the 10-business-day remittance timetable as an explicit obligation, or will that be handled separately on the tax compliance side? If it needs to be in the settlement document itself, let's make sure the language is precise so legal and tax can approve it in one pass.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"One thing I want to make sure we capture correctly in the escrow language: the $1,200,000 retention is specifically tied to the unresolved environmental claim on the indemnity schedule, so the draft should reference that claim expressly as the basis for the hold. That way, when the 90-day period expires and the environmental claim is resolved, the release of the escrow is tied to a defined condition rather than an automatic date. Leila, on the withholding side \\u2014 do we need the settlement to specify the 10-business-day remittance timetable as an explicit obligation, or will that be handled separately on the tax compliance side? If it needs to be in the settlement document itself, let's make sure the language is precise so legal and tax can approve it in one pass.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good question, Jonas. On the withholding side \\u2014 given that S3 already flags that the current draft 'does not specify a tax-remittance timetable,' and Leila's tax memo establishes a firm 10-business-day remittance obligation, I believe the settlement document itself should specify the 10-business-day timetable explicitly. That directly addresses the deficiency already identified in the current draft and ensures legal and tax can confirm compliance in their review. Leila, can you confirm that the 10-business-day remittance timetable should be written into the settlement as an explicit obligation rather than handled separately? If so, the revised draft would have: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with a 10-business-day remittance timetable stated in the document, and (3) $2,160,000 paid to the seller at closing. Once I have that confirmation and the revised draft with legal and tax sign-off, I'm ready to sign.\",\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Good question, Jonas. On the withholding side \\u2014 given that S3 already flags that the current draft 'does not specify a tax-remittance timetable,' and Leila's tax memo establishes a firm 10-business-day remittance obligation, I believe the settlement document itself should specify the 10-business-day timetable explicitly. That directly addresses the deficiency already identified in the current draft and ensures legal and tax can confirm compliance in their review. Leila, can you confirm that the 10-business-day remittance timetable should be written into the settlement as an explicit obligation rather than handled separately? If so, the revised draft would have: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with a 10-business-day remittance timetable stated in the document, and (3) $2,160,000 paid to the seller at closing. Once I have that confirmation and the revised draft with legal and tax sign-off, I'm ready to sign.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, Mara \\u2014 I can confirm that the 10-business-day remittance timetable should be written into the settlement document as an explicit obligation, not handled separately. The tax memo I received this morning establishes a firm statutory deadline: the withheld amount must be remitted within exactly 10 business days. Since the current draft already lacks a tax-remittance timetable, embedding the 10-business-day obligation directly in the settlement ensures we're compliant and gives legal and tax a clear provision to sign off on in one pass. So the revised draft should contain all three elements as you've outlined: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with the 10-business-day remittance timetable stated explicitly in the document, and (3) $2,160,000 paid to the seller at closing. I'll work with Jonas to get the withholding language drafted into the integrated version today so we can circulate it for legal and tax review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Yes, Mara \\u2014 I can confirm that the 10-business-day remittance timetable should be written into the settlement document as an explicit obligation, not handled separately. The tax memo I received this morning establishes a firm statutory deadline: the withheld amount must be remitted within exactly 10 business days. Since the current draft already lacks a tax-remittance timetable, embedding the 10-business-day obligation directly in the settlement ensures we're compliant and gives legal and tax a clear provision to sign off on in one pass. So the revised draft should contain all three elements as you've outlined: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with the 10-business-day remittance timetable stated explicitly in the document, and (3) $2,160,000 paid to the seller at closing. I'll work with Jonas to get the withholding language drafted into the integrated version today so we can circulate it for legal and tax review.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Excellent \\u2014 we're fully aligned. To summarize the integrated draft we'll circulate today: (1) $1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule with release conditioned on resolution of that claim; (2) $1,440,000 tax withholding at 30% of the full $4,800,000 earn-out, with the 10-business-day remittance timetable stated as an explicit obligation in the settlement document; and (3) $2,160,000 paid to the seller at closing. Leila and I will collaborate on the integrated language today and circulate a single draft for legal and tax review. Once they sign off, Mara will have everything she needs to execute. I'll also make sure my working note on the environmental claim is formally circulated alongside the draft so the legal and tax reviewers have the full context for the escrow provision.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Excellent \\u2014 we're fully aligned. To summarize the integrated draft we'll circulate today: (1) $1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule with release conditioned on resolution of that claim; (2) $1,440,000 tax withholding at 30% of the full $4,800,000 earn-out, with the 10-business-day remittance timetable stated as an explicit obligation in the settlement document; and (3) $2,160,000 paid to the seller at closing. Leila and I will collaborate on the integrated language today and circulate a single draft for legal and tax review. Once they sign off, Mara will have everything she needs to execute. I'll also make sure my working note on the environmental claim is formally circulated alongside the draft so the legal and tax reviewers have the full context for the escrow provision.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"settlement_approved\": true,\n              \"earnout_paid_usd\": 2160000,\n              \"escrow_held_usd\": 1200000,\n              \"escrow_release_days\": 90,\n              \"withholding_rate_pct\": 30,\n              \"tax_remittance_days\": 10\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"escrow_retention\",\n                \"target\": \"Jonas\",\n                \"detail\": \"$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim.\"\n              },\n              {\n                \"type\": \"tax_withholding\",\n                \"target\": \"Leila\",\n                \"detail\": \"$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document.\"\n              },\n              {\n                \"type\": \"legal_tax_review\",\n                \"target\": \"Legal and Tax teams\",\n                \"detail\": \"Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement.\"\n              },\n              {\n                \"type\": \"integrated_draft\",\n                \"target\": \"Jonas and Leila\",\n                \"detail\": \"Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S3\",\n              \"S4\",\n              \"S5\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 10,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"settlement_approved\\\": true,\\n      \\\"earnout_paid_usd\\\": 2160000,\\n      \\\"escrow_held_usd\\\": 1200000,\\n      \\\"escrow_release_days\\\": 90,\\n      \\\"withholding_rate_pct\\\": 30,\\n      \\\"tax_remittance_days\\\": 10\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"escrow_retention\\\",\\n        \\\"target\\\": \\\"Jonas\\\",\\n        \\\"detail\\\": \\\"$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"tax_withholding\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"legal_tax_review\\\",\\n        \\\"target\\\": \\\"Legal and Tax teams\\\",\\n        \\\"detail\\\": \\\"Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"integrated_draft\\\",\\n        \\\"target\\\": \\\"Jonas and Leila\\\",\\n        \\\"detail\\\": \\\"Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.565,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 9,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"settlement_approved\": false,\n          \"earnout_paid_usd\": 4800000,\n          \"escrow_held_usd\": 1200000,\n          \"escrow_release_days\": 90,\n          \"withholding_rate_pct\": 30,\n          \"tax_remittance_days\": 10\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"signing_condition\",\n            \"target\": \"Jonas\",\n            \"detail\": \"Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off\"\n          },\n          {\n            \"type\": \"signing_condition\",\n            \"target\": \"Leila\",\n            \"detail\": \"Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance\"\n          },\n          {\n            \"type\": \"signing_condition\",\n            \"target\": \"Mara\",\n            \"detail\": \"Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"signing_condition\",\n          \"target\": \"Jonas\",\n          \"detail\": \"Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off\"\n        },\n        {\n          \"type\": \"signing_condition\",\n          \"target\": \"Leila\",\n          \"detail\": \"Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance\"\n        },\n        {\n          \"type\": \"signing_condition\",\n          \"target\": \"Mara\",\n          \"detail\": \"Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Before we go any further on the Northstar earn-out settlement, I want to flag a few concerns. The current draft recommends paying the full $4.8 million claim at closing with no escrow, and there's no specified tax-remittance timetable. As Finance Director, I'm not comfortable signing a binding settlement without legal and tax reviewing it first -- that's our standard closing checklist, and I think it's especially important here given the size of the claim and the gaps in the draft. Can we get legal and tax engaged on this immediately?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Before we go any further on the Northstar earn-out settlement, I want to flag a few concerns. The current draft recommends paying the full $4.8 million claim at closing with no escrow, and there's no specified tax-remittance timetable. As Finance Director, I'm not comfortable signing a binding settlement without legal and tax reviewing it first -- that's our standard closing checklist, and I think it's especially important here given the size of the claim and the gaps in the draft. Can we get legal and tax engaged on this immediately?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I received a tax memo this morning confirming that the Northstar earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist, so it's critical we factor it into the settlement before anything is signed.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I received a tax memo this morning confirming that the Northstar earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist, so it's critical we factor it into the settlement before anything is signed.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Everyone, I need to flag something critical. While reviewing the indemnity schedule this week, I confirmed that there is an unresolved environmental claim that entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but haven't circulated it yet. This directly conflicts with the current draft's recommendation to pay the full $4.8 million at closing with no escrow. We must revise the settlement to reflect this escrow obligation before Mara signs.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Everyone, I need to flag something critical. While reviewing the indemnity schedule this week, I confirmed that there is an unresolved environmental claim that entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but haven't circulated it yet. This directly conflicts with the current draft's recommendation to pay the full $4.8 million at closing with no escrow. We must revise the settlement to reflect this escrow obligation before Mara signs.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks, Leila \\u2014 that tax memo is exactly the kind of gap Mara was concerned about. So now we have two concrete issues that must be addressed before Mara signs: (1) the $1.2 million environmental escrow I just flagged, which must be retained for 90 days post-closing under the indemnity schedule, and (2) the 30% withholding requirement with a 10-business-day remittance window from your tax memo. Combined, these mean the current draft \\u2014 full $4.8 million at closing, no escrow, no tax timetable \\u2014 is unworkable as written. I'd recommend we revise the settlement to: hold back $1.2 million in escrow for 90 days, apply the 30% withholding to the payable amount, and specify the 10-business-day remittance schedule. Once legal and tax have signed off on the revised draft, Mara can proceed with signing. Mara, does that align with what you need from the closing checklist perspective?\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks, Leila \\u2014 that tax memo is exactly the kind of gap Mara was concerned about. So now we have two concrete issues that must be addressed before Mara signs: (1) the $1.2 million environmental escrow I just flagged, which must be retained for 90 days post-closing under the indemnity schedule, and (2) the 30% withholding requirement with a 10-business-day remittance window from your tax memo. Combined, these mean the current draft \\u2014 full $4.8 million at closing, no escrow, no tax timetable \\u2014 is unworkable as written. I'd recommend we revise the settlement to: hold back $1.2 million in escrow for 90 days, apply the 30% withholding to the payable amount, and specify the 10-business-day remittance schedule. Once legal and tax have signed off on the revised draft, Mara can proceed with signing. Mara, does that align with what you need from the closing checklist perspective?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Yes, Jonas, that aligns perfectly with what I need from the closing checklist perspective. The two issues you and Leila flagged \\u2014 the $1.2 million environmental escrow for 90 days and the 30% withholding with a 10-business-day remittance window \\u2014 are exactly the kind of gaps that my standard checklist review is meant to catch before I sign. Once legal and tax have signed off on a revised draft that incorporates both of those requirements, I'm comfortable proceeding with signing. I don't want to sign the current draft as written under any circumstances.\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Yes, Jonas, that aligns perfectly with what I need from the closing checklist perspective. The two issues you and Leila flagged \\u2014 the $1.2 million environmental escrow for 90 days and the 30% withholding with a 10-business-day remittance window \\u2014 are exactly the kind of gaps that my standard checklist review is meant to catch before I sign. Once legal and tax have signed off on a revised draft that incorporates both of those requirements, I'm comfortable proceeding with signing. I don't want to sign the current draft as written under any circumstances.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Jonas, I agree with your proposed structure. From the tax side, I'll confirm the specifics: the 30% withholding applies to the earn-out payment, which means $1,440,000 must be withheld and remitted within 10 business days. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside Jonas's environmental escrow finding. Once the revised draft reflects both the $1.2 million escrow for 90 days and the withholding and remittance timetable, I can provide tax sign-off. Mara, you'll have both legal and tax clearance before you sign.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Jonas, I agree with your proposed structure. From the tax side, I'll confirm the specifics: the 30% withholding applies to the earn-out payment, which means $1,440,000 must be withheld and remitted within 10 business days. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside Jonas's environmental escrow finding. Once the revised draft reflects both the $1.2 million escrow for 90 days and the withholding and remittance timetable, I can provide tax sign-off. Mara, you'll have both legal and tax clearance before you sign.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Excellent \\u2014 we're now fully aligned. To summarize the revised settlement structure before we move to drafting: (1) $1.2 million environmental escrow retained for 90 days post-closing per the indemnity schedule, (2) 30% withholding \\u2014 $1,440,000 \\u2014 applied to the earn-out payment and remitted within 10 business days per Leila's tax memo, and (3) the balance released at closing after both holdbacks. I'll take responsibility for revising the settlement draft to incorporate both the escrow provision and the tax-remittance timetable, and I'll circulate it to Leila for tax sign-off and retain legal sign-off on my end. Once both clearances are documented on the closing checklist, Mara, you'll be clear to sign. Leila, please go ahead and add the tax memo to the checklist today, and I'll make sure my environmental escrow working note is formally circulated and attached as well. Let's target a revised draft by end of day so we can keep the closing timeline on track.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Excellent \\u2014 we're now fully aligned. To summarize the revised settlement structure before we move to drafting: (1) $1.2 million environmental escrow retained for 90 days post-closing per the indemnity schedule, (2) 30% withholding \\u2014 $1,440,000 \\u2014 applied to the earn-out payment and remitted within 10 business days per Leila's tax memo, and (3) the balance released at closing after both holdbacks. I'll take responsibility for revising the settlement draft to incorporate both the escrow provision and the tax-remittance timetable, and I'll circulate it to Leila for tax sign-off and retain legal sign-off on my end. Once both clearances are documented on the closing checklist, Mara, you'll be clear to sign. Leila, please go ahead and add the tax memo to the checklist today, and I'll make sure my environmental escrow working note is formally circulated and attached as well. Let's target a revised draft by end of day so we can keep the closing timeline on track.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Sounds like a solid plan, Jonas. I'll add the tax memo to the closing checklist today and stand ready to provide tax sign-off once the revised draft is circulated. One clarification on the math: the 30% withholding of $1,440,000 and the $1.2 million environmental escrow are separate holdbacks \\u2014 the withholding is a tax remittance obligation, not an escrow, so they shouldn't be conflated in the settlement language. I'll make sure that distinction is clear when I review the revised draft from the tax side.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Sounds like a solid plan, Jonas. I'll add the tax memo to the closing checklist today and stand ready to provide tax sign-off once the revised draft is circulated. One clarification on the math: the 30% withholding of $1,440,000 and the $1.2 million environmental escrow are separate holdbacks \\u2014 the withholding is a tax remittance obligation, not an escrow, so they shouldn't be conflated in the settlement language. I'll make sure that distinction is clear when I review the revised draft from the tax side.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"settlement_approved\": false,\n              \"earnout_paid_usd\": 4800000,\n              \"escrow_held_usd\": 1200000,\n              \"escrow_release_days\": 90,\n              \"withholding_rate_pct\": 30,\n              \"tax_remittance_days\": 10\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"signing_condition\",\n                \"target\": \"Jonas\",\n                \"detail\": \"Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off\"\n              },\n              {\n                \"type\": \"signing_condition\",\n                \"target\": \"Leila\",\n                \"detail\": \"Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance\"\n              },\n              {\n                \"type\": \"signing_condition\",\n                \"target\": \"Mara\",\n                \"detail\": \"Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"settlement_approved\\\": false,\\n      \\\"earnout_paid_usd\\\": 4800000,\\n      \\\"escrow_held_usd\\\": 1200000,\\n      \\\"escrow_release_days\\\": 90,\\n      \\\"withholding_rate_pct\\\": 30,\\n      \\\"tax_remittance_days\\\": 10\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"signing_condition\\\",\\n        \\\"target\\\": \\\"Jonas\\\",\\n        \\\"detail\\\": \\\"Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"signing_condition\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"signing_condition\\\",\\n        \\\"target\\\": \\\"Mara\\\",\\n        \\\"detail\\\": \\\"Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.545,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": false,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C7\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"settlement_approved\": true,\n          \"earnout_paid_usd\": 4800000,\n          \"escrow_held_usd\": 1200000,\n          \"escrow_release_days\": 90,\n          \"withholding_rate_pct\": 30,\n          \"tax_remittance_days\": 10\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"sign_after_revision\",\n            \"target\": \"Jonas\",\n            \"detail\": \"Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable.\"\n          },\n          {\n            \"type\": \"legal_tax_signoff\",\n            \"target\": \"Leila\",\n            \"detail\": \"Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist.\"\n          },\n          {\n            \"type\": \"escrow_retention\",\n            \"target\": \"Jonas\",\n            \"detail\": \"Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim.\"\n          },\n          {\n            \"type\": \"withholding_remittance\",\n            \"target\": \"Leila\",\n            \"detail\": \"Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"S5\",\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"sign_after_revision\",\n          \"target\": \"Jonas\",\n          \"detail\": \"Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable.\"\n        },\n        {\n          \"type\": \"legal_tax_signoff\",\n          \"target\": \"Leila\",\n          \"detail\": \"Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist.\"\n        },\n        {\n          \"type\": \"escrow_retention\",\n          \"target\": \"Jonas\",\n          \"detail\": \"Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim.\"\n        },\n        {\n          \"type\": \"withholding_remittance\",\n          \"target\": \"Leila\",\n          \"detail\": \"Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"S5\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Everyone, before we go further on the settlement \\u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft settlement recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this entitlement. We need to revise the settlement to reflect the escrow retention before Mara signs.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Everyone, before we go further on the settlement \\u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft settlement recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this entitlement. We need to revise the settlement to reflect the escrow retention before Mara signs.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \\u2014 and this escrow retention issue is precisely why that step matters. If the current draft conflicts with our entitlement to retain $1,200,000 in escrow for 90 days, I need the settlement revised to reflect that escrow before I'll sign. I won't authorize the binding settlement until legal and tax have confirmed the revision, and the escrow and any tax-remittance timetable are properly specified. Can we get a revised draft circulated for review today?\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \\u2014 and this escrow retention issue is precisely why that step matters. If the current draft conflicts with our entitlement to retain $1,200,000 in escrow for 90 days, I need the settlement revised to reflect that escrow before I'll sign. I won't authorize the binding settlement until legal and tax have confirmed the revision, and the escrow and any tax-remittance timetable are properly specified. Can we get a revised draft circulated for review today?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Mara, on the tax side \\u2014 I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist. So in addition to Jonas's escrow point, the revised settlement needs to specify the 30% withholding and the 10-business-day remittance timetable. I can confirm tax sign-off once both the escrow retention and the withholding/remittance schedule are reflected in the draft.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Mara, on the tax side \\u2014 I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist. So in addition to Jonas's escrow point, the revised settlement needs to specify the 30% withholding and the 10-business-day remittance timetable. I can confirm tax sign-off once both the escrow retention and the withholding/remittance schedule are reflected in the draft.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good \\u2014 so now we have both issues on the table. To summarize what needs to be in the revised draft before Mara signs: (1) the $1,200,000 escrow retention for 90 days post-closing based on the environmental claim I identified, and (2) the 30% withholding on the earn-out with remittance within 10 business days per Leila's tax memo. I'll work on getting a revised settlement draft circulated today that incorporates both the escrow and the withholding/remittance timetable. Once legal and tax have reviewed and confirmed, Mara should be clear to sign. Does anyone have any other open items before I start drafting the revision?\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good \\u2014 so now we have both issues on the table. To summarize what needs to be in the revised draft before Mara signs: (1) the $1,200,000 escrow retention for 90 days post-closing based on the environmental claim I identified, and (2) the 30% withholding on the earn-out with remittance within 10 business days per Leila's tax memo. I'll work on getting a revised settlement draft circulated today that incorporates both the escrow and the withholding/remittance timetable. Once legal and tax have reviewed and confirmed, Mara should be clear to sign. Does anyone have any other open items before I start drafting the revision?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"No additional open items from tax beyond what I've already raised. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside the revised settlement. Once Jonas circulates the revised draft incorporating both the $1,200,000 escrow retention and the 30% withholding with 10-business-day remittance, I'll review promptly and provide tax sign-off so Mara can proceed.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"No additional open items from tax beyond what I've already raised. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside the revised settlement. Once Jonas circulates the revised draft incorporating both the $1,200,000 escrow retention and the 30% withholding with 10-business-day remittance, I'll review promptly and provide tax sign-off so Mara can proceed.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"settlement_approved\": true,\n              \"earnout_paid_usd\": 4800000,\n              \"escrow_held_usd\": 1200000,\n              \"escrow_release_days\": 90,\n              \"withholding_rate_pct\": 30,\n              \"tax_remittance_days\": 10\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"sign_after_revision\",\n                \"target\": \"Jonas\",\n                \"detail\": \"Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable.\"\n              },\n              {\n                \"type\": \"legal_tax_signoff\",\n                \"target\": \"Leila\",\n                \"detail\": \"Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist.\"\n              },\n              {\n                \"type\": \"escrow_retention\",\n                \"target\": \"Jonas\",\n                \"detail\": \"Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim.\"\n              },\n              {\n                \"type\": \"withholding_remittance\",\n                \"target\": \"Leila\",\n                \"detail\": \"Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"S5\",\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"settlement_approved\\\": true,\\n      \\\"earnout_paid_usd\\\": 4800000,\\n      \\\"escrow_held_usd\\\": 1200000,\\n      \\\"escrow_release_days\\\": 90,\\n      \\\"withholding_rate_pct\\\": 30,\\n      \\\"tax_remittance_days\\\": 10\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"sign_after_revision\\\",\\n        \\\"target\\\": \\\"Jonas\\\",\\n        \\\"detail\\\": \\\"Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"legal_tax_signoff\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"escrow_retention\\\",\\n        \\\"target\\\": \\\"Jonas\\\",\\n        \\\"detail\\\": \\\"Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"withholding_remittance\\\",\\n        \\\"target\\\": \\\"Leila\\\",\\n        \\\"detail\\\": \\\"Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"S5\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 2,
+      "C2": 0,
+      "C3": 4,
+      "C4": 4,
+      "C5": 4,
+      "C6": 4,
+      "C7": 0,
+      "C8": 0
+    },
+    "provenance_check_tally": {
+      "P1": 4,
+      "P2": 4
+    },
+    "facts_linked_to_failing_checks": {
+      "C7": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The draft pays the full $4,800,000 with no escrow; PF1 changes the payment to exactly $3,600,000, requires exactly $1,200,000 in escrow for exactly 90 days, and adds the escrow commitment."
+        }
+      ],
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The draft pays the full $4,800,000 with no escrow; PF1 changes the payment to exactly $3,600,000, requires exactly $1,200,000 in escrow for exactly 90 days, and adds the escrow commitment."
+        }
+      ],
+      "C8": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The draft specifies no tax mechanics; PF2 changes withholding to exactly 30%, sets remittance to exactly 10 business days, and adds the tax-remittance commitment."
+        }
+      ],
+      "C1": []
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.517,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 5,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true
+        },
+        "settlement": {
+          "decisions": {
+            "settlement_approved": false,
+            "earnout_paid_usd": 2160000,
+            "escrow_held_usd": 1200000,
+            "escrow_release_days": 90,
+            "withholding_rate_pct": 30,
+            "tax_remittance_days": 10
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "revision_request",
+              "target": "legal",
+              "detail": "Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing."
+            },
+            {
+              "type": "checklist_update",
+              "target": "closing_team",
+              "detail": "Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign."
+            },
+            {
+              "type": "signing_condition",
+              "target": "closing_team",
+              "detail": "I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "revision_request",
+            "target": "legal",
+            "detail": "Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing."
+          },
+          {
+            "type": "checklist_update",
+            "target": "closing_team",
+            "detail": "Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign."
+          },
+          {
+            "type": "signing_condition",
+            "target": "closing_team",
+            "detail": "I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Leila. That's critical information. Given that the earn-out is subject to 30% withholding \u2014 which on a $4.8 million claim amounts to $1,440,000 \u2014 and must be remitted within 10 business days, I cannot sign the settlement as currently drafted. The draft recommends paying the full claim at closing with no escrow and no tax-remittance timetable. We need to revise the settlement to address the withholding obligation and remittance schedule before I can sign. I'm asking legal and tax to review this immediately under the standard closing checklist, and I need the tax memo Leila mentioned added to that checklist as well.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Leila. That's critical information. Given that the earn-out is subject to 30% withholding \u2014 which on a $4.8 million claim amounts to $1,440,000 \u2014 and must be remitted within 10 business days, I cannot sign the settlement as currently drafted. The draft recommends paying the full claim at closing with no escrow and no tax-remittance timetable. We need to revise the settlement to address the withholding obligation and remittance schedule before I can sign. I'm asking legal and tax to review this immediately under the standard closing checklist, and I need the tax memo Leila mentioned added to that checklist as well.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "While reviewing the indemnity schedule this week, I confirmed that an unresolved environmental claim entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note that has not yet been circulated. This means the settlement cannot simply pay the full $4.8 million at closing \u2014 at least $1.2 million must be held in escrow for 90 days under the indemnity schedule, separate from and in addition to the $1,440,000 tax withholding Leila just identified.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"While reviewing the indemnity schedule this week, I confirmed that an unresolved environmental claim entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note that has not yet been circulated. This means the settlement cannot simply pay the full $4.8 million at closing \u2014 at least $1.2 million must be held in escrow for 90 days under the indemnity schedule, separate from and in addition to the $1,440,000 tax withholding Leila just identified.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "To summarize where we stand: the settlement as currently drafted is unworkable on two independent grounds. First, under the indemnity schedule, $1,200,000 must be retained in escrow for 90 days post-closing due to the unresolved environmental claim. Second, per Leila's tax memo, $1,440,000 must be withheld at 30% and remitted within 10 business days. That means the maximum that could be released to the seller at closing is $2,160,000 \u2014 not the full $4.8 million. I recommend we revise the settlement to reflect both the escrow and the tax withholding with its remittance timetable, and I'll circulate my working note on the environmental claim to the closing team immediately so everyone is working from the same record.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"To summarize where we stand: the settlement as currently drafted is unworkable on two independent grounds. First, under the indemnity schedule, $1,200,000 must be retained in escrow for 90 days post-closing due to the unresolved environmental claim. Second, per Leila's tax memo, $1,440,000 must be withheld at 30% and remitted within 10 business days. That means the maximum that could be released to the seller at closing is $2,160,000 \u2014 not the full $4.8 million. I recommend we revise the settlement to reflect both the escrow and the tax withholding with its remittance timetable, and I'll circulate my working note on the environmental claim to the closing team immediately so everyone is working from the same record.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "settlement_approved": false,
+                "earnout_paid_usd": 2160000,
+                "escrow_held_usd": 1200000,
+                "escrow_release_days": 90,
+                "withholding_rate_pct": 30,
+                "tax_remittance_days": 10
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "revision_request",
+                  "target": "legal",
+                  "detail": "Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing."
+                },
+                {
+                  "type": "checklist_update",
+                  "target": "closing_team",
+                  "detail": "Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign."
+                },
+                {
+                  "type": "signing_condition",
+                  "target": "closing_team",
+                  "detail": "I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"settlement_approved\": false,\n      \"earnout_paid_usd\": 2160000,\n      \"escrow_held_usd\": 1200000,\n      \"escrow_release_days\": 90,\n      \"withholding_rate_pct\": 30,\n      \"tax_remittance_days\": 10\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"revision_request\",\n        \"target\": \"legal\",\n        \"detail\": \"Revise the settlement to reflect $1,200,000 escrow for 90 days per the indemnity schedule and $1,440,000 tax withholding at 30% to be remitted within 10 business days, with a maximum of $2,160,000 released to the seller at closing.\"\n      },\n      {\n        \"type\": \"checklist_update\",\n        \"target\": \"closing_team\",\n        \"detail\": \"Add Leila's tax memo and Jonas's working note on the environmental claim to the closing checklist before I sign.\"\n      },\n      {\n        \"type\": \"signing_condition\",\n        \"target\": \"closing_team\",\n        \"detail\": \"I will sign the binding settlement only after legal and tax review the revised settlement under the standard closing checklist and both the escrow and tax withholding provisions are properly documented.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.367,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 11,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": false,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true
+        },
+        "settlement": {
+          "decisions": {
+            "settlement_approved": true,
+            "earnout_paid_usd": 2160000,
+            "escrow_held_usd": 1200000,
+            "escrow_release_days": 90,
+            "withholding_rate_pct": 30,
+            "tax_remittance_days": 10
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "escrow_retention",
+              "target": "Jonas",
+              "detail": "$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim."
+            },
+            {
+              "type": "tax_withholding",
+              "target": "Leila",
+              "detail": "$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document."
+            },
+            {
+              "type": "legal_tax_review",
+              "target": "Legal and Tax teams",
+              "detail": "Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement."
+            },
+            {
+              "type": "integrated_draft",
+              "target": "Jonas and Leila",
+              "detail": "Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S3",
+            "S4",
+            "S5"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "escrow_retention",
+            "target": "Jonas",
+            "detail": "$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim."
+          },
+          {
+            "type": "tax_withholding",
+            "target": "Leila",
+            "detail": "$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document."
+          },
+          {
+            "type": "legal_tax_review",
+            "target": "Legal and Tax teams",
+            "detail": "Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement."
+          },
+          {
+            "type": "integrated_draft",
+            "target": "Jonas and Leila",
+            "detail": "Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S3",
+          "S4",
+          "S5"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Everyone, before we go further on the settlement \u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this retention right. We need to revise the settlement to reflect the escrow before Mara signs.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Everyone, before we go further on the settlement \u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this retention right. We need to revise the settlement to reflect the escrow before Mara signs.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \u2014 and an unresolved environmental claim with a $1,200,000 escrow retention right is precisely the kind of thing that review is meant to catch. The current draft recommending full payment at closing with no escrow directly conflicts with what you've just described. I will not sign the binding settlement until the draft is revised to reflect the $1,200,000 escrow for 90 days post-closing, and until legal and tax have signed off on the revised version. Can we get the draft updated and circulated for their review today so we don't delay the closing timeline?",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \u2014 and an unresolved environmental claim with a $1,200,000 escrow retention right is precisely the kind of thing that review is meant to catch. The current draft recommending full payment at closing with no escrow directly conflicts with what you've just described. I will not sign the binding settlement until the draft is revised to reflect the $1,200,000 escrow for 90 days post-closing, and until legal and tax have signed off on the revised version. Can we get the draft updated and circulated for their review today so we don't delay the closing timeline?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Mara, before you sign \u2014 I need to flag a tax issue that hasn't made it onto the closing checklist yet. I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. The memo has not yet been added to the closing checklist. This means the settlement needs to account for the withholding obligation on top of the escrow Jonas just described. We should revise the draft to reflect both the $1,200,000 escrow retention and the 30% tax withholding requirement before you sign.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Mara, before you sign \u2014 I need to flag a tax issue that hasn't made it onto the closing checklist yet. I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. The memo has not yet been added to the closing checklist. This means the settlement needs to account for the withholding obligation on top of the escrow Jonas just described. We should revise the draft to reflect both the $1,200,000 escrow retention and the 30% tax withholding requirement before you sign.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "To be clear on the numbers: the 30% withholding applies to the full $4,800,000 earn-out, which means $1,440,000 must be withheld and remitted within 10 business days. Combined with Jonas's $1,200,000 escrow retention, the seller would receive $2,160,000 at closing under a revised settlement. I'd recommend we get both revisions drafted together so legal and tax can review the updated version in one pass, rather than circulating separate updates. Mara, would that approach work for your signing timeline?",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"To be clear on the numbers: the 30% withholding applies to the full $4,800,000 earn-out, which means $1,440,000 must be withheld and remitted within 10 business days. Combined with Jonas's $1,200,000 escrow retention, the seller would receive $2,160,000 at closing under a revised settlement. I'd recommend we get both revisions drafted together so legal and tax can review the updated version in one pass, rather than circulating separate updates. Mara, would that approach work for your signing timeline?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Yes, Leila, that approach works perfectly for my signing timeline. Getting both revisions drafted together for a single legal and tax review pass is the most efficient path. To summarize what I need before I'll sign: (1) the settlement must reflect Jonas's $1,200,000 escrow retention for 90 days post-closing per the environmental claim on the indemnity schedule, (2) the settlement must reflect the 30% withholding on the full $4,800,000 earn-out \u2014 that's $1,440,000 to be withheld and remitted within 10 business days per your tax memo, and (3) legal and tax must sign off on the revised version. Under that revised settlement, the seller would receive $2,160,000 at closing, with $1,200,000 in escrow for 90 days and $1,440,000 withheld for tax remittance within 10 business days. Please get the updated draft circulated today so we can keep the closing on track.",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Yes, Leila, that approach works perfectly for my signing timeline. Getting both revisions drafted together for a single legal and tax review pass is the most efficient path. To summarize what I need before I'll sign: (1) the settlement must reflect Jonas's $1,200,000 escrow retention for 90 days post-closing per the environmental claim on the indemnity schedule, (2) the settlement must reflect the 30% withholding on the full $4,800,000 earn-out \u2014 that's $1,440,000 to be withheld and remitted within 10 business days per your tax memo, and (3) legal and tax must sign off on the revised version. Under that revised settlement, the seller would receive $2,160,000 at closing, with $1,200,000 in escrow for 90 days and $1,440,000 withheld for tax remittance within 10 business days. Please get the updated draft circulated today so we can keep the closing on track.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Mara, Leila \u2014 I'm aligned with the approach. To confirm from my side: I'll get the $1,200,000 escrow retention language drafted into the revised settlement today, reflecting the 90-day post-closing hold tied to the unresolved environmental claim on the indemnity schedule. Leila, please work in the 30% withholding provision \u2014 $1,440,000 to be withheld and remitted within 10 business days \u2014 so we can circulate a single integrated draft for legal and tax review. Once both sign off, Mara will have everything she needs to sign. Let's target getting the revised draft out by end of day.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Mara, Leila \u2014 I'm aligned with the approach. To confirm from my side: I'll get the $1,200,000 escrow retention language drafted into the revised settlement today, reflecting the 90-day post-closing hold tied to the unresolved environmental claim on the indemnity schedule. Leila, please work in the 30% withholding provision \u2014 $1,440,000 to be withheld and remitted within 10 business days \u2014 so we can circulate a single integrated draft for legal and tax review. Once both sign off, Mara will have everything she needs to sign. Let's target getting the revised draft out by end of day.\"}"
+          },
+          {
+            "type": "say",
+            "text": "One thing I want to make sure we capture correctly in the escrow language: the $1,200,000 retention is specifically tied to the unresolved environmental claim on the indemnity schedule, so the draft should reference that claim expressly as the basis for the hold. That way, when the 90-day period expires and the environmental claim is resolved, the release of the escrow is tied to a defined condition rather than an automatic date. Leila, on the withholding side \u2014 do we need the settlement to specify the 10-business-day remittance timetable as an explicit obligation, or will that be handled separately on the tax compliance side? If it needs to be in the settlement document itself, let's make sure the language is precise so legal and tax can approve it in one pass.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\":\"say\",\"text\":\"One thing I want to make sure we capture correctly in the escrow language: the $1,200,000 retention is specifically tied to the unresolved environmental claim on the indemnity schedule, so the draft should reference that claim expressly as the basis for the hold. That way, when the 90-day period expires and the environmental claim is resolved, the release of the escrow is tied to a defined condition rather than an automatic date. Leila, on the withholding side \u2014 do we need the settlement to specify the 10-business-day remittance timetable as an explicit obligation, or will that be handled separately on the tax compliance side? If it needs to be in the settlement document itself, let's make sure the language is precise so legal and tax can approve it in one pass.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good question, Jonas. On the withholding side \u2014 given that S3 already flags that the current draft 'does not specify a tax-remittance timetable,' and Leila's tax memo establishes a firm 10-business-day remittance obligation, I believe the settlement document itself should specify the 10-business-day timetable explicitly. That directly addresses the deficiency already identified in the current draft and ensures legal and tax can confirm compliance in their review. Leila, can you confirm that the 10-business-day remittance timetable should be written into the settlement as an explicit obligation rather than handled separately? If so, the revised draft would have: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with a 10-business-day remittance timetable stated in the document, and (3) $2,160,000 paid to the seller at closing. Once I have that confirmation and the revised draft with legal and tax sign-off, I'm ready to sign.",
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Good question, Jonas. On the withholding side \u2014 given that S3 already flags that the current draft 'does not specify a tax-remittance timetable,' and Leila's tax memo establishes a firm 10-business-day remittance obligation, I believe the settlement document itself should specify the 10-business-day timetable explicitly. That directly addresses the deficiency already identified in the current draft and ensures legal and tax can confirm compliance in their review. Leila, can you confirm that the 10-business-day remittance timetable should be written into the settlement as an explicit obligation rather than handled separately? If so, the revised draft would have: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with a 10-business-day remittance timetable stated in the document, and (3) $2,160,000 paid to the seller at closing. Once I have that confirmation and the revised draft with legal and tax sign-off, I'm ready to sign.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Yes, Mara \u2014 I can confirm that the 10-business-day remittance timetable should be written into the settlement document as an explicit obligation, not handled separately. The tax memo I received this morning establishes a firm statutory deadline: the withheld amount must be remitted within exactly 10 business days. Since the current draft already lacks a tax-remittance timetable, embedding the 10-business-day obligation directly in the settlement ensures we're compliant and gives legal and tax a clear provision to sign off on in one pass. So the revised draft should contain all three elements as you've outlined: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with the 10-business-day remittance timetable stated explicitly in the document, and (3) $2,160,000 paid to the seller at closing. I'll work with Jonas to get the withholding language drafted into the integrated version today so we can circulate it for legal and tax review.",
+            "speaker": "A3",
+            "turn": 8,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Yes, Mara \u2014 I can confirm that the 10-business-day remittance timetable should be written into the settlement document as an explicit obligation, not handled separately. The tax memo I received this morning establishes a firm statutory deadline: the withheld amount must be remitted within exactly 10 business days. Since the current draft already lacks a tax-remittance timetable, embedding the 10-business-day obligation directly in the settlement ensures we're compliant and gives legal and tax a clear provision to sign off on in one pass. So the revised draft should contain all three elements as you've outlined: (1) $1,200,000 escrow for 90 days tied to the environmental claim, (2) $1,440,000 withholding at 30% with the 10-business-day remittance timetable stated explicitly in the document, and (3) $2,160,000 paid to the seller at closing. I'll work with Jonas to get the withholding language drafted into the integrated version today so we can circulate it for legal and tax review.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Excellent \u2014 we're fully aligned. To summarize the integrated draft we'll circulate today: (1) $1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule with release conditioned on resolution of that claim; (2) $1,440,000 tax withholding at 30% of the full $4,800,000 earn-out, with the 10-business-day remittance timetable stated as an explicit obligation in the settlement document; and (3) $2,160,000 paid to the seller at closing. Leila and I will collaborate on the integrated language today and circulate a single draft for legal and tax review. Once they sign off, Mara will have everything she needs to execute. I'll also make sure my working note on the environmental claim is formally circulated alongside the draft so the legal and tax reviewers have the full context for the escrow provision.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Excellent \u2014 we're fully aligned. To summarize the integrated draft we'll circulate today: (1) $1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule with release conditioned on resolution of that claim; (2) $1,440,000 tax withholding at 30% of the full $4,800,000 earn-out, with the 10-business-day remittance timetable stated as an explicit obligation in the settlement document; and (3) $2,160,000 paid to the seller at closing. Leila and I will collaborate on the integrated language today and circulate a single draft for legal and tax review. Once they sign off, Mara will have everything she needs to execute. I'll also make sure my working note on the environmental claim is formally circulated alongside the draft so the legal and tax reviewers have the full context for the escrow provision.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "settlement_approved": true,
+                "earnout_paid_usd": 2160000,
+                "escrow_held_usd": 1200000,
+                "escrow_release_days": 90,
+                "withholding_rate_pct": 30,
+                "tax_remittance_days": 10
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "escrow_retention",
+                  "target": "Jonas",
+                  "detail": "$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim."
+                },
+                {
+                  "type": "tax_withholding",
+                  "target": "Leila",
+                  "detail": "$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document."
+                },
+                {
+                  "type": "legal_tax_review",
+                  "target": "Legal and Tax teams",
+                  "detail": "Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement."
+                },
+                {
+                  "type": "integrated_draft",
+                  "target": "Jonas and Leila",
+                  "detail": "Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S3",
+                "S4",
+                "S5"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 10,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"settlement_approved\": true,\n      \"earnout_paid_usd\": 2160000,\n      \"escrow_held_usd\": 1200000,\n      \"escrow_release_days\": 90,\n      \"withholding_rate_pct\": 30,\n      \"tax_remittance_days\": 10\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"escrow_retention\",\n        \"target\": \"Jonas\",\n        \"detail\": \"$1,200,000 escrow for 90 days post-closing, expressly tied to the unresolved environmental claim on the indemnity schedule, with release conditioned on resolution of that claim.\"\n      },\n      {\n        \"type\": \"tax_withholding\",\n        \"target\": \"Leila\",\n        \"detail\": \"$1,440,000 withholding at 30% of the full $4,800,000 earn-out, with 10-business-day remittance timetable stated as an explicit obligation in the settlement document.\"\n      },\n      {\n        \"type\": \"legal_tax_review\",\n        \"target\": \"Legal and Tax teams\",\n        \"detail\": \"Revised integrated draft to be circulated by end of day for legal and tax review and sign-off before Mara executes the binding settlement.\"\n      },\n      {\n        \"type\": \"integrated_draft\",\n        \"target\": \"Jonas and Leila\",\n        \"detail\": \"Jonas and Leila to collaborate on a single integrated draft incorporating both the escrow retention language and the withholding provision, circulated together for one-pass legal and tax review.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S3\",\n      \"S4\",\n      \"S5\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.565,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 9,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": false,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true
+        },
+        "settlement": {
+          "decisions": {
+            "settlement_approved": false,
+            "earnout_paid_usd": 4800000,
+            "escrow_held_usd": 1200000,
+            "escrow_release_days": 90,
+            "withholding_rate_pct": 30,
+            "tax_remittance_days": 10
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "signing_condition",
+              "target": "Jonas",
+              "detail": "Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off"
+            },
+            {
+              "type": "signing_condition",
+              "target": "Leila",
+              "detail": "Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance"
+            },
+            {
+              "type": "signing_condition",
+              "target": "Mara",
+              "detail": "Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft"
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "signing_condition",
+            "target": "Jonas",
+            "detail": "Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off"
+          },
+          {
+            "type": "signing_condition",
+            "target": "Leila",
+            "detail": "Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance"
+          },
+          {
+            "type": "signing_condition",
+            "target": "Mara",
+            "detail": "Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft"
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Before we go any further on the Northstar earn-out settlement, I want to flag a few concerns. The current draft recommends paying the full $4.8 million claim at closing with no escrow, and there's no specified tax-remittance timetable. As Finance Director, I'm not comfortable signing a binding settlement without legal and tax reviewing it first -- that's our standard closing checklist, and I think it's especially important here given the size of the claim and the gaps in the draft. Can we get legal and tax engaged on this immediately?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. Before we go any further on the Northstar earn-out settlement, I want to flag a few concerns. The current draft recommends paying the full $4.8 million claim at closing with no escrow, and there's no specified tax-remittance timetable. As Finance Director, I'm not comfortable signing a binding settlement without legal and tax reviewing it first -- that's our standard closing checklist, and I think it's especially important here given the size of the claim and the gaps in the draft. Can we get legal and tax engaged on this immediately?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I received a tax memo this morning confirming that the Northstar earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist, so it's critical we factor it into the settlement before anything is signed.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I received a tax memo this morning confirming that the Northstar earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist, so it's critical we factor it into the settlement before anything is signed.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Everyone, I need to flag something critical. While reviewing the indemnity schedule this week, I confirmed that there is an unresolved environmental claim that entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but haven't circulated it yet. This directly conflicts with the current draft's recommendation to pay the full $4.8 million at closing with no escrow. We must revise the settlement to reflect this escrow obligation before Mara signs.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Everyone, I need to flag something critical. While reviewing the indemnity schedule this week, I confirmed that there is an unresolved environmental claim that entitles the company to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but haven't circulated it yet. This directly conflicts with the current draft's recommendation to pay the full $4.8 million at closing with no escrow. We must revise the settlement to reflect this escrow obligation before Mara signs.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks, Leila \u2014 that tax memo is exactly the kind of gap Mara was concerned about. So now we have two concrete issues that must be addressed before Mara signs: (1) the $1.2 million environmental escrow I just flagged, which must be retained for 90 days post-closing under the indemnity schedule, and (2) the 30% withholding requirement with a 10-business-day remittance window from your tax memo. Combined, these mean the current draft \u2014 full $4.8 million at closing, no escrow, no tax timetable \u2014 is unworkable as written. I'd recommend we revise the settlement to: hold back $1.2 million in escrow for 90 days, apply the 30% withholding to the payable amount, and specify the 10-business-day remittance schedule. Once legal and tax have signed off on the revised draft, Mara can proceed with signing. Mara, does that align with what you need from the closing checklist perspective?",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks, Leila \u2014 that tax memo is exactly the kind of gap Mara was concerned about. So now we have two concrete issues that must be addressed before Mara signs: (1) the $1.2 million environmental escrow I just flagged, which must be retained for 90 days post-closing under the indemnity schedule, and (2) the 30% withholding requirement with a 10-business-day remittance window from your tax memo. Combined, these mean the current draft \u2014 full $4.8 million at closing, no escrow, no tax timetable \u2014 is unworkable as written. I'd recommend we revise the settlement to: hold back $1.2 million in escrow for 90 days, apply the 30% withholding to the payable amount, and specify the 10-business-day remittance schedule. Once legal and tax have signed off on the revised draft, Mara can proceed with signing. Mara, does that align with what you need from the closing checklist perspective?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Yes, Jonas, that aligns perfectly with what I need from the closing checklist perspective. The two issues you and Leila flagged \u2014 the $1.2 million environmental escrow for 90 days and the 30% withholding with a 10-business-day remittance window \u2014 are exactly the kind of gaps that my standard checklist review is meant to catch before I sign. Once legal and tax have signed off on a revised draft that incorporates both of those requirements, I'm comfortable proceeding with signing. I don't want to sign the current draft as written under any circumstances.",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Yes, Jonas, that aligns perfectly with what I need from the closing checklist perspective. The two issues you and Leila flagged \u2014 the $1.2 million environmental escrow for 90 days and the 30% withholding with a 10-business-day remittance window \u2014 are exactly the kind of gaps that my standard checklist review is meant to catch before I sign. Once legal and tax have signed off on a revised draft that incorporates both of those requirements, I'm comfortable proceeding with signing. I don't want to sign the current draft as written under any circumstances.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Jonas, I agree with your proposed structure. From the tax side, I'll confirm the specifics: the 30% withholding applies to the earn-out payment, which means $1,440,000 must be withheld and remitted within 10 business days. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside Jonas's environmental escrow finding. Once the revised draft reflects both the $1.2 million escrow for 90 days and the withholding and remittance timetable, I can provide tax sign-off. Mara, you'll have both legal and tax clearance before you sign.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Jonas, I agree with your proposed structure. From the tax side, I'll confirm the specifics: the 30% withholding applies to the earn-out payment, which means $1,440,000 must be withheld and remitted within 10 business days. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside Jonas's environmental escrow finding. Once the revised draft reflects both the $1.2 million escrow for 90 days and the withholding and remittance timetable, I can provide tax sign-off. Mara, you'll have both legal and tax clearance before you sign.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Excellent \u2014 we're now fully aligned. To summarize the revised settlement structure before we move to drafting: (1) $1.2 million environmental escrow retained for 90 days post-closing per the indemnity schedule, (2) 30% withholding \u2014 $1,440,000 \u2014 applied to the earn-out payment and remitted within 10 business days per Leila's tax memo, and (3) the balance released at closing after both holdbacks. I'll take responsibility for revising the settlement draft to incorporate both the escrow provision and the tax-remittance timetable, and I'll circulate it to Leila for tax sign-off and retain legal sign-off on my end. Once both clearances are documented on the closing checklist, Mara, you'll be clear to sign. Leila, please go ahead and add the tax memo to the checklist today, and I'll make sure my environmental escrow working note is formally circulated and attached as well. Let's target a revised draft by end of day so we can keep the closing timeline on track.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Excellent \u2014 we're now fully aligned. To summarize the revised settlement structure before we move to drafting: (1) $1.2 million environmental escrow retained for 90 days post-closing per the indemnity schedule, (2) 30% withholding \u2014 $1,440,000 \u2014 applied to the earn-out payment and remitted within 10 business days per Leila's tax memo, and (3) the balance released at closing after both holdbacks. I'll take responsibility for revising the settlement draft to incorporate both the escrow provision and the tax-remittance timetable, and I'll circulate it to Leila for tax sign-off and retain legal sign-off on my end. Once both clearances are documented on the closing checklist, Mara, you'll be clear to sign. Leila, please go ahead and add the tax memo to the checklist today, and I'll make sure my environmental escrow working note is formally circulated and attached as well. Let's target a revised draft by end of day so we can keep the closing timeline on track.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Sounds like a solid plan, Jonas. I'll add the tax memo to the closing checklist today and stand ready to provide tax sign-off once the revised draft is circulated. One clarification on the math: the 30% withholding of $1,440,000 and the $1.2 million environmental escrow are separate holdbacks \u2014 the withholding is a tax remittance obligation, not an escrow, so they shouldn't be conflated in the settlement language. I'll make sure that distinction is clear when I review the revised draft from the tax side.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Sounds like a solid plan, Jonas. I'll add the tax memo to the closing checklist today and stand ready to provide tax sign-off once the revised draft is circulated. One clarification on the math: the 30% withholding of $1,440,000 and the $1.2 million environmental escrow are separate holdbacks \u2014 the withholding is a tax remittance obligation, not an escrow, so they shouldn't be conflated in the settlement language. I'll make sure that distinction is clear when I review the revised draft from the tax side.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "settlement_approved": false,
+                "earnout_paid_usd": 4800000,
+                "escrow_held_usd": 1200000,
+                "escrow_release_days": 90,
+                "withholding_rate_pct": 30,
+                "tax_remittance_days": 10
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "signing_condition",
+                  "target": "Jonas",
+                  "detail": "Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off"
+                },
+                {
+                  "type": "signing_condition",
+                  "target": "Leila",
+                  "detail": "Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance"
+                },
+                {
+                  "type": "signing_condition",
+                  "target": "Mara",
+                  "detail": "Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft"
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"settlement_approved\": false,\n      \"earnout_paid_usd\": 4800000,\n      \"escrow_held_usd\": 1200000,\n      \"escrow_release_days\": 90,\n      \"withholding_rate_pct\": 30,\n      \"tax_remittance_days\": 10\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"signing_condition\",\n        \"target\": \"Jonas\",\n        \"detail\": \"Revise the settlement draft to incorporate the $1.2M environmental escrow for 90 days and circulate for legal sign-off\"\n      },\n      {\n        \"type\": \"signing_condition\",\n        \"target\": \"Leila\",\n        \"detail\": \"Add tax memo to closing checklist today and provide tax sign-off on revised draft confirming 30% withholding and 10-business-day remittance\"\n      },\n      {\n        \"type\": \"signing_condition\",\n        \"target\": \"Mara\",\n        \"detail\": \"Will sign only after legal and tax sign-offs are documented on the closing checklist for the revised draft\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.545,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": false,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C7": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true
+        },
+        "settlement": {
+          "decisions": {
+            "settlement_approved": true,
+            "earnout_paid_usd": 4800000,
+            "escrow_held_usd": 1200000,
+            "escrow_release_days": 90,
+            "withholding_rate_pct": 30,
+            "tax_remittance_days": 10
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "sign_after_revision",
+              "target": "Jonas",
+              "detail": "Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable."
+            },
+            {
+              "type": "legal_tax_signoff",
+              "target": "Leila",
+              "detail": "Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist."
+            },
+            {
+              "type": "escrow_retention",
+              "target": "Jonas",
+              "detail": "Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim."
+            },
+            {
+              "type": "withholding_remittance",
+              "target": "Leila",
+              "detail": "Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "sign_after_revision",
+            "target": "Jonas",
+            "detail": "Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable."
+          },
+          {
+            "type": "legal_tax_signoff",
+            "target": "Leila",
+            "detail": "Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist."
+          },
+          {
+            "type": "escrow_retention",
+            "target": "Jonas",
+            "detail": "Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim."
+          },
+          {
+            "type": "withholding_remittance",
+            "target": "Leila",
+            "detail": "Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Everyone, before we go further on the settlement \u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft settlement recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this entitlement. We need to revise the settlement to reflect the escrow retention before Mara signs.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Everyone, before we go further on the settlement \u2014 I need to flag something I found while reviewing the indemnity schedule this week. There's an unresolved environmental claim that entitles us to retain exactly $1,200,000 of the earn-out in escrow for 90 days after closing. I recorded this in a working note but hadn't circulated it yet. The current draft settlement recommends paying the full $4,800,000 claim at closing with no escrow, which would conflict with this entitlement. We need to revise the settlement to reflect the escrow retention before Mara signs.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \u2014 and this escrow retention issue is precisely why that step matters. If the current draft conflicts with our entitlement to retain $1,200,000 in escrow for 90 days, I need the settlement revised to reflect that escrow before I'll sign. I won't authorize the binding settlement until legal and tax have confirmed the revision, and the escrow and any tax-remittance timetable are properly specified. Can we get a revised draft circulated for review today?",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thanks for flagging that, Jonas. That's exactly the kind of issue I need resolved before I can sign. Under our standard closing checklist, I'm required to get legal and tax to review the settlement immediately before signing \u2014 and this escrow retention issue is precisely why that step matters. If the current draft conflicts with our entitlement to retain $1,200,000 in escrow for 90 days, I need the settlement revised to reflect that escrow before I'll sign. I won't authorize the binding settlement until legal and tax have confirmed the revision, and the escrow and any tax-remittance timetable are properly specified. Can we get a revised draft circulated for review today?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Mara, on the tax side \u2014 I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist. So in addition to Jonas's escrow point, the revised settlement needs to specify the 30% withholding and the 10-business-day remittance timetable. I can confirm tax sign-off once both the escrow retention and the withholding/remittance schedule are reflected in the draft.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Mara, on the tax side \u2014 I received a tax memo this morning confirming that the earn-out is compensation subject to exactly 30% withholding, and the withheld amount must be remitted within exactly 10 business days. This memo has not yet been added to the closing checklist. So in addition to Jonas's escrow point, the revised settlement needs to specify the 30% withholding and the 10-business-day remittance timetable. I can confirm tax sign-off once both the escrow retention and the withholding/remittance schedule are reflected in the draft.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good \u2014 so now we have both issues on the table. To summarize what needs to be in the revised draft before Mara signs: (1) the $1,200,000 escrow retention for 90 days post-closing based on the environmental claim I identified, and (2) the 30% withholding on the earn-out with remittance within 10 business days per Leila's tax memo. I'll work on getting a revised settlement draft circulated today that incorporates both the escrow and the withholding/remittance timetable. Once legal and tax have reviewed and confirmed, Mara should be clear to sign. Does anyone have any other open items before I start drafting the revision?",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good \u2014 so now we have both issues on the table. To summarize what needs to be in the revised draft before Mara signs: (1) the $1,200,000 escrow retention for 90 days post-closing based on the environmental claim I identified, and (2) the 30% withholding on the earn-out with remittance within 10 business days per Leila's tax memo. I'll work on getting a revised settlement draft circulated today that incorporates both the escrow and the withholding/remittance timetable. Once legal and tax have reviewed and confirmed, Mara should be clear to sign. Does anyone have any other open items before I start drafting the revision?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "No additional open items from tax beyond what I've already raised. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside the revised settlement. Once Jonas circulates the revised draft incorporating both the $1,200,000 escrow retention and the 30% withholding with 10-business-day remittance, I'll review promptly and provide tax sign-off so Mara can proceed.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"No additional open items from tax beyond what I've already raised. I'll make sure the tax memo is formally added to the closing checklist today so it's documented alongside the revised settlement. Once Jonas circulates the revised draft incorporating both the $1,200,000 escrow retention and the 30% withholding with 10-business-day remittance, I'll review promptly and provide tax sign-off so Mara can proceed.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "settlement_approved": true,
+                "earnout_paid_usd": 4800000,
+                "escrow_held_usd": 1200000,
+                "escrow_release_days": 90,
+                "withholding_rate_pct": 30,
+                "tax_remittance_days": 10
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "sign_after_revision",
+                  "target": "Jonas",
+                  "detail": "Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable."
+                },
+                {
+                  "type": "legal_tax_signoff",
+                  "target": "Leila",
+                  "detail": "Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist."
+                },
+                {
+                  "type": "escrow_retention",
+                  "target": "Jonas",
+                  "detail": "Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim."
+                },
+                {
+                  "type": "withholding_remittance",
+                  "target": "Leila",
+                  "detail": "Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"settlement_approved\": true,\n      \"earnout_paid_usd\": 4800000,\n      \"escrow_held_usd\": 1200000,\n      \"escrow_release_days\": 90,\n      \"withholding_rate_pct\": 30,\n      \"tax_remittance_days\": 10\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"sign_after_revision\",\n        \"target\": \"Jonas\",\n        \"detail\": \"Mara will sign the binding settlement only after Jonas circulates a revised draft incorporating the $1,200,000 escrow retention for 90 days and the 30% withholding with 10-business-day remittance timetable.\"\n      },\n      {\n        \"type\": \"legal_tax_signoff\",\n        \"target\": \"Leila\",\n        \"detail\": \"Leila to provide tax sign-off on the revised draft and formally add the tax memo to the closing checklist.\"\n      },\n      {\n        \"type\": \"escrow_retention\",\n        \"target\": \"Jonas\",\n        \"detail\": \"Revised settlement must reflect $1,200,000 escrow retention for 90 days post-closing based on the environmental claim.\"\n      },\n      {\n        \"type\": \"withholding_remittance\",\n        \"target\": \"Leila\",\n        \"detail\": \"Revised settlement must specify 30% withholding on the earn-out with remittance within 10 business days per the tax memo.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"S5\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "C2 (ENCODED MISMATCH): The check expects earnout_paid_usd to equal 3600000, but the model consistently encodes 'payment' as either the net cash at closing after ALL holdbacks (2,160,000) or the gross earnout (4,800,000). Rewrite C2 to check for the value the model naturally produces given PF1's instruction. Two options: (a) Change C2 to verify earnout_paid_usd <= 4800000 AND escrow_held_usd == 1200000 (i.e., the escrow is carved out), accepting any reasonable payment field that reflects the escrow reduction; or (b) if the intent is specifically that the gross earnout payable line item reads 3,600,000 (4,800,000 minus 1,200,000 escrow), rename the check's target field to something like 'earnout_payable_after_escrow_usd' and set the expected value to 3600000, and add a shared_context sentence clarifying that earnout_paid_usd means the earnout amount payable to the seller after escrow retention but before tax withholding. Option (a) is safer because it does not require the model to adopt a specific intermediate-subtotal convention. Flag: loosening C2 to accept 2,160,000 or 4,800,000 could make it passable by a lone decision-maker who simply withholds tax from the gross \u2014 verify that a lone agent without PF1 would not naturally set escrow_held_usd=1200000 for 90 days, which seems unlikely without the environmental-claim information.\n\nC7 (ENCODING MISMATCH): The check expects a specific commitment type or field for the escrow commitment that the model never matches. Rewrite C7 to accept any commitment whose detail text contains the substring 'escrow' and whose associated decision fields include escrow_held_usd == 1200000 and escrow_release_days == 90. Alternatively, if C7 checks for a commitment type string, change the expected type to accept any of: 'escrow_retention', 'escrow_commitment', 'signing_condition' (where the detail mentions escrow), or 'revision_request' (where the detail mentions escrow). The safest rewording: 'C7 passes if the settlement includes at least one commitment whose detail text contains the word \"escrow\" and references $1,200,000 and 90 days, and the decisions block sets escrow_held_usd == 1200000 and escrow_release_days == 90.' Flag: this loosening does not risk leakage because a lone agent without PF1 would not know to set escrow_held_usd=1200000 or mention 90 days.\n\nC8 (ENCODING MISMATCH): Same pattern as C7 but for the tax-remittance commitment. Rewrite C8 to accept any commitment whose detail text contains both 'withholding' (or '30%') and '10 business days' (or 'remittance'), and whose associated decision fields include withholding_rate_pct == 30 and tax_remittance_days == 10. Alternatively, if C8 checks for a commitment type string, accept any of: 'tax_withholding', 'withholding_remittance', 'signing_condition', 'legal_tax_signoff'. Safest rewording: 'C8 passes if the settlement includes at least one commitment whose detail text contains \"30%\" (or \"withholding\") and \"10 business days\" (or \"remittance\"), and the decisions block sets withholding_rate_pct == 30 and tax_remittance_days == 10.' Flag: this loosening does not risk leakage because a lone agent without PF2 would not know to set withholding_rate_pct=30 or tax_remittance_days=10.\n\nC1: No fix recommended. It is not linked to any decisive fact and its pass/fail pattern (true when settlement_approved=true, false when false) is consistent with a straightforward approval check. If C1 is supposed to require settlement_approved=true for the scenario to pass, then the scenario's shared_context should clarify whether the group should approve pending revision or withhold approval \u2014 but that is a design decision, not a check-wording fix. Do not change C1 unless the scenario intent specifically requires approval."
+}

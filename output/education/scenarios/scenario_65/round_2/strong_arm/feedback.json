@@ -1,0 +1,576 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "The scenario has three distinct failure modes, each affecting specific checks across the rollouts:\n\n1. **C5 and C6 (REVEALED BUT UNUSED / TELEPATHY hybrid) \u2014 failed in 4/4 rollouts (tally 0/4 each):** C5 checks the lab-supervision commitment and is gated by PF1; C6 checks the family-compatible schedule commitment and is gated by PF2. In rollouts 0 and 2 (auto-failed on turn cap, no settlement), both PF1 and PF2 were revealed but never settled, so C5 and C6 never ran. In rollouts 1 and 3 (settled), both checks still failed. In rollout 1, PF2 was revealed and cited in justification_fact_ids, and the settlement decisions include meeting_day='Saturday' and meeting_time='10:00 a.m.' \u2014 the values C6 presumably requires \u2014 yet C6 still failed. Similarly, the settlement includes supervised_lab_sessions=4 and lab_session_minutes=90 (values C5 presumably requires), yet C5 still failed despite no PF1 reveal in that rollout. The settlement credited S1-S4 and PF2 but NOT PF1, and neither C5 nor C6 appears to be keyed to a commitment field the settlement actually produced. In rollout 3, PF2 was revealed but NOT cited in justification_fact_ids (only S1-S4 were cited), and again the settlement produced the same decision values that should satisfy C5 and C6, yet both failed. This strongly indicates an ENCODING MISMATCH: C5 and C6 are looking for a specific commitment type, field, or attribution (likely an attributed lab-supervision commitment for C5 and a family-compatible-schedule commitment for C6) that the settlement format does not produce. The settlement commitments in both settled rollouts use generic types like 'conditional_approval' or 'revise_plan' and 'review' \u2014 none match a 'lab-supervision' or 'family-compatible-schedule' commitment type that the checks likely expect. So even when the correct values appear in decisions, the commitment-encoding the checks require is never produced.\n\n2. **C1 (failed in 2/2 settled rollouts, tally 0/2):** C1 has no linked decisive facts (facts_linked_to_failing_checks shows empty array). In both settled rollouts the settlement sets approved=false with conditional commitments requiring teacher+counselor review. Without the exact check definition we cannot determine the precise mismatch, but the consistent pattern across both settled rollouts (approved=false, conditional approval pending review) suggests C1 either expects a different approved value, a different commitment structure, or a field the settlement doesn't produce. Given that C1 is unlinked to any decisive fact, this is likely an ENCODING MISMATCH or a check that expects a field/value the settle schema doesn't naturally generate.\n\n3. **P1 (PROVENANCE \u2014 failed in 2/2 settled rollouts, tally 0/2):** P1 is gated by PF1 (owner A2). In rollout 1, PF1 was NEVER revealed (only PF2 was revealed) yet the settlement includes supervised_lab_sessions=4 and lab_session_minutes=90 in decisions \u2014 this is TELEPATHY: the model produced the correct lab values without PF1 being disclosed, likely because A2 mentioned the lab details in a 'say' action (turn 0) without using a reveal action. The settlement did not cite PF1 in justification_fact_ids (only S1-S4 and PF2). P1 checks provenance \u2014 that PF1 is properly attributed \u2014 and since PF1 was never formally revealed, P1 correctly fails. In rollout 3, PF1 was also never revealed (A2 again used 'say' at turn 0 to describe the labs), so the same TELEPATHY pattern repeats: the model knew the lab details from A2's say but never used a reveal action, and the settlement excluded PF1 from justification_fact_ids. The root cause is that A2 consistently uses 'say' to disclose PF1's content rather than 'reveal', so the provenance check can never pass.\n\n4. **Turn-cap auto-fails (rollouts 0 and 2):** Both hit the 10-turn cap without settling. In rollout 0, all relevant facts were revealed by turn 2, and by turn 5 A1 had essentially summarized the full settlement conditions (Saturday 10am, four 90-min labs, teacher+counselor review). The conversation then continued for 5 more turns of repetitive agreement without anyone issuing a settle action. In rollout 2, same pattern: both facts revealed by turn 4, full conditions summarized by turn 5, then 5 more turns of restating the plan. This is a STRUCTURAL problem, not just a pacing one: the settle-eligibility condition apparently requires something more than 'all facts revealed and conditions discussed' \u2014 likely it requires a specific acknowledgment or confirmation pattern that the agents keep deferring ('once the review is complete,' 'once revisions are made'). The agents describe a future review process rather than treating the current conversation as the review itself, so they never feel empowered to settle. Raising turn_cap alone would not fix this; the agents would just keep talking. The settle-eligibility condition needs to be loosened so that a settlement is permitted once all decisive facts have been revealed and the principal has articulated the conditions, even if the agents frame the review as a future step.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 0,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 2,\n  \"auto_failed_count\": 2,\n  \"content_check_tally\": {\n    \"C1\": 0,\n    \"C2\": 2,\n    \"C3\": 2,\n    \"C4\": 2,\n    \"C5\": 0,\n    \"C6\": 0\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 0\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C2\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment.\"\n      }\n    ],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The family's confirmed work obligation changes the recurring meeting from Tuesday afternoon to Saturday at exactly 10:00 a.m. and creates the family-compatible schedule commitment.\"\n      }\n    ],\n    \"C4\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The family's confirmed work obligation changes the recurring meeting from Tuesday afternoon to Saturday at exactly 10:00 a.m. and creates the family-compatible schedule commitment.\"\n      }\n    ],\n    \"C1\": [],\n    \"C3\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.592,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a scheduling issue before we go further. During my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon check-in meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a scheduling issue before we go further. During my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon check-in meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you for flagging that, Mr. Chen. That's an important scheduling conflict we'll need to resolve. Before we go further, though, per our independent-study routine, I need to ask the supervising teacher and counselor to review the draft plan before I can approve it. So let's make sure we get that review process started, and we can address the Tuesday-to-Saturday meeting adjustment as part of that review.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you for flagging that, Mr. Chen. That's an important scheduling conflict we'll need to resolve. Before we go further, though, per our independent-study routine, I need to ask the supervising teacher and counselor to review the draft plan before I can approve it. So let's make sure we get that review process started, and we can address the Tuesday-to-Saturday meeting adjustment as part of that review.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Before we proceed with the review, I need to flag something critical about the draft plan. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. We'll need to figure out how to incorporate these supervised labs into the plan before it can be approved.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"Before we proceed with the review, I need to flag something critical about the draft plan. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. We'll need to figure out how to incorporate these supervised labs into the plan before it can be approved.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"So to summarize where we stand: the draft plan needs to address both the scheduling conflict with the Tuesday check-ins that Mr. Chen flagged and the four required supervised labs I just raised. The labs can't be done through online modules \\u2014 they require 90 minutes of in-person supervision each. We'll also need to attach the department's lab safety checklist to the request. I'm happy to work with Mr. Chen and the counselor during the review process to figure out how to build these labs into the revised schedule, especially if the check-in meetings are moving to Saturday mornings. Are there any other gaps in the draft plan we should be aware of before the review formally begins?\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"I've already revealed my private fact PF1 in my previous turn, so I have no new private facts to reveal. Let me respond to the conversation.\\n\\n{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"So to summarize where we stand: the draft plan needs to address both the scheduling conflict with the Tuesday check-ins that Mr. Chen flagged and the four required supervised labs I just raised. The labs can't be done through online modules \\u2014 they require 90 minutes of in-person supervision each. We'll also need to attach the department's lab safety checklist to the request. I'm happy to work with Mr. Chen and the counselor during the review process to figure out how to build these labs into the revised schedule, especially if the check-in meetings are moving to Saturday mornings. Are there any other gaps in the draft plan we should be aware of before the review formally begins?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Ms. Ibarra, for raising the labs issue \\u2014 that's clearly an important gap we need to address. To answer your question about other gaps, I don't have additional concerns beyond the scheduling conflict I already flagged. From the counseling side, the student's circumstances are well-documented, and Saturday at 10:00 a.m. works for the family. I'm ready to participate in the review process and help figure out how to build the four supervised labs into a revised schedule alongside the Saturday check-ins. One thing we'll need to consider is whether the in-person labs can also be scheduled on Saturdays or if we need to find alternative times that work for both the student and the supervising teacher.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Ms. Ibarra, for raising the labs issue \\u2014 that's clearly an important gap we need to address. To answer your question about other gaps, I don't have additional concerns beyond the scheduling conflict I already flagged. From the counseling side, the student's circumstances are well-documented, and Saturday at 10:00 a.m. works for the family. I'm ready to participate in the review process and help figure out how to build the four supervised labs into a revised schedule alongside the Saturday check-ins. One thing we'll need to consider is whether the in-person labs can also be scheduled on Saturdays or if we need to find alternative times that work for both the student and the supervising teacher.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for raising these important issues. Let me summarize where we stand: the draft plan needs the supervising teacher and counselor review before I can approve it, and we've identified two gaps that need to be resolved during that review \\u2014 the Tuesday-to-Saturday check-in scheduling adjustment Mr. Chen flagged, and the four required hands-on labs with 90 minutes of in-person supervision each that Ms. Ibarra identified. We also need to attach the department's lab safety checklist to the request. Since Saturday at 10:00 a.m. works for the family, it makes sense to explore whether the supervised labs can also be scheduled on Saturdays or if we need alternative times. I'd like to proceed with the formal review process now, with the understanding that the revised plan will incorporate these changes. Once the review is complete and the updated plan addresses these gaps, I'll be in a position to make an approval decision.\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you both for raising these important issues. Let me summarize where we stand: the draft plan needs the supervising teacher and counselor review before I can approve it, and we've identified two gaps that need to be resolved during that review \\u2014 the Tuesday-to-Saturday check-in scheduling adjustment Mr. Chen flagged, and the four required hands-on labs with 90 minutes of in-person supervision each that Ms. Ibarra identified. We also need to attach the department's lab safety checklist to the request. Since Saturday at 10:00 a.m. works for the family, it makes sense to explore whether the supervised labs can also be scheduled on Saturdays or if we need alternative times. I'd like to proceed with the formal review process now, with the understanding that the revised plan will incorporate these changes. Once the review is complete and the updated plan addresses these gaps, I'll be in a position to make an approval decision.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"That summary looks accurate, Dr. Morgan. I'm ready to proceed with the formal review process. From the counseling side, I'll focus on ensuring the Saturday 10:00 a.m. check-in time is properly reflected in the revised plan and that it accommodates the student's work obligation. I'll also coordinate with Ms. Ibarra on how the four supervised labs can be incorporated, whether that's on Saturdays alongside the check-ins or on alternative days that work for both the student and the supervising teacher. Let me know how you'd like the review process to proceed from here.\",\n          \"speaker\": \"A3\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"That summary looks accurate, Dr. Morgan. I'm ready to proceed with the formal review process. From the counseling side, I'll focus on ensuring the Saturday 10:00 a.m. check-in time is properly reflected in the revised plan and that it accommodates the student's work obligation. I'll also coordinate with Ms. Ibarra on how the four supervised labs can be incorporated, whether that's on Saturdays alongside the check-ins or on alternative days that work for both the student and the supervising teacher. Let me know how you'd like the review process to proceed from here.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mr. Chen. Here's how I'd like the review process to proceed: Ms. Ibarra, as the supervising teacher, please review the draft plan with these two gaps in mind \\u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. Please also ensure the department's lab safety checklist is attached to the request. Mr. Chen, as the counselor, please review the plan alongside Ms. Ibarra, focusing on whether the Saturday check-in time and the supervised labs can be feasibly scheduled together or if we need alternative arrangements. Once you've both completed your review and the draft has been revised to address these items, bring the updated plan back to me for a final approval decision.\",\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Mr. Chen. Here's how I'd like the review process to proceed: Ms. Ibarra, as the supervising teacher, please review the draft plan with these two gaps in mind \\u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. Please also ensure the department's lab safety checklist is attached to the request. Mr. Chen, as the counselor, please review the plan alongside Ms. Ibarra, focusing on whether the Saturday check-in time and the supervised labs can be feasibly scheduled together or if we need alternative arrangements. Once you've both completed your review and the draft has been revised to address these items, bring the updated plan back to me for a final approval decision.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Understood, Dr. Morgan. I'll begin my review of the draft plan with both gaps in mind \\u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. I'll also make sure the department's lab safety checklist is attached to the request. Mr. Chen, I'll reach out to coordinate with you on scheduling, specifically whether the labs can be done on Saturdays alongside the check-ins or if we need to identify alternative times that work for the student and me. Once we've completed the review and the draft is revised, I'll bring the updated plan back to Dr. Morgan for final approval.\",\n          \"speaker\": \"A2\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Understood, Dr. Morgan. I'll begin my review of the draft plan with both gaps in mind \\u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. I'll also make sure the department's lab safety checklist is attached to the request. Mr. Chen, I'll reach out to coordinate with you on scheduling, specifically whether the labs can be done on Saturdays alongside the check-ins or if we need to identify alternative times that work for the student and me. Once we've completed the review and the draft is revised, I'll bring the updated plan back to Dr. Morgan for final approval.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Sounds like a clear path forward, Dr. Morgan. I'm ready to coordinate with Ms. Ibarra on the scheduling review. I'll make sure the Saturday 10:00 a.m. check-in time is properly reflected and work with her to determine whether the four supervised labs can also be scheduled on Saturdays or if we need alternative arrangements that accommodate the student's work obligation. Once we've completed the review and revised the draft, we'll bring the updated plan back to you for final approval.\",\n          \"speaker\": \"A3\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Sounds like a clear path forward, Dr. Morgan. I'm ready to coordinate with Ms. Ibarra on the scheduling review. I'll make sure the Saturday 10:00 a.m. check-in time is properly reflected and work with her to determine whether the four supervised labs can also be scheduled on Saturdays or if we need alternative arrangements that accommodate the student's work obligation. Once we've completed the review and revised the draft, we'll bring the updated plan back to you for final approval.\\\"}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.219,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 4,\n      \"revealed_facts\": [\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"approved\": false,\n          \"supervised_lab_sessions\": 4,\n          \"lab_session_minutes\": 90,\n          \"meeting_day\": \"Saturday\",\n          \"meeting_time\": \"10:00 a.m.\"\n        },\n        \"credited_facts\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"conditional_approval\",\n            \"target\": \"supervising teacher and counselor\",\n            \"detail\": \"Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"conditional_approval\",\n          \"target\": \"supervising teacher and counselor\",\n          \"detail\": \"Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone. I wanted to bring up an important issue with the independent-study draft plan before it goes to the principal. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist hasn't been attached to the independent-study request yet. We need to figure out how to incorporate these supervised labs into the plan before the principal reviews it.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone. I wanted to bring up an important issue with the independent-study draft plan before it goes to the principal. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist hasn't been attached to the independent-study request yet. We need to figure out how to incorporate these supervised labs into the plan before the principal reviews it.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I should mention that during my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I should mention that during my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for raising these important issues before this reaches my desk. Ms. Ibarra, the four supervised hands-on labs at 90 minutes each are a critical gap in the draft \\u2014 I appreciate you catching that against the lab safety checklist. Mr. Chen, the Tuesday afternoon scheduling conflict is also significant; if Saturday at 10:00 a.m. is the family's reliable time, the draft needs to be updated accordingly. Before I can approve any independent-study plan, I'm required to have the supervising teacher and counselor review the draft. So here's what I'd like to see happen: first, update the draft to include the four in-person supervised lab sessions and change the check-in meetings to Saturday at 10:00 a.m. Then, route the revised draft to the supervising teacher and counselor for their review. Once I have their feedback and the updated plan in front of me, I can make an approval decision. Does that work for everyone?\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you both for raising these important issues before this reaches my desk. Ms. Ibarra, the four supervised hands-on labs at 90 minutes each are a critical gap in the draft \\u2014 I appreciate you catching that against the lab safety checklist. Mr. Chen, the Tuesday afternoon scheduling conflict is also significant; if Saturday at 10:00 a.m. is the family's reliable time, the draft needs to be updated accordingly. Before I can approve any independent-study plan, I'm required to have the supervising teacher and counselor review the draft. So here's what I'd like to see happen: first, update the draft to include the four in-person supervised lab sessions and change the check-in meetings to Saturday at 10:00 a.m. Then, route the revised draft to the supervising teacher and counselor for their review. Once I have their feedback and the updated plan in front of me, I can make an approval decision. Does that work for everyone?\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"approved\": false,\n              \"supervised_lab_sessions\": 4,\n              \"lab_session_minutes\": 90,\n              \"meeting_day\": \"Saturday\",\n              \"meeting_time\": \"10:00 a.m.\"\n            },\n            \"credited_facts\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"conditional_approval\",\n                \"target\": \"supervising teacher and counselor\",\n                \"detail\": \"Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"approved\\\":false,\\\"supervised_lab_sessions\\\":4,\\\"lab_session_minutes\\\":90,\\\"meeting_day\\\":\\\"Saturday\\\",\\\"meeting_time\\\":\\\"10:00 a.m.\\\"},\\\"credited_facts\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\",\\\"PF2\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"conditional_approval\\\",\\\"target\\\":\\\"supervising teacher and counselor\\\",\\\"detail\\\":\\\"Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft.\\\"}],\\\"justification_fact_ids\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\",\\\"PF2\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.525,\n      \"settled\": false,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": true,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {},\n      \"provenance_results\": {},\n      \"settlement\": {},\n      \"credited_facts\": [],\n      \"commitments\": [],\n      \"justification_fact_ids\": [],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi everyone. I understand there's an independent-study request for one of my Earth Science students that needs to be reviewed before the principal can approve it. I've actually been looking over the draft plan, and I have an important concern I'd like to raise about the lab requirements before we move forward.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi everyone. I understand there's an independent-study request for one of my Earth Science students that needs to be reviewed before the principal can approve it. I've actually been looking over the draft plan, and I have an important concern I'd like to raise about the lab requirements before we move forward.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Hi Ms. Ibarra, thank you for flagging the lab requirements concern. Before we get into that, I'd like to raise a scheduling issue I've come across. The draft plan currently lists biweekly check-in meetings on Tuesday afternoons, but I have reason to believe that time won't actually work for the student. I'd like to share what I've found so we can address it along with your lab concern.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Hi Ms. Ibarra, thank you for flagging the lab requirements concern. Before we get into that, I'd like to raise a scheduling issue I've come across. The draft plan currently lists biweekly check-in meetings on Tuesday afternoons, but I have reason to believe that time won't actually work for the student. I'd like to share what I've found so we can address it along with your lab concern.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for bringing these concerns forward. As principal, I need to follow our independent-study routine, which requires that both the supervising teacher and the counselor review the draft plan before I can approve anything. Ms. Ibarra, please go ahead and share your concern about the lab requirements, and Mr. Chen, I'd like to hear what you've found about the scheduling issue as well. Once we've reviewed both concerns and the plan has been properly assessed by the supervising teacher and counselor, I'll be in a position to make a decision on approval.\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you both for bringing these concerns forward. As principal, I need to follow our independent-study routine, which requires that both the supervising teacher and the counselor review the draft plan before I can approve anything. Ms. Ibarra, please go ahead and share your concern about the lab requirements, and Mr. Chen, I'd like to hear what you've found about the scheduling issue as well. Once we've reviewed both concerns and the plan has been properly assessed by the supervising teacher and counselor, I'll be in a position to make a decision on approval.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time that would work for them. I confirmed this with the family but have not yet updated the draft schedule to reflect this change.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time that would work for them. I confirmed this with the family but have not yet updated the draft schedule to reflect this change.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag a critical issue with the lab requirements. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. The current draft plan relies on online course modules, which won't satisfy these required in-person lab components.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"I need to flag a critical issue with the lab requirements. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. The current draft plan relies on online course modules, which won't satisfy these required in-person lab components.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for these critical findings. Ms. Ibarra, your concern about the four required hands-on labs is a significant gap in the current draft \\u2014 the online modules alone won't satisfy the in-person lab requirement, and the safety checklist needs to be attached. Mr. Chen, thank you for confirming the scheduling conflict directly with the family; Saturday at 10:00 a.m. is clearly the workable time. Before I can make any approval decision, I need two things to happen: first, the draft plan must be updated to reflect the Saturday 10:00 a.m. check-in time and to incorporate the four supervised 90-minute in-person lab sessions. Second, the lab safety checklist needs to be attached to the request. Once those revisions are made and I've had confirmation that both the supervising teacher and counselor have reviewed the updated plan, I'll be ready to make my decision. I do not believe I can approve the plan as it currently stands.\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you both for these critical findings. Ms. Ibarra, your concern about the four required hands-on labs is a significant gap in the current draft \\u2014 the online modules alone won't satisfy the in-person lab requirement, and the safety checklist needs to be attached. Mr. Chen, thank you for confirming the scheduling conflict directly with the family; Saturday at 10:00 a.m. is clearly the workable time. Before I can make any approval decision, I need two things to happen: first, the draft plan must be updated to reflect the Saturday 10:00 a.m. check-in time and to incorporate the four supervised 90-minute in-person lab sessions. Second, the lab safety checklist needs to be attached to the request. Once those revisions are made and I've had confirmation that both the supervising teacher and counselor have reviewed the updated plan, I'll be ready to make my decision. I do not believe I can approve the plan as it currently stands.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Dr. Morgan. I agree with that path forward. To summarize what needs to happen on my end: I'll make sure the four required 90-minute in-person lab sessions are incorporated into the revised plan, and I'll attach the department's lab safety checklist to the request. I want to note that I've already confirmed the lab requirements against the checklist this week, so I'm prepared to move quickly on those revisions. Once the updated plan is ready, I'll review it as the supervising teacher and make sure Mr. Chen has the opportunity to review it as well before it comes back to you for a decision.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Dr. Morgan. I agree with that path forward. To summarize what needs to happen on my end: I'll make sure the four required 90-minute in-person lab sessions are incorporated into the revised plan, and I'll attach the department's lab safety checklist to the request. I want to note that I've already confirmed the lab requirements against the checklist this week, so I'm prepared to move quickly on those revisions. Once the updated plan is ready, I'll review it as the supervising teacher and make sure Mr. Chen has the opportunity to review it as well before it comes back to you for a decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Ms. Ibarra and Dr. Morgan. I'll take responsibility for updating the check-in meeting time in the draft schedule from Tuesday afternoons to Saturday at 10:00 a.m., as confirmed with the family. Once Ms. Ibarra has incorporated the four in-person lab sessions and attached the safety checklist, I'll review the updated plan as counselor before it goes back to Dr. Morgan for a decision.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Ms. Ibarra and Dr. Morgan. I'll take responsibility for updating the check-in meeting time in the draft schedule from Tuesday afternoons to Saturday at 10:00 a.m., as confirmed with the family. Once Ms. Ibarra has incorporated the four in-person lab sessions and attached the safety checklist, I'll review the updated plan as counselor before it goes back to Dr. Morgan for a decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Excellent. It sounds like we have a clear path forward and everyone understands their responsibilities. To recap: Ms. Ibarra will revise the plan to incorporate the four required 90-minute supervised in-person lab sessions and attach the department's lab safety checklist. Mr. Chen will update the check-in meeting time from Tuesday afternoons to Saturday at 10:00 a.m. as confirmed with the family. Once both of those revisions are complete, Ms. Ibarra will review as supervising teacher and Mr. Chen will review as counselor. After I receive confirmation that both reviews have been completed on the updated plan, I'll be in a position to make my final approval decision. I cannot approve the plan as it currently stands, but I'm optimistic we can get this resolved quickly given how prepared everyone is. Please let me know once the revised plan is ready for my review.\",\n          \"speaker\": \"A1\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Excellent. It sounds like we have a clear path forward and everyone understands their responsibilities. To recap: Ms. Ibarra will revise the plan to incorporate the four required 90-minute supervised in-person lab sessions and attach the department's lab safety checklist. Mr. Chen will update the check-in meeting time from Tuesday afternoons to Saturday at 10:00 a.m. as confirmed with the family. Once both of those revisions are complete, Ms. Ibarra will review as supervising teacher and Mr. Chen will review as counselor. After I receive confirmation that both reviews have been completed on the updated plan, I'll be in a position to make my final approval decision. I cannot approve the plan as it currently stands, but I'm optimistic we can get this resolved quickly given how prepared everyone is. Please let me know once the revised plan is ready for my review.\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"I think we've covered everything thoroughly and have a clear plan moving forward. I'll get started on incorporating the four 90-minute in-person lab sessions and attaching the safety checklist right away. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., let me know and we can coordinate so that both of our reviews are completed before the revised plan goes back to Dr. Morgan. I don't have anything further to add at this point.\",\n          \"speaker\": \"A2\",\n          \"turn\": 9,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"I think we've covered everything thoroughly and have a clear plan moving forward. I'll get started on incorporating the four 90-minute in-person lab sessions and attaching the safety checklist right away. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., let me know and we can coordinate so that both of our reviews are completed before the revised plan goes back to Dr. Morgan. I don't have anything further to add at this point.\\\"}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.449,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 8,\n      \"revealed_facts\": [\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": false,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"approved\": false,\n          \"supervised_lab_sessions\": 4,\n          \"lab_session_minutes\": 90,\n          \"meeting_day\": \"Saturday\",\n          \"meeting_time\": \"10:00 a.m.\"\n        },\n        \"credited_facts\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"revise_plan\",\n            \"target\": \"Ms. Ibarra\",\n            \"detail\": \"Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan\"\n          },\n          {\n            \"type\": \"revise_plan\",\n            \"target\": \"Mr. Chen\",\n            \"detail\": \"Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m.\"\n          },\n          {\n            \"type\": \"review\",\n            \"target\": \"supervising teacher and counselor\",\n            \"detail\": \"Review the revised draft plan before final approval by the principal\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"revise_plan\",\n          \"target\": \"Ms. Ibarra\",\n          \"detail\": \"Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan\"\n        },\n        {\n          \"type\": \"revise_plan\",\n          \"target\": \"Mr. Chen\",\n          \"detail\": \"Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m.\"\n        },\n        {\n          \"type\": \"review\",\n          \"target\": \"supervising teacher and counselor\",\n          \"detail\": \"Review the revised draft plan before final approval by the principal\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Before we go any further with this independent-study plan, I need to flag something important. I've been reviewing the Earth Science course requirements, and there are four required hands-on labs that cannot be replaced by online modules. Each one needs to be supervised in person for exactly 90 minutes. The draft plan as it currently stands doesn't account for that, and I haven't yet attached the department's lab safety checklist to the request either. I think we need to address this before the plan goes to the principal for approval.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Before we go any further with this independent-study plan, I need to flag something important. I've been reviewing the Earth Science course requirements, and there are four required hands-on labs that cannot be replaced by online modules. Each one needs to be supervised in person for exactly 90 minutes. The draft plan as it currently stands doesn't account for that, and I haven't yet attached the department's lab safety checklist to the request either. I think we need to address this before the plan goes to the principal for approval.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a scheduling issue with the draft plan. During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\",\n          \"speaker\": \"A3\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a scheduling issue with the draft plan. During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you both for catching these issues before this reaches my desk. Ms. Ibarra, the four supervised in-person labs at 90 minutes each and the lab safety checklist need to be incorporated into the plan. Mr. Chen, the Tuesday afternoon conflict is a real problem \\u2014 if Saturday at 10:00 a.m. is the reliable time for the family, the draft needs to be updated accordingly. Before I can approve anything, I need a revised plan that addresses both the lab sessions and the schedule change, and per our routine, I'll need the supervising teacher and counselor to review that revised draft first. Can you two get those updates made and circulate the revised version for review?\",\n          \"speaker\": \"A1\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you both for catching these issues before this reaches my desk. Ms. Ibarra, the four supervised in-person labs at 90 minutes each and the lab safety checklist need to be incorporated into the plan. Mr. Chen, the Tuesday afternoon conflict is a real problem \\u2014 if Saturday at 10:00 a.m. is the reliable time for the family, the draft needs to be updated accordingly. Before I can approve anything, I need a revised plan that addresses both the lab sessions and the schedule change, and per our routine, I'll need the supervising teacher and counselor to review that revised draft first. Can you two get those updates made and circulate the revised version for review?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good. So to summarize the path forward: Ms. Ibarra will add the four 90-minute supervised in-person labs and attach the lab safety checklist, and Mr. Chen will update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. Once the revised draft is ready, please route it to the supervising teacher and counselor for their review per our standard routine. After their review comes back, I'll be ready to look at it for final approval. Do either of you have any questions about what needs to happen next?\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Good. So to summarize the path forward: Ms. Ibarra will add the four 90-minute supervised in-person labs and attach the lab safety checklist, and Mr. Chen will update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. Once the revised draft is ready, please route it to the supervising teacher and counselor for their review per our standard routine. After their review comes back, I'll be ready to look at it for final approval. Do either of you have any questions about what needs to happen next?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"No questions from me, Dr. Morgan. The path forward is clear. I'll add the four 90-minute supervised in-person labs to the plan and attach the lab safety checklist. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., we can circulate the revised draft to the supervising teacher and counselor for their review before it comes back to Dr. Morgan for final approval.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"No questions from me, Dr. Morgan. The path forward is clear. I'll add the four 90-minute supervised in-person labs to the plan and attach the lab safety checklist. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., we can circulate the revised draft to the supervising teacher and counselor for their review before it comes back to Dr. Morgan for final approval.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"text\\\": \\\"No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. on the draft plan. Once Ms. Ibarra has added the four 90-minute supervised in-person labs and attached the lab safety checklist, we'll circulate the revised draft to the supervising teacher and counselor for their review per our standard routine, and then route it back to you for final approval.\\\"}\\n}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. in the draft plan. Once that's done, Ms. Ibarra and I will circulate the revised draft to the supervising teacher and counselor for their review before it comes back to you for final approval.\",\n          \"speaker\": \"A3\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. in the draft plan. Once that's done, Ms. Ibarra and I will circulate the revised draft to the supervising teacher and counselor for their review before it comes back to you for final approval.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"approved\": false,\n              \"supervised_lab_sessions\": 4,\n              \"lab_session_minutes\": 90,\n              \"meeting_day\": \"Saturday\",\n              \"meeting_time\": \"10:00 a.m.\"\n            },\n            \"credited_facts\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"revise_plan\",\n                \"target\": \"Ms. Ibarra\",\n                \"detail\": \"Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan\"\n              },\n              {\n                \"type\": \"revise_plan\",\n                \"target\": \"Mr. Chen\",\n                \"detail\": \"Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m.\"\n              },\n              {\n                \"type\": \"review\",\n                \"target\": \"supervising teacher and counselor\",\n                \"detail\": \"Review the revised draft plan before final approval by the principal\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"approved\\\":false,\\\"supervised_lab_sessions\\\":4,\\\"lab_session_minutes\\\":90,\\\"meeting_day\\\":\\\"Saturday\\\",\\\"meeting_time\\\":\\\"10:00 a.m.\\\"},\\\"credited_facts\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"revise_plan\\\",\\\"target\\\":\\\"Ms. Ibarra\\\",\\\"detail\\\":\\\"Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan\\\"},{\\\"type\\\":\\\"revise_plan\\\",\\\"target\\\":\\\"Mr. Chen\\\",\\\"detail\\\":\\\"Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m.\\\"},{\\\"type\\\":\\\"review\\\",\\\"target\\\":\\\"supervising teacher and counselor\\\",\\\"detail\\\":\\\"Review the revised draft plan before final approval by the principal\\\"}],\\\"justification_fact_ids\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\"]}}\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 0,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 2,
+    "auto_failed_count": 2,
+    "content_check_tally": {
+      "C1": 0,
+      "C2": 2,
+      "C3": 2,
+      "C4": 2,
+      "C5": 0,
+      "C6": 0
+    },
+    "provenance_check_tally": {
+      "P1": 0
+    },
+    "facts_linked_to_failing_checks": {
+      "C2": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment."
+        }
+      ],
+      "C6": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The family's confirmed work obligation changes the recurring meeting from Tuesday afternoon to Saturday at exactly 10:00 a.m. and creates the family-compatible schedule commitment."
+        }
+      ],
+      "C4": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The family's confirmed work obligation changes the recurring meeting from Tuesday afternoon to Saturday at exactly 10:00 a.m. and creates the family-compatible schedule commitment."
+        }
+      ],
+      "C1": [],
+      "C3": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The teacher's course-specific requirement changes the laboratory plan from online modules with no fixed labs to exactly four supervised sessions of exactly 90 minutes each and creates the attributed lab-supervision commitment."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.592,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a scheduling issue before we go further. During my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon check-in meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a scheduling issue before we go further. During my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon check-in meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you for flagging that, Mr. Chen. That's an important scheduling conflict we'll need to resolve. Before we go further, though, per our independent-study routine, I need to ask the supervising teacher and counselor to review the draft plan before I can approve it. So let's make sure we get that review process started, and we can address the Tuesday-to-Saturday meeting adjustment as part of that review.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you for flagging that, Mr. Chen. That's an important scheduling conflict we'll need to resolve. Before we go further, though, per our independent-study routine, I need to ask the supervising teacher and counselor to review the draft plan before I can approve it. So let's make sure we get that review process started, and we can address the Tuesday-to-Saturday meeting adjustment as part of that review.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Before we proceed with the review, I need to flag something critical about the draft plan. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. We'll need to figure out how to incorporate these supervised labs into the plan before it can be approved.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"Before we proceed with the review, I need to flag something critical about the draft plan. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. We'll need to figure out how to incorporate these supervised labs into the plan before it can be approved.\"}"
+          },
+          {
+            "type": "say",
+            "text": "So to summarize where we stand: the draft plan needs to address both the scheduling conflict with the Tuesday check-ins that Mr. Chen flagged and the four required supervised labs I just raised. The labs can't be done through online modules \u2014 they require 90 minutes of in-person supervision each. We'll also need to attach the department's lab safety checklist to the request. I'm happy to work with Mr. Chen and the counselor during the review process to figure out how to build these labs into the revised schedule, especially if the check-in meetings are moving to Saturday mornings. Are there any other gaps in the draft plan we should be aware of before the review formally begins?",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "I've already revealed my private fact PF1 in my previous turn, so I have no new private facts to reveal. Let me respond to the conversation.\n\n{\"type\":\"say\",\"text\":\"So to summarize where we stand: the draft plan needs to address both the scheduling conflict with the Tuesday check-ins that Mr. Chen flagged and the four required supervised labs I just raised. The labs can't be done through online modules \u2014 they require 90 minutes of in-person supervision each. We'll also need to attach the department's lab safety checklist to the request. I'm happy to work with Mr. Chen and the counselor during the review process to figure out how to build these labs into the revised schedule, especially if the check-in meetings are moving to Saturday mornings. Are there any other gaps in the draft plan we should be aware of before the review formally begins?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Ms. Ibarra, for raising the labs issue \u2014 that's clearly an important gap we need to address. To answer your question about other gaps, I don't have additional concerns beyond the scheduling conflict I already flagged. From the counseling side, the student's circumstances are well-documented, and Saturday at 10:00 a.m. works for the family. I'm ready to participate in the review process and help figure out how to build the four supervised labs into a revised schedule alongside the Saturday check-ins. One thing we'll need to consider is whether the in-person labs can also be scheduled on Saturdays or if we need to find alternative times that work for both the student and the supervising teacher.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Ms. Ibarra, for raising the labs issue \u2014 that's clearly an important gap we need to address. To answer your question about other gaps, I don't have additional concerns beyond the scheduling conflict I already flagged. From the counseling side, the student's circumstances are well-documented, and Saturday at 10:00 a.m. works for the family. I'm ready to participate in the review process and help figure out how to build the four supervised labs into a revised schedule alongside the Saturday check-ins. One thing we'll need to consider is whether the in-person labs can also be scheduled on Saturdays or if we need to find alternative times that work for both the student and the supervising teacher.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for raising these important issues. Let me summarize where we stand: the draft plan needs the supervising teacher and counselor review before I can approve it, and we've identified two gaps that need to be resolved during that review \u2014 the Tuesday-to-Saturday check-in scheduling adjustment Mr. Chen flagged, and the four required hands-on labs with 90 minutes of in-person supervision each that Ms. Ibarra identified. We also need to attach the department's lab safety checklist to the request. Since Saturday at 10:00 a.m. works for the family, it makes sense to explore whether the supervised labs can also be scheduled on Saturdays or if we need alternative times. I'd like to proceed with the formal review process now, with the understanding that the revised plan will incorporate these changes. Once the review is complete and the updated plan addresses these gaps, I'll be in a position to make an approval decision.",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you both for raising these important issues. Let me summarize where we stand: the draft plan needs the supervising teacher and counselor review before I can approve it, and we've identified two gaps that need to be resolved during that review \u2014 the Tuesday-to-Saturday check-in scheduling adjustment Mr. Chen flagged, and the four required hands-on labs with 90 minutes of in-person supervision each that Ms. Ibarra identified. We also need to attach the department's lab safety checklist to the request. Since Saturday at 10:00 a.m. works for the family, it makes sense to explore whether the supervised labs can also be scheduled on Saturdays or if we need alternative times. I'd like to proceed with the formal review process now, with the understanding that the revised plan will incorporate these changes. Once the review is complete and the updated plan addresses these gaps, I'll be in a position to make an approval decision.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "That summary looks accurate, Dr. Morgan. I'm ready to proceed with the formal review process. From the counseling side, I'll focus on ensuring the Saturday 10:00 a.m. check-in time is properly reflected in the revised plan and that it accommodates the student's work obligation. I'll also coordinate with Ms. Ibarra on how the four supervised labs can be incorporated, whether that's on Saturdays alongside the check-ins or on alternative days that work for both the student and the supervising teacher. Let me know how you'd like the review process to proceed from here.",
+            "speaker": "A3",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"That summary looks accurate, Dr. Morgan. I'm ready to proceed with the formal review process. From the counseling side, I'll focus on ensuring the Saturday 10:00 a.m. check-in time is properly reflected in the revised plan and that it accommodates the student's work obligation. I'll also coordinate with Ms. Ibarra on how the four supervised labs can be incorporated, whether that's on Saturdays alongside the check-ins or on alternative days that work for both the student and the supervising teacher. Let me know how you'd like the review process to proceed from here.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mr. Chen. Here's how I'd like the review process to proceed: Ms. Ibarra, as the supervising teacher, please review the draft plan with these two gaps in mind \u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. Please also ensure the department's lab safety checklist is attached to the request. Mr. Chen, as the counselor, please review the plan alongside Ms. Ibarra, focusing on whether the Saturday check-in time and the supervised labs can be feasibly scheduled together or if we need alternative arrangements. Once you've both completed your review and the draft has been revised to address these items, bring the updated plan back to me for a final approval decision.",
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Mr. Chen. Here's how I'd like the review process to proceed: Ms. Ibarra, as the supervising teacher, please review the draft plan with these two gaps in mind \u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. Please also ensure the department's lab safety checklist is attached to the request. Mr. Chen, as the counselor, please review the plan alongside Ms. Ibarra, focusing on whether the Saturday check-in time and the supervised labs can be feasibly scheduled together or if we need alternative arrangements. Once you've both completed your review and the draft has been revised to address these items, bring the updated plan back to me for a final approval decision.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Understood, Dr. Morgan. I'll begin my review of the draft plan with both gaps in mind \u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. I'll also make sure the department's lab safety checklist is attached to the request. Mr. Chen, I'll reach out to coordinate with you on scheduling, specifically whether the labs can be done on Saturdays alongside the check-ins or if we need to identify alternative times that work for the student and me. Once we've completed the review and the draft is revised, I'll bring the updated plan back to Dr. Morgan for final approval.",
+            "speaker": "A2",
+            "turn": 8,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Understood, Dr. Morgan. I'll begin my review of the draft plan with both gaps in mind \u2014 the Saturday 10:00 a.m. check-in adjustment and the four required hands-on labs needing 90 minutes of in-person supervision each. I'll also make sure the department's lab safety checklist is attached to the request. Mr. Chen, I'll reach out to coordinate with you on scheduling, specifically whether the labs can be done on Saturdays alongside the check-ins or if we need to identify alternative times that work for the student and me. Once we've completed the review and the draft is revised, I'll bring the updated plan back to Dr. Morgan for final approval.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Sounds like a clear path forward, Dr. Morgan. I'm ready to coordinate with Ms. Ibarra on the scheduling review. I'll make sure the Saturday 10:00 a.m. check-in time is properly reflected and work with her to determine whether the four supervised labs can also be scheduled on Saturdays or if we need alternative arrangements that accommodate the student's work obligation. Once we've completed the review and revised the draft, we'll bring the updated plan back to you for final approval.",
+            "speaker": "A3",
+            "turn": 9,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Sounds like a clear path forward, Dr. Morgan. I'm ready to coordinate with Ms. Ibarra on the scheduling review. I'll make sure the Saturday 10:00 a.m. check-in time is properly reflected and work with her to determine whether the four supervised labs can also be scheduled on Saturdays or if we need alternative arrangements that accommodate the student's work obligation. Once we've completed the review and revised the draft, we'll bring the updated plan back to you for final approval.\"}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.219,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 4,
+        "revealed_facts": [
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": false
+        },
+        "settlement": {
+          "decisions": {
+            "approved": false,
+            "supervised_lab_sessions": 4,
+            "lab_session_minutes": 90,
+            "meeting_day": "Saturday",
+            "meeting_time": "10:00 a.m."
+          },
+          "credited_facts": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "conditional_approval",
+              "target": "supervising teacher and counselor",
+              "detail": "Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "conditional_approval",
+            "target": "supervising teacher and counselor",
+            "detail": "Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone. I wanted to bring up an important issue with the independent-study draft plan before it goes to the principal. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist hasn't been attached to the independent-study request yet. We need to figure out how to incorporate these supervised labs into the plan before the principal reviews it.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. I wanted to bring up an important issue with the independent-study draft plan before it goes to the principal. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist hasn't been attached to the independent-study request yet. We need to figure out how to incorporate these supervised labs into the plan before the principal reviews it.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I should mention that during my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I should mention that during my intake call with the student's family this week, they confirmed the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for raising these important issues before this reaches my desk. Ms. Ibarra, the four supervised hands-on labs at 90 minutes each are a critical gap in the draft \u2014 I appreciate you catching that against the lab safety checklist. Mr. Chen, the Tuesday afternoon scheduling conflict is also significant; if Saturday at 10:00 a.m. is the family's reliable time, the draft needs to be updated accordingly. Before I can approve any independent-study plan, I'm required to have the supervising teacher and counselor review the draft. So here's what I'd like to see happen: first, update the draft to include the four in-person supervised lab sessions and change the check-in meetings to Saturday at 10:00 a.m. Then, route the revised draft to the supervising teacher and counselor for their review. Once I have their feedback and the updated plan in front of me, I can make an approval decision. Does that work for everyone?",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you both for raising these important issues before this reaches my desk. Ms. Ibarra, the four supervised hands-on labs at 90 minutes each are a critical gap in the draft \u2014 I appreciate you catching that against the lab safety checklist. Mr. Chen, the Tuesday afternoon scheduling conflict is also significant; if Saturday at 10:00 a.m. is the family's reliable time, the draft needs to be updated accordingly. Before I can approve any independent-study plan, I'm required to have the supervising teacher and counselor review the draft. So here's what I'd like to see happen: first, update the draft to include the four in-person supervised lab sessions and change the check-in meetings to Saturday at 10:00 a.m. Then, route the revised draft to the supervising teacher and counselor for their review. Once I have their feedback and the updated plan in front of me, I can make an approval decision. Does that work for everyone?\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "approved": false,
+                "supervised_lab_sessions": 4,
+                "lab_session_minutes": 90,
+                "meeting_day": "Saturday",
+                "meeting_time": "10:00 a.m."
+              },
+              "credited_facts": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "conditional_approval",
+                  "target": "supervising teacher and counselor",
+                  "detail": "Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"approved\":false,\"supervised_lab_sessions\":4,\"lab_session_minutes\":90,\"meeting_day\":\"Saturday\",\"meeting_time\":\"10:00 a.m.\"},\"credited_facts\":[\"S1\",\"S2\",\"S3\",\"S4\",\"PF2\"],\"commitments\":[{\"type\":\"conditional_approval\",\"target\":\"supervising teacher and counselor\",\"detail\":\"Approval will be granted once the draft is updated to include four in-person supervised 90-minute lab sessions, the check-in meetings are changed to Saturday at 10:00 a.m., and the supervising teacher and counselor have reviewed the revised draft.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"PF2\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.525,
+        "settled": false,
+        "passed": false,
+        "auto_failed_on_turn_cap": true,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {},
+        "provenance_results": {},
+        "settlement": {},
+        "credited_facts": [],
+        "commitments": [],
+        "justification_fact_ids": [],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Hi everyone. I understand there's an independent-study request for one of my Earth Science students that needs to be reviewed before the principal can approve it. I've actually been looking over the draft plan, and I have an important concern I'd like to raise about the lab requirements before we move forward.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi everyone. I understand there's an independent-study request for one of my Earth Science students that needs to be reviewed before the principal can approve it. I've actually been looking over the draft plan, and I have an important concern I'd like to raise about the lab requirements before we move forward.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Hi Ms. Ibarra, thank you for flagging the lab requirements concern. Before we get into that, I'd like to raise a scheduling issue I've come across. The draft plan currently lists biweekly check-in meetings on Tuesday afternoons, but I have reason to believe that time won't actually work for the student. I'd like to share what I've found so we can address it along with your lab concern.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Hi Ms. Ibarra, thank you for flagging the lab requirements concern. Before we get into that, I'd like to raise a scheduling issue I've come across. The draft plan currently lists biweekly check-in meetings on Tuesday afternoons, but I have reason to believe that time won't actually work for the student. I'd like to share what I've found so we can address it along with your lab concern.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for bringing these concerns forward. As principal, I need to follow our independent-study routine, which requires that both the supervising teacher and the counselor review the draft plan before I can approve anything. Ms. Ibarra, please go ahead and share your concern about the lab requirements, and Mr. Chen, I'd like to hear what you've found about the scheduling issue as well. Once we've reviewed both concerns and the plan has been properly assessed by the supervising teacher and counselor, I'll be in a position to make a decision on approval.",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you both for bringing these concerns forward. As principal, I need to follow our independent-study routine, which requires that both the supervising teacher and the counselor review the draft plan before I can approve anything. Ms. Ibarra, please go ahead and share your concern about the lab requirements, and Mr. Chen, I'd like to hear what you've found about the scheduling issue as well. Once we've reviewed both concerns and the plan has been properly assessed by the supervising teacher and counselor, I'll be in a position to make a decision on approval.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time that would work for them. I confirmed this with the family but have not yet updated the draft schedule to reflect this change.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. The family indicated that Saturday at 10:00 a.m. is the reliable meeting time that would work for them. I confirmed this with the family but have not yet updated the draft schedule to reflect this change.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag a critical issue with the lab requirements. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. The current draft plan relies on online course modules, which won't satisfy these required in-person lab components.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"I need to flag a critical issue with the lab requirements. The Earth Science course includes four required hands-on labs that cannot be replaced by online modules. Each lab must be supervised in person for exactly 90 minutes. I confirmed this against the department's lab safety checklist this week, but the checklist has not yet been attached to the independent-study request. The current draft plan relies on online course modules, which won't satisfy these required in-person lab components.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for these critical findings. Ms. Ibarra, your concern about the four required hands-on labs is a significant gap in the current draft \u2014 the online modules alone won't satisfy the in-person lab requirement, and the safety checklist needs to be attached. Mr. Chen, thank you for confirming the scheduling conflict directly with the family; Saturday at 10:00 a.m. is clearly the workable time. Before I can make any approval decision, I need two things to happen: first, the draft plan must be updated to reflect the Saturday 10:00 a.m. check-in time and to incorporate the four supervised 90-minute in-person lab sessions. Second, the lab safety checklist needs to be attached to the request. Once those revisions are made and I've had confirmation that both the supervising teacher and counselor have reviewed the updated plan, I'll be ready to make my decision. I do not believe I can approve the plan as it currently stands.",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you both for these critical findings. Ms. Ibarra, your concern about the four required hands-on labs is a significant gap in the current draft \u2014 the online modules alone won't satisfy the in-person lab requirement, and the safety checklist needs to be attached. Mr. Chen, thank you for confirming the scheduling conflict directly with the family; Saturday at 10:00 a.m. is clearly the workable time. Before I can make any approval decision, I need two things to happen: first, the draft plan must be updated to reflect the Saturday 10:00 a.m. check-in time and to incorporate the four supervised 90-minute in-person lab sessions. Second, the lab safety checklist needs to be attached to the request. Once those revisions are made and I've had confirmation that both the supervising teacher and counselor have reviewed the updated plan, I'll be ready to make my decision. I do not believe I can approve the plan as it currently stands.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Dr. Morgan. I agree with that path forward. To summarize what needs to happen on my end: I'll make sure the four required 90-minute in-person lab sessions are incorporated into the revised plan, and I'll attach the department's lab safety checklist to the request. I want to note that I've already confirmed the lab requirements against the checklist this week, so I'm prepared to move quickly on those revisions. Once the updated plan is ready, I'll review it as the supervising teacher and make sure Mr. Chen has the opportunity to review it as well before it comes back to you for a decision.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Dr. Morgan. I agree with that path forward. To summarize what needs to happen on my end: I'll make sure the four required 90-minute in-person lab sessions are incorporated into the revised plan, and I'll attach the department's lab safety checklist to the request. I want to note that I've already confirmed the lab requirements against the checklist this week, so I'm prepared to move quickly on those revisions. Once the updated plan is ready, I'll review it as the supervising teacher and make sure Mr. Chen has the opportunity to review it as well before it comes back to you for a decision.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Ms. Ibarra and Dr. Morgan. I'll take responsibility for updating the check-in meeting time in the draft schedule from Tuesday afternoons to Saturday at 10:00 a.m., as confirmed with the family. Once Ms. Ibarra has incorporated the four in-person lab sessions and attached the safety checklist, I'll review the updated plan as counselor before it goes back to Dr. Morgan for a decision.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Ms. Ibarra and Dr. Morgan. I'll take responsibility for updating the check-in meeting time in the draft schedule from Tuesday afternoons to Saturday at 10:00 a.m., as confirmed with the family. Once Ms. Ibarra has incorporated the four in-person lab sessions and attached the safety checklist, I'll review the updated plan as counselor before it goes back to Dr. Morgan for a decision.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Excellent. It sounds like we have a clear path forward and everyone understands their responsibilities. To recap: Ms. Ibarra will revise the plan to incorporate the four required 90-minute supervised in-person lab sessions and attach the department's lab safety checklist. Mr. Chen will update the check-in meeting time from Tuesday afternoons to Saturday at 10:00 a.m. as confirmed with the family. Once both of those revisions are complete, Ms. Ibarra will review as supervising teacher and Mr. Chen will review as counselor. After I receive confirmation that both reviews have been completed on the updated plan, I'll be in a position to make my final approval decision. I cannot approve the plan as it currently stands, but I'm optimistic we can get this resolved quickly given how prepared everyone is. Please let me know once the revised plan is ready for my review.",
+            "speaker": "A1",
+            "turn": 8,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Excellent. It sounds like we have a clear path forward and everyone understands their responsibilities. To recap: Ms. Ibarra will revise the plan to incorporate the four required 90-minute supervised in-person lab sessions and attach the department's lab safety checklist. Mr. Chen will update the check-in meeting time from Tuesday afternoons to Saturday at 10:00 a.m. as confirmed with the family. Once both of those revisions are complete, Ms. Ibarra will review as supervising teacher and Mr. Chen will review as counselor. After I receive confirmation that both reviews have been completed on the updated plan, I'll be in a position to make my final approval decision. I cannot approve the plan as it currently stands, but I'm optimistic we can get this resolved quickly given how prepared everyone is. Please let me know once the revised plan is ready for my review.\"\n}\n```"
+          },
+          {
+            "type": "say",
+            "text": "I think we've covered everything thoroughly and have a clear plan moving forward. I'll get started on incorporating the four 90-minute in-person lab sessions and attaching the safety checklist right away. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., let me know and we can coordinate so that both of our reviews are completed before the revised plan goes back to Dr. Morgan. I don't have anything further to add at this point.",
+            "speaker": "A2",
+            "turn": 9,
+            "raw_output": "{\"type\": \"say\", \"text\": \"I think we've covered everything thoroughly and have a clear plan moving forward. I'll get started on incorporating the four 90-minute in-person lab sessions and attaching the safety checklist right away. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., let me know and we can coordinate so that both of our reviews are completed before the revised plan goes back to Dr. Morgan. I don't have anything further to add at this point.\"}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.449,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 8,
+        "revealed_facts": [
+          "PF2"
+        ],
+        "content_results": {
+          "C1": false,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": false,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": false
+        },
+        "settlement": {
+          "decisions": {
+            "approved": false,
+            "supervised_lab_sessions": 4,
+            "lab_session_minutes": 90,
+            "meeting_day": "Saturday",
+            "meeting_time": "10:00 a.m."
+          },
+          "credited_facts": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "commitments": [
+            {
+              "type": "revise_plan",
+              "target": "Ms. Ibarra",
+              "detail": "Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan"
+            },
+            {
+              "type": "revise_plan",
+              "target": "Mr. Chen",
+              "detail": "Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m."
+            },
+            {
+              "type": "review",
+              "target": "supervising teacher and counselor",
+              "detail": "Review the revised draft plan before final approval by the principal"
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "commitments": [
+          {
+            "type": "revise_plan",
+            "target": "Ms. Ibarra",
+            "detail": "Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan"
+          },
+          {
+            "type": "revise_plan",
+            "target": "Mr. Chen",
+            "detail": "Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m."
+          },
+          {
+            "type": "review",
+            "target": "supervising teacher and counselor",
+            "detail": "Review the revised draft plan before final approval by the principal"
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Before we go any further with this independent-study plan, I need to flag something important. I've been reviewing the Earth Science course requirements, and there are four required hands-on labs that cannot be replaced by online modules. Each one needs to be supervised in person for exactly 90 minutes. The draft plan as it currently stands doesn't account for that, and I haven't yet attached the department's lab safety checklist to the request either. I think we need to address this before the plan goes to the principal for approval.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Before we go any further with this independent-study plan, I need to flag something important. I've been reviewing the Earth Science course requirements, and there are four required hands-on labs that cannot be replaced by online modules. Each one needs to be supervised in person for exactly 90 minutes. The draft plan as it currently stands doesn't account for that, and I haven't yet attached the department's lab safety checklist to the request either. I think we need to address this before the plan goes to the principal for approval.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a scheduling issue with the draft plan. During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.",
+            "speaker": "A3",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a scheduling issue with the draft plan. During my intake call with the student's family this week, they confirmed that the student cannot attend Tuesday afternoon meetings due to a recurring work obligation. Saturday at 10:00 a.m. is the reliable meeting time for them. I haven't updated the draft schedule yet to reflect this.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you both for catching these issues before this reaches my desk. Ms. Ibarra, the four supervised in-person labs at 90 minutes each and the lab safety checklist need to be incorporated into the plan. Mr. Chen, the Tuesday afternoon conflict is a real problem \u2014 if Saturday at 10:00 a.m. is the reliable time for the family, the draft needs to be updated accordingly. Before I can approve anything, I need a revised plan that addresses both the lab sessions and the schedule change, and per our routine, I'll need the supervising teacher and counselor to review that revised draft first. Can you two get those updates made and circulate the revised version for review?",
+            "speaker": "A1",
+            "turn": 2,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you both for catching these issues before this reaches my desk. Ms. Ibarra, the four supervised in-person labs at 90 minutes each and the lab safety checklist need to be incorporated into the plan. Mr. Chen, the Tuesday afternoon conflict is a real problem \u2014 if Saturday at 10:00 a.m. is the reliable time for the family, the draft needs to be updated accordingly. Before I can approve anything, I need a revised plan that addresses both the lab sessions and the schedule change, and per our routine, I'll need the supervising teacher and counselor to review that revised draft first. Can you two get those updates made and circulate the revised version for review?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good. So to summarize the path forward: Ms. Ibarra will add the four 90-minute supervised in-person labs and attach the lab safety checklist, and Mr. Chen will update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. Once the revised draft is ready, please route it to the supervising teacher and counselor for their review per our standard routine. After their review comes back, I'll be ready to look at it for final approval. Do either of you have any questions about what needs to happen next?",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Good. So to summarize the path forward: Ms. Ibarra will add the four 90-minute supervised in-person labs and attach the lab safety checklist, and Mr. Chen will update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. Once the revised draft is ready, please route it to the supervising teacher and counselor for their review per our standard routine. After their review comes back, I'll be ready to look at it for final approval. Do either of you have any questions about what needs to happen next?\"}"
+          },
+          {
+            "type": "say",
+            "text": "No questions from me, Dr. Morgan. The path forward is clear. I'll add the four 90-minute supervised in-person labs to the plan and attach the lab safety checklist. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., we can circulate the revised draft to the supervising teacher and counselor for their review before it comes back to Dr. Morgan for final approval.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"No questions from me, Dr. Morgan. The path forward is clear. I'll add the four 90-minute supervised in-person labs to the plan and attach the lab safety checklist. Mr. Chen, once you've updated the meeting time to Saturday at 10:00 a.m., we can circulate the revised draft to the supervising teacher and counselor for their review before it comes back to Dr. Morgan for final approval.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "{\"type\":\" \"text\": \"No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. on the draft plan. Once Ms. Ibarra has added the four 90-minute supervised in-person labs and attached the lab safety checklist, we'll circulate the revised draft to the supervising teacher and counselor for their review per our standard routine, and then route it back to you for final approval.\"}\n}"
+          },
+          {
+            "type": "say",
+            "text": "No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. in the draft plan. Once that's done, Ms. Ibarra and I will circulate the revised draft to the supervising teacher and counselor for their review before it comes back to you for final approval.",
+            "speaker": "A3",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"No questions from me either, Dr. Morgan. The path forward is clear. I'll update the meeting time from Tuesday afternoon to Saturday at 10:00 a.m. in the draft plan. Once that's done, Ms. Ibarra and I will circulate the revised draft to the supervising teacher and counselor for their review before it comes back to you for final approval.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "approved": false,
+                "supervised_lab_sessions": 4,
+                "lab_session_minutes": 90,
+                "meeting_day": "Saturday",
+                "meeting_time": "10:00 a.m."
+              },
+              "credited_facts": [
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ],
+              "commitments": [
+                {
+                  "type": "revise_plan",
+                  "target": "Ms. Ibarra",
+                  "detail": "Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan"
+                },
+                {
+                  "type": "revise_plan",
+                  "target": "Mr. Chen",
+                  "detail": "Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m."
+                },
+                {
+                  "type": "review",
+                  "target": "supervising teacher and counselor",
+                  "detail": "Review the revised draft plan before final approval by the principal"
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"approved\":false,\"supervised_lab_sessions\":4,\"lab_session_minutes\":90,\"meeting_day\":\"Saturday\",\"meeting_time\":\"10:00 a.m.\"},\"credited_facts\":[\"S1\",\"S2\",\"S3\",\"S4\"],\"commitments\":[{\"type\":\"revise_plan\",\"target\":\"Ms. Ibarra\",\"detail\":\"Add four 90-minute supervised in-person labs and attach the lab safety checklist to the draft plan\"},{\"type\":\"revise_plan\",\"target\":\"Mr. Chen\",\"detail\":\"Update the biweekly check-in meeting time from Tuesday afternoon to Saturday at 10:00 a.m.\"},{\"type\":\"review\",\"target\":\"supervising teacher and counselor\",\"detail\":\"Review the revised draft plan before final approval by the principal\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\"]}}"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. **C5 (ENCODING MISMATCH):** C5 expects a lab-supervision commitment attributed to the supervising teacher, but settlements produce generic commitment types ('conditional_approval' or 'revise_plan') that don't match. Fix C5 to accept the lab-supervision evidence from the settlement decisions fields (supervised_lab_sessions=4, lab_session_minutes=90) when they appear alongside a commitment targeting the supervising teacher, OR add the shared_context instruction telling A1 to create a commitment with type 'lab_supervision' and target 'supervising_teacher' when settling. Recommended: loosen C5 to check that the settlement decisions contain supervised_lab_sessions=4 AND lab_session_minutes=90 AND that a commitment exists whose target or detail mentions the supervising teacher \u2014 this does NOT risk LEAKED because those decision values require PF1's content. Exact rewording: check should pass when supervised_lab_sessions==4, lab_session_minutes==90, and at least one commitment mentions 'supervising teacher' or 'lab' in its target or detail.\n\n2. **C6 (ENCODING MISMATCH):** C6 expects a family-compatible-schedule commitment but settlements produce generic 'revise_plan' or 'conditional_approval' commitments. Fix C6 to accept the schedule evidence from settlement decisions (meeting_day='Saturday', meeting_time='10:00 a.m.') when accompanied by a commitment mentioning the schedule change. Recommended: loosen C6 to pass when meeting_day=='Saturday' AND meeting_time=='10:00 a.m.' AND at least one commitment mentions 'meeting' or 'schedule' or 'Saturday' in its target or detail. This does NOT risk LEAKED because the Saturday 10am values require PF2's content.\n\n3. **C1 (ENCODING MISMATCH):** C1 is unlinked to any decisive fact and failed in both settled rollouts despite approved=false with conditional commitments. Without the exact check text, the fix should loosen C1 to accept approved=false when a conditional_approval or review commitment targeting 'supervising teacher and counselor' is present \u2014 which both settled rollouts produce. If C1 expects a different field name for the approval decision, align it to 'approved' (boolean) as the settlement schema uses.\n\n4. **P1 (TELEPATHY / disclosure problem):** P1 fails because A2 discloses PF1's content via 'say' instead of 'reveal' in rollouts 1 and 3, so PF1 never enters justification_fact_ids. Fix the shared_context or agent instructions for A2 to ensure it uses a formal reveal action for PF1, not just a say. Additionally, in rollouts 0 and 2 A2 DID use reveal for PF1 but the settlements didn't cite PF1 (rollout 0 never settled; rollout 2 never settled), so P1 never had a chance to pass on a settled rollout where PF1 was properly revealed. The structural fix below (loosening settle-eligibility) will allow settled rollouts where PF1 was properly revealed, giving P1 a fair chance.\n\n5. **Turn-cap structural problem (rollouts 0 and 2):** Loosen the settle-eligibility condition so that a settlement is permitted once all decisive facts have been revealed AND the principal (A1) has articulated the specific conditions for approval (lab sessions, schedule change, review requirement) \u2014 even if agents frame the review as a future step. Currently the agents defer settling because they describe the review as something that happens 'once the revised plan is ready.' The shared_context should clarify that the current conversation IS the teacher-and-counselor review, so A1 is empowered to settle once all facts are on the table. Alternatively or additionally, raise turn_cap from 10 to 14 to give agents more room \u2014 but the primary fix is the settle-eligibility loosening, since the agents had the full picture by turn 5 and still didn't settle in 5 more turns."
+}

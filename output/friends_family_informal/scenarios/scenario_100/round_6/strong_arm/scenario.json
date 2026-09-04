@@ -1,0 +1,145 @@
+{
+  "scenario_id": "scenario_100",
+  "scenario_type": "family_harvest_coordination",
+  "description": "Nora is caring for the late family garden and must decide how to handle a 30-kilogram tomato harvest, including what Eli will freeze, what Sofia will deliver, and what happens to the remainder, after checking in with her brother and cousin.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Nora",
+      "role": "Garden Keeper and Final Decision-Maker"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Eli",
+      "role": "Brother"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Sofia",
+      "role": "Cousin"
+    }
+  ],
+  "shared_context": {
+    "S1": "The family's garden has produced 30 kilograms of ripe tomatoes that need to be handled this weekend.",
+    "S2": "Nora is coordinating the harvest plan and will make the final decision about preserving, sharing, and composting the tomatoes.",
+    "S3": "The tomatoes are currently in one set of crates at the garden, and the family wants to avoid letting usable food spoil.",
+    "S4": "Before settling the plan, Nora follows the family's usual kitchen check-in and asks each person what they can store, take, or arrange.",
+    "S5": "Any tomatoes passed along must be sorted and packed on Saturday afternoon.",
+    "S6": "Nora will finalize the plan during this check-in using the information already discussed; no further outside confirmation is part of the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Eli has exactly 12 kilograms of free space in his chest freezer, and he can portion and label that amount on Saturday afternoon."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Sofia spoke with the coordinator of the Oak Street Community Fridge, who confirmed that it can accept exactly 10 kilograms of fresh tomatoes on Sunday between 09:00 and 11:00; this confirmation has not reached the family yet."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "freezer_storage_kg": "integer",
+      "frozen_sauce_kg": "integer",
+      "community_fridge_kg": "integer",
+      "compost_kg": "integer",
+      "community_fridge_delivery_window": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Exactly 12 kilograms must be assigned to Eli's freezer storage.",
+    "Exactly 10 kilograms must be designated for the Oak Street Community Fridge.",
+    "The remaining quantities must account for all 30 kilograms through home frozen sauce and compost.",
+    "The community-fridge delivery must be scheduled for Sunday between 09:00 and 11:00.",
+    "A commitment to portion, label, and store the 12 kilograms in Eli's freezer must exist.",
+    "A commitment to deliver exactly 10 kilograms to the Oak Street Community Fridge must exist.",
+    "Sofia's community-fridge confirmation must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['freezer_storage_kg'] == 12",
+    "C2": "decisions['community_fridge_kg'] == 10",
+    "C3": "decisions['freezer_storage_kg'] + decisions['frozen_sauce_kg'] + decisions['community_fridge_kg'] + decisions['compost_kg'] == 30",
+    "C4": "decisions['community_fridge_delivery_window'] in ['Sunday 09:00-11:00', 'Sunday 09:00\u201311:00', 'Sunday between 09:00 and 11:00', 'Sunday between 9:00 and 11:00']",
+    "C5": "any((c['type'] in ['frozen_storage', 'freezer_storage'] and c['target'] == 'Eli') for c in commitments)",
+    "C6": "any((c['type'] in ['community_fridge_donation', 'community_fridge_delivery', 'delivery', 'deliver'] and (c['target'] == 'Sofia' or c['target'] == 'Oak Street Community Fridge')) for c in commitments)",
+    "C7": "decisions['frozen_sauce_kg'] >= 0 and decisions['compost_kg'] >= 0"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in revealed and 'PF2' in justification_fact_ids and 'PF2' in credited_facts"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C3",
+        "C5"
+      ],
+      "why": "Eli's exact freezer capacity changes freezer_storage_kg to exactly 12 and requires a matching freezer commitment, leaving the remaining 18 kilograms to be allocated elsewhere."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C4",
+        "C6",
+        "P1"
+      ],
+      "why": "Sofia's confirmation changes the community-fridge allocation to exactly 10 kilograms, fixes the delivery window to Sunday 09:00\u201311:00, and supports a delivery commitment citing PF2."
+    }
+  ],
+  "domain": "friends_family_informal",
+  "requested_num_agents": 3
+}

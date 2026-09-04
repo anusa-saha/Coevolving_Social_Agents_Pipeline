@@ -1,0 +1,172 @@
+{
+  "scenario_id": "scenario_60",
+  "scenario_type": "cash_liquidity_allocation",
+  "description": "The head of liquidity management must allocate a holding company's available cash among an operating reserve, payroll, a derivatives collateral call, and an acquisition deposit, while setting the transfer timing and deferral commitments with input from risk, treasury operations, and corporate development.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Head of Liquidity Management"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Elias",
+      "role": "Liquidity Risk Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nora",
+      "role": "Treasury Operations Manager"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Victor",
+      "role": "Corporate Development Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The holding company has $14,000,000 of unrestricted cash available for near-term commitments.",
+    "S2": "The preliminary cash plan lists $4,000,000 for payroll, $3,000,000 for derivatives collateral, and $5,000,000 for an acquisition deposit.",
+    "S3": "Maya makes the binding final allocation decision for this week's cash plan.",
+    "S4": "The company's daily liquidity huddle includes a round-robin report from liquidity risk, treasury operations, and corporate development before the final cash plan is published.",
+    "S5": "For the final settlement, total_committed_cash_usd is defined as the sum of payroll_transfer_usd, derivatives_collateral_transfer_usd, acquisition_deposit_usd, and operating_cash_reserve_usd."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Elias received a supervisory liquidity memo this morning requiring this entity to retain exactly $2,000,000 of uncommitted operating cash through the week; the memo has not yet been circulated to the liquidity huddle."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nora received the confirmed margin notice from the derivatives counterparty this morning: the collateral transfer is $4,200,000 and must settle within 2 business days, rather than the preliminary $3,000,000 estimate; she has not yet updated the treasury payment queue."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Victor found the signed acquisition side letter while reviewing the deal file this week: only $3,000,000 may be deposited this week, with the remaining $2,000,000 deferred until next month; the side letter has not yet been added to the cash-plan folder."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "operating_cash_reserve_usd": "integer",
+      "payroll_transfer_usd": "integer",
+      "derivatives_collateral_transfer_usd": "integer",
+      "acquisition_deposit_usd": "integer",
+      "acquisition_deferred_amount_usd": "integer",
+      "collateral_settlement_within_days": "integer",
+      "acquisition_balance_deferred": "boolean",
+      "total_committed_cash_usd": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "Exactly $2,000,000 must remain as uncommitted operating cash.",
+    "Exactly $4,000,000 must be allocated to payroll.",
+    "Exactly $4,200,000 must be transferred for derivatives collateral within 2 business days.",
+    "Exactly $3,000,000 must be deposited for the acquisition this week, and exactly $2,000,000 of the acquisition balance must be deferred until next month.",
+    "The reported total committed cash must equal $13,200,000, calculated by including the operating cash reserve, and must not exceed the $14,000,000 of available cash."
+  ],
+  "content_checks": {
+    "C1": "decisions['operating_cash_reserve_usd'] == 2000000",
+    "C2": "decisions['payroll_transfer_usd'] == 4000000",
+    "C3": "decisions['derivatives_collateral_transfer_usd'] == 4200000",
+    "C4": "decisions['collateral_settlement_within_days'] >= 1 and decisions['collateral_settlement_within_days'] <= 2",
+    "C5": "decisions['acquisition_deposit_usd'] == 3000000",
+    "C6": "decisions['acquisition_balance_deferred'] == True",
+    "C7": "decisions['total_committed_cash_usd'] == 13200000",
+    "C8": "decisions['acquisition_deferred_amount_usd'] == 2000000"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed",
+    "P3": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The preliminary plan identifies outgoing uses but no reserve amount; PF1 changes operating_cash_reserve_usd from an unspecified or smaller generic holdback to exactly 2000000 and supplies the required justification."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "P2"
+      ],
+      "why": "The preliminary collateral estimate is 3000000 with no firm timing; PF2 changes derivatives_collateral_transfer_usd to exactly 4200000, sets settlement within 1-2 days, and supplies the required justification."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C8",
+        "P3"
+      ],
+      "why": "The preliminary plan calls for 5000000 this week; PF3 changes acquisition_deposit_usd to exactly 3000000, sets acquisition_deferred_amount_usd to exactly 2000000, turns acquisition_balance_deferred on, and supplies the required justification."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

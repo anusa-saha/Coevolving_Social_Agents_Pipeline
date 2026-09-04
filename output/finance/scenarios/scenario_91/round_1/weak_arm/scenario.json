@@ -1,0 +1,165 @@
+{
+  "scenario_id": "scenario_91",
+  "scenario_type": "share_repurchase_authorization",
+  "description": "A finance director must authorize a one-time share repurchase and set its amount, execution method, tax reserve, and filing timetable, with input from treasury, legal, and tax accounting.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Finance Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Marcus",
+      "role": "Treasury Manager"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Corporate Counsel"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonah",
+      "role": "Tax Accounting Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has proposed a one-time share repurchase before the end of the fiscal quarter.",
+    "S2": "The preliminary proposal describes a $5,000,000 repurchase but does not finalize the execution method, tax reserve, or filing timetable.",
+    "S3": "Elena makes the binding capital-allocation decision.",
+    "S4": "At the capital-allocation meeting, Elena routinely asks treasury, legal, and tax accounting to report any relevant conditions before she signs the authorization."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Marcus confirmed in this morning's rolling cash forecast that exactly $4,200,000 can be used for the repurchase while preserving the board-approved operating cash floor; the updated forecast has not yet been circulated."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia found in the current board resolution while reviewing the corporate records this week that the repurchase must be conducted through a Dutch auction and may not use an open-market program; she has not yet updated the draft authorization."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jonah confirmed in a tax memo received yesterday that the repurchase requires an excise-tax reserve of exactly $126,000 and a tax filing within 30 days after execution; the memo has not yet been added to the transaction file."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "repurchase_approved": "boolean",
+      "repurchase_amount_usd": "integer",
+      "execution_method": "string",
+      "excise_tax_reserve_usd": "integer",
+      "tax_filing_days_after_execution": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The repurchase must be approved for exactly $4,200,000.",
+    "The repurchase must use a Dutch auction.",
+    "An excise-tax reserve of exactly $126,000 must be recorded.",
+    "The tax filing must be scheduled within 30 days after execution.",
+    "The authorization must include a Dutch-auction execution commitment.",
+    "The authorization must include a tax-filing commitment."
+  ],
+  "content_checks": {
+    "C1": "decisions['repurchase_approved'] == True",
+    "C2": "decisions['repurchase_amount_usd'] == 4200000",
+    "C3": "decisions['execution_method'] == 'dutch_auction'",
+    "C4": "decisions['excise_tax_reserve_usd'] == 126000",
+    "C5": "decisions['tax_filing_days_after_execution'] >= 1 and decisions['tax_filing_days_after_execution'] <= 30",
+    "C6": "any(c['type'] == 'dutch_auction_execution' for c in commitments)",
+    "C7": "any(c['type'] == 'excise_tax_filing' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed",
+    "P3": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "P1"
+      ],
+      "why": "The preliminary proposal names $5,000,000 without confirming available surplus cash; PF1 changes repurchase_amount_usd to exactly $4,200,000 and makes repurchase_approved true within the cash floor."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C6",
+        "P2"
+      ],
+      "why": "The preliminary proposal leaves execution method open; PF2 changes execution_method to dutch_auction and adds the required dutch_auction_execution commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C5",
+        "C7",
+        "P3"
+      ],
+      "why": "The preliminary proposal has no tax treatment; PF3 changes excise_tax_reserve_usd to exactly $126,000, sets tax_filing_days_after_execution to no more than 30, and adds the excise_tax_filing commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

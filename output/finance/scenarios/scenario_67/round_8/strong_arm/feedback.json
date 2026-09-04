@@ -1,0 +1,895 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "ROLLOUT 0 (2 failures: C6, C8): C6 (gated by PF2, owner A3) FAILED \u2014 ENCODING MISMATCH. PF2 was revealed at turn 2 (A3 disclosed beneficial-owner certification and approved municipal-bond custodian) and was cited in justification_fact_ids. The settlement's commitment detail says \"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete\" and settlement_requires_special_documentation is true. The information is present and correctly applied; the check is likely rejecting because the commitment combines both requirements into a single legal_condition entry or because the exact wording/threshold for C6 does not match this natural encoding. C8 (gated by PF3, owner A4) FAILED \u2014 ENCODING MISMATCH. PF3 was revealed at turn 3 (A4 disclosed $5M face value, 4 days, single cycle) and cited in justification_fact_ids. The settlement sets purchase_face_value_usd=5000000, execution_days=4, execution_single_cycle=true \u2014 all correct. The check still failed despite the values being right, indicating C8's wording or threshold does not match how the model naturally encodes the single-cycle commitment (possibly expecting a specific commitment string or field that is absent or differently worded in this compact settlement).\n\nROLLOUT 1 (4 failures: C5, C6, C8, P1): C5 and P1 (both gated by PF1, owner A2) FAILED \u2014 NEVER REVEALED. In rollout 1, A2 never issued a reveal action for PF1. At turn 0 A2 only said (\"say\" type) that existing exposure exists but did not disclose the specific $4M exposure or $10M limit via a reveal action. PF1 is absent from revealed_facts. The settlement set issuer_exposure_limit_controlled=false and did not cite PF1 in justification_fact_ids, so C5 (content) and P1 (provenance) both correctly failed. This is a disclosure problem: A2 narrated that exposure exists but never formally revealed the decisive fact. C6 (gated by PF2, owner A3) FAILED \u2014 ENCODING MISMATCH. PF2 was revealed at turn 2 and cited in justification_fact_ids. The settlement split the two requirements into two separate legal_condition commitments (\"Buyer must provide beneficial-owner certification before settlement\" and \"Buyer must use an approved municipal-bond custodian for settlement\") and set settlement_requires_special_documentation=true. The information is fully present and correctly applied; C6 is likely rejecting because it expects both requirements in a single commitment entry or expects different exact wording. C8 (gated by PF3, owner A4) FAILED \u2014 ENCODING MISMATCH. PF3 was revealed at turn 1 and cited in justification_fact_ids. The settlement sets purchase_face_value_usd=5000000, execution_days=4, execution_single_cycle=true \u2014 all correct. Same pattern as rollout 0: C8 fails despite correct values, confirming a systematic encoding mismatch in the check's wording/threshold.\n\nROLLOUTS 2 and 3 passed all checks. In rollout 2, the settlement included detailed commitments with explicit wording (e.g., \"consistent with the transfer-agent memo\", \"consistent with the desk's $5,000,000 per-cycle maximum\") and C6/C8 passed. In rollout 3, the settlement used \"fair value through profit or loss\" (spaces, not underscores) for accounting_classification and C4 still passed, and C6/C8 also passed with the more detailed commitment structure. This confirms the checks are sensitive to commitment wording/structure, not just decision-field values.\n\nNo turn-cap auto-fails occurred. All 4 rollouts settled within 5-10 turns.\n\nSUMMARY OF FAILURE MODES:\n- C6: ENCODING MISMATCH in rollouts 0 and 1. PF2 was revealed and cited both times; settlement_requires_special_documentation=true both times. The check fails when the commitment wording or structure differs from what it expects (single combined entry vs. two separate entries, or missing specific phrases like \"consistent with the transfer-agent memo\").\n- C8: ENCODING MISMATCH in rollouts 0 and 1. PF3 was revealed and cited both times; all three decision fields (purchase_face_value_usd, execution_days, execution_single_cycle) were correct both times. The check fails when the commitment detail lacks specific wording (e.g., \"consistent with the desk's $5,000,000 per-cycle maximum\" or \"multi-cycle phasing to exceed $5,000,000 total is not permitted\").\n- C5/P1: NEVER REVEALED in rollout 1 only. A2 used a \"say\" action instead of a \"reveal\" action for PF1. This is a disclosure norm problem \u2014 A2 announced the topic but did not formally reveal the fact.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 2,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 4,\n    \"C2\": 4,\n    \"C3\": 4,\n    \"C4\": 4,\n    \"C5\": 3,\n    \"C6\": 2,\n    \"C8\": 2\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3,\n    \"P2\": 4,\n    \"P3\": 4,\n    \"P4\": 4\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C8\": [\n      {\n        \"fact_id\": \"PF3\",\n        \"owner\": \"A4\",\n        \"why\": \"The desk's explicit single-cycle instruction changes purchase_face_value_usd to exactly $5000000 face value, execution_days to exactly 4, and execution_single_cycle to true while requiring the execution commitment to state a single-cycle approach.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The existing $4000000 issuer exposure and $10000000 limit change issuer_exposure_limit_controlled from false or unspecified to true and require the $5000000 purchase to remain within a $6000000 incremental capacity.\"\n      }\n    ],\n    \"C5\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The existing $4000000 issuer exposure and $10000000 limit change issuer_exposure_limit_controlled from false or unspecified to true and require the $5000000 purchase to remain within a $6000000 incremental capacity.\"\n      }\n    ],\n    \"C6\": [\n      {\n        \"fact_id\": \"PF2\",\n        \"owner\": \"A3\",\n        \"why\": \"The transfer-agent memo changes settlement_requires_special_documentation from false or unspecified to true and adds both a beneficial-owner certification and an approved municipal-bond custodian to the settlement commitment.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.342,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 5,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF4\",\n        \"PF2\",\n        \"PF3\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true,\n        \"P3\": true,\n        \"P4\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"purchase_approved\": true,\n          \"purchase_face_value_usd\": 5000000,\n          \"execution_days\": 4,\n          \"execution_single_cycle\": true,\n          \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n          \"issuer_exposure_limit_controlled\": true,\n          \"settlement_requires_special_documentation\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"Nadia\",\n            \"detail\": \"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"Nadia\",\n          \"detail\": \"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this bond issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet, so it may not be visible to everyone here. Given the bonds have a face value of $12,000,000, purchasing them at 82 cents on the dollar would cost approximately $9,840,000, and combined with our existing $4,000,000 exposure, our total exposure to this issuer would reach approximately $13,840,000 \\u2014 well above the $10,000,000 single-issuer limit. I need to set a condition that the issuer exposure limit is confirmed and controlled before any purchase proceeds.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this bond issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet, so it may not be visible to everyone here. Given the bonds have a face value of $12,000,000, purchasing them at 82 cents on the dollar would cost approximately $9,840,000, and combined with our existing $4,000,000 exposure, our total exposure to this issuer would reach approximately $13,840,000 \\u2014 well above the $10,000,000 single-issuer limit. I need to set a condition that the issuer exposure limit is confirmed and controlled before any purchase proceeds.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to flag an accounting issue before we proceed. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this is awaiting circulation, but I want the committee to be aware that this classification decision has been made and will need to be reflected in how we account for the position if we purchase it.\",\n          \"speaker\": \"A5\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF4\\\",\\\"text\\\":\\\"I need to flag an accounting issue before we proceed. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this is awaiting circulation, but I want the committee to be aware that this classification decision has been made and will need to be reflected in how we account for the position if we purchase it.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this is a legal settlement condition that must be satisfied before any purchase can complete.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this is a legal settlement condition that must be satisfied before any purchase can complete.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to flag an execution constraint before we proceed. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\",\n          \"speaker\": \"A4\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"I need to flag an execution constraint before we proceed. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"purchase_approved\": true,\n              \"purchase_face_value_usd\": 5000000,\n              \"execution_days\": 4,\n              \"execution_single_cycle\": true,\n              \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n              \"issuer_exposure_limit_controlled\": true,\n              \"settlement_requires_special_documentation\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"Nadia\",\n                \"detail\": \"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"purchase_approved\\\": true,\\n      \\\"purchase_face_value_usd\\\": 5000000,\\n      \\\"execution_days\\\": 4,\\n      \\\"execution_single_cycle\\\": true,\\n      \\\"accounting_classification\\\": \\\"fair_value_through_profit_or_loss\\\",\\n      \\\"issuer_exposure_limit_controlled\\\": true,\\n      \\\"settlement_requires_special_documentation\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\\"PF1\\\", \\\"PF2\\\", \\\"PF3\\\", \\\"PF4\\\"],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"legal_condition\\\",\\n        \\\"target\\\": \\\"Nadia\\\",\\n        \\\"detail\\\": \\\"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\\"PF1\\\", \\\"PF2\\\", \\\"PF3\\\", \\\"PF4\\\"]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.389,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF3\",\n        \"PF2\",\n        \"PF4\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": false,\n        \"C6\": false,\n        \"C8\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false,\n        \"P2\": true,\n        \"P3\": true,\n        \"P4\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"purchase_approved\": true,\n          \"purchase_face_value_usd\": 5000000,\n          \"execution_days\": 4,\n          \"execution_single_cycle\": true,\n          \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n          \"issuer_exposure_limit_controlled\": false,\n          \"settlement_requires_special_documentation\": true\n        },\n        \"credited_facts\": [\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"settlement\",\n            \"detail\": \"Buyer must provide beneficial-owner certification before settlement\"\n          },\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"settlement\",\n            \"detail\": \"Buyer must use an approved municipal-bond custodian for settlement\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"settlement\",\n          \"detail\": \"Buyer must provide beneficial-owner certification before settlement\"\n        },\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"settlement\",\n          \"detail\": \"Buyer must use an approved municipal-bond custodian for settlement\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important credit risk matter. I reviewed the exposure report this morning and found that we already have existing exposure to this issuer that needs to be factored into our decision. Let me share that with the committee now.\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important credit risk matter. I reviewed the exposure report this morning and found that we already have existing exposure to this issuer that needs to be factored into our decision. Let me share that with the committee now.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to share important sizing constraints from the execution desk. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\",\n          \"speaker\": \"A4\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to share important sizing constraints from the execution desk. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this constitutes a legal settlement condition that must be reflected in our vote.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this constitutes a legal settlement condition that must be reflected in our vote.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Victor, Hassan, and Nadia. Let me make sure I have everything before I record the vote. So far I have input from credit risk (Victor), legal (Nadia), and markets/execution (Hassan). Under our normal pre-trade procedure, I also need to hear from accounting before I can record the vote. I still need accounting to state any conditions or implementation requirements they may have. Once accounting has weighed in, I will record the decision immediately after, incorporating all conditions stated. Let me also note for the record that Hassan's sizing constraint of exactly $5,000,000 face value over exactly four trading days in a single cycle will be reflected, and Nadia's legal settlement conditions \\u2014 beneficial-owner certification and use of an approved municipal-bond custodian \\u2014 will be included as legal_condition commitments. Victor, please also share the specifics of the existing issuer exposure you flagged so I can confirm whether the issuer exposure limit is controlled before I set the decision field. Accounting, whenever you're ready, please state your conditions or confirm you have none.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Victor, Hassan, and Nadia. Let me make sure I have everything before I record the vote. So far I have input from credit risk (Victor), legal (Nadia), and markets/execution (Hassan). Under our normal pre-trade procedure, I also need to hear from accounting before I can record the vote. I still need accounting to state any conditions or implementation requirements they may have. Once accounting has weighed in, I will record the decision immediately after, incorporating all conditions stated. Let me also note for the record that Hassan's sizing constraint of exactly $5,000,000 face value over exactly four trading days in a single cycle will be reflected, and Nadia's legal settlement conditions \\u2014 beneficial-owner certification and use of an approved municipal-bond custodian \\u2014 will be included as legal_condition commitments. Victor, please also share the specifics of the existing issuer exposure you flagged so I can confirm whether the issuer exposure limit is controlled before I set the decision field. Accounting, whenever you're ready, please state your conditions or confirm you have none.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"I need to share an important accounting condition before the vote is recorded. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this classification determination is awaiting circulation, but the committee should be aware that the accounting treatment will be FVTPL, not amortized cost. This is an accounting implementation requirement that should be reflected in our decision.\",\n          \"speaker\": \"A5\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF4\\\",\\\"text\\\":\\\"I need to share an important accounting condition before the vote is recorded. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this classification determination is awaiting circulation, but the committee should be aware that the accounting treatment will be FVTPL, not amortized cost. This is an accounting implementation requirement that should be reflected in our decision.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"purchase_approved\": true,\n              \"purchase_face_value_usd\": 5000000,\n              \"execution_days\": 4,\n              \"execution_single_cycle\": true,\n              \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n              \"issuer_exposure_limit_controlled\": false,\n              \"settlement_requires_special_documentation\": true\n            },\n            \"credited_facts\": [\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"settlement\",\n                \"detail\": \"Buyer must provide beneficial-owner certification before settlement\"\n              },\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"settlement\",\n                \"detail\": \"Buyer must use an approved municipal-bond custodian for settlement\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"purchase_approved\\\":true,\\\"purchase_face_value_usd\\\":5000000,\\\"execution_days\\\":4,\\\"execution_single_cycle\\\":true,\\\"accounting_classification\\\":\\\"fair_value_through_profit_or_loss\\\",\\\"issuer_exposure_limit_controlled\\\":false,\\\"settlement_requires_special_documentation\\\":true},\\\"credited_facts\\\":[\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"legal_condition\\\",\\\"target\\\":\\\"settlement\\\",\\\"detail\\\":\\\"Buyer must provide beneficial-owner certification before settlement\\\"},{\\\"type\\\":\\\"legal_condition\\\",\\\"target\\\":\\\"settlement\\\",\\\"detail\\\":\\\"Buyer must use an approved municipal-bond custodian for settlement\\\"}],\\\"justification_fact_ids\\\":[\\\"PF2\\\",\\\"PF3\\\",\\\"PF4\\\"]}}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.363,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true,\n        \"P3\": true,\n        \"P4\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"purchase_approved\": true,\n          \"purchase_face_value_usd\": 5000000,\n          \"execution_days\": 4,\n          \"execution_single_cycle\": true,\n          \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n          \"issuer_exposure_limit_controlled\": true,\n          \"settlement_requires_special_documentation\": true\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"settlement\",\n            \"detail\": \"The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo.\"\n          },\n          {\n            \"type\": \"accounting_condition\",\n            \"target\": \"trade_tickets_and_downstream_systems\",\n            \"detail\": \"The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows.\"\n          },\n          {\n            \"type\": \"markets_condition\",\n            \"target\": \"execution_desk\",\n            \"detail\": \"The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum.\"\n          },\n          {\n            \"type\": \"credit_risk_condition\",\n            \"target\": \"issuer_exposure\",\n            \"detail\": \"Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"settlement\",\n          \"detail\": \"The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo.\"\n        },\n        {\n          \"type\": \"accounting_condition\",\n          \"target\": \"trade_tickets_and_downstream_systems\",\n          \"detail\": \"The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows.\"\n        },\n        {\n          \"type\": \"markets_condition\",\n          \"target\": \"execution_desk\",\n          \"detail\": \"The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum.\"\n        },\n        {\n          \"type\": \"credit_risk_condition\",\n          \"target\": \"issuer_exposure\",\n          \"detail\": \"Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I understand we've been offered a block of distressed municipal bonds with a face value of $12 million, currently quoted at 82 cents on the dollar, maturing in 30 months. As chair of the Risk Committee, I'll be making the binding decision on whether we proceed and on what conditions. Before I record the vote, I need to hear from each of the four required functions under our normal pre-trade procedure: credit risk, legal, markets, and accounting. Please state any conditions or implementation requirements you have. I'll record the vote immediately after the last of those four has spoken. Who would like to begin?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I understand we've been offered a block of distressed municipal bonds with a face value of $12 million, currently quoted at 82 cents on the dollar, maturing in 30 months. As chair of the Risk Committee, I'll be making the binding decision on whether we proceed and on what conditions. Before I record the vote, I need to hear from each of the four required functions under our normal pre-trade procedure: credit risk, legal, markets, and accounting. Please state any conditions or implementation requirements you have. I'll record the vote immediately after the last of those four has spoken. Who would like to begin?\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. This means that if we purchase the full $12 million face value of these bonds, our total exposure to this issuer would reach $16 million, which would exceed our single-issuer limit by $6 million. As a credit risk condition, we would need to either reduce the purchase size to stay within the $10 million limit, or obtain an exception to the single-issuer limit before proceeding.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. This means that if we purchase the full $12 million face value of these bonds, our total exposure to this issuer would reach $16 million, which would exceed our single-issuer limit by $6 million. As a credit risk condition, we would need to either reduce the purchase size to stay within the $10 million limit, or obtain an exception to the single-issuer limit before proceeding.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Victor. I'll go next on behalf of accounting. I have an important accounting implementation requirement to flag. During my review of the bond terms this week, I identified a feature of the contractual cash flows that affects how we would classify and measure this position. I'll disclose that finding now.\",\n          \"speaker\": \"A5\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Victor. I'll go next on behalf of accounting. I have an important accounting implementation requirement to flag. During my review of the bond terms this week, I identified a feature of the contractual cash flows that affects how we would classify and measure this position. I'll disclose that finding now.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but I'm disclosing this now so it's on the record. As a legal settlement condition, the purchase should be conditional on the bank providing the beneficial-owner certification and using an approved municipal-bond custodian before settlement.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but I'm disclosing this now so it's on the record. As a legal settlement condition, the purchase should be conditional on the bank providing the beneficial-owner certification and using an approved municipal-bond custodian before settlement.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Nadia. I'll go next on behalf of the markets function. I have an important implementation requirement to flag regarding execution sizing. Let me share what I confirmed with the execution desk today.\",\n          \"speaker\": \"A4\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Nadia. I'll go next on behalf of the markets function. I have an important implementation requirement to flag regarding execution sizing. Let me share what I confirmed with the execution desk today.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. I should also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\",\n          \"speaker\": \"A4\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF3\\\",\\\"text\\\":\\\"I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. I should also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Hassan. That's very helpful. From a credit risk perspective, Hassan's markets condition actually helps resolve part of the exposure issue I raised. If we cap the purchase at $5,000,000 face value as the execution desk requires, our total exposure to this issuer would be $4,000,000 existing plus $5,000,000 new, equaling $9,000,000 \\u2014 which stays within our $10,000,000 single-issuer limit. So the markets condition and the credit risk condition are compatible: we can proceed at $5,000,000 face value without breaching the single-issuer limit, and no exception would be needed. My credit risk condition is satisfied as long as the purchase is sized at $5,000,000 face value, keeping total issuer exposure at $9,000,000, which is within the $10,000,000 limit. I also want to confirm that the committee's vote template should use the decision field 'issuer_exposure_limit_controlled' set to true, since the issuer exposure limit is confirmed as controlled at $9,000,000 against the $10,000,000 limit.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Hassan. That's very helpful. From a credit risk perspective, Hassan's markets condition actually helps resolve part of the exposure issue I raised. If we cap the purchase at $5,000,000 face value as the execution desk requires, our total exposure to this issuer would be $4,000,000 existing plus $5,000,000 new, equaling $9,000,000 \\u2014 which stays within our $10,000,000 single-issuer limit. So the markets condition and the credit risk condition are compatible: we can proceed at $5,000,000 face value without breaching the single-issuer limit, and no exception would be needed. My credit risk condition is satisfied as long as the purchase is sized at $5,000,000 face value, keeping total issuer exposure at $9,000,000, which is within the $10,000,000 limit. I also want to confirm that the committee's vote template should use the decision field 'issuer_exposure_limit_controlled' set to true, since the issuer exposure limit is confirmed as controlled at $9,000,000 against the $10,000,000 limit.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this finding is awaiting circulation. As an accounting implementation requirement, the trade tickets and downstream systems must be set up to classify and measure this position at fair value through profit or loss from inception, not at amortized cost.\",\n          \"speaker\": \"A5\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF4\\\",\\\"text\\\":\\\"During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this finding is awaiting circulation. As an accounting implementation requirement, the trade tickets and downstream systems must be set up to classify and measure this position at fair value through profit or loss from inception, not at amortized cost.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Grace. To summarize from legal's perspective: all four required functions \\u2014 credit risk, legal, markets, and accounting \\u2014 have now stated their conditions. From the legal side, my settlement condition remains as stated: the purchase must be conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo. I'll make sure the memo is attached to the trade file. Elena, the floor is yours to record the vote.\",\n          \"speaker\": \"A3\",\n          \"turn\": 8,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Grace. To summarize from legal's perspective: all four required functions \\u2014 credit risk, legal, markets, and accounting \\u2014 have now stated their conditions. From the legal side, my settlement condition remains as stated: the purchase must be conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo. I'll make sure the memo is attached to the trade file. Elena, the floor is yours to record the vote.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"purchase_approved\": true,\n              \"purchase_face_value_usd\": 5000000,\n              \"execution_days\": 4,\n              \"execution_single_cycle\": true,\n              \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n              \"issuer_exposure_limit_controlled\": true,\n              \"settlement_requires_special_documentation\": true\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"settlement\",\n                \"detail\": \"The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo.\"\n              },\n              {\n                \"type\": \"accounting_condition\",\n                \"target\": \"trade_tickets_and_downstream_systems\",\n                \"detail\": \"The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows.\"\n              },\n              {\n                \"type\": \"markets_condition\",\n                \"target\": \"execution_desk\",\n                \"detail\": \"The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum.\"\n              },\n              {\n                \"type\": \"credit_risk_condition\",\n                \"target\": \"issuer_exposure\",\n                \"detail\": \"Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"purchase_approved\\\": true,\\n      \\\"purchase_face_value_usd\\\": 5000000,\\n      \\\"execution_days\\\": 4,\\n      \\\"execution_single_cycle\\\": true,\\n      \\\"accounting_classification\\\": \\\"fair_value_through_profit_or_loss\\\",\\n      \\\"issuer_exposure_limit_controlled\\\": true,\\n      \\\"settlement_requires_special_documentation\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"legal_condition\\\",\\n        \\\"target\\\": \\\"settlement\\\",\\n        \\\"detail\\\": \\\"The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"accounting_condition\\\",\\n        \\\"target\\\": \\\"trade_tickets_and_downstream_systems\\\",\\n        \\\"detail\\\": \\\"The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"markets_condition\\\",\\n        \\\"target\\\": \\\"execution_desk\\\",\\n        \\\"detail\\\": \\\"The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"credit_risk_condition\\\",\\n        \\\"target\\\": \\\"issuer_exposure\\\",\\n        \\\"detail\\\": \\\"Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.542,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 10,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF3\",\n        \"PF2\",\n        \"PF4\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true,\n        \"C8\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true,\n        \"P2\": true,\n        \"P3\": true,\n        \"P4\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"purchase_approved\": true,\n          \"purchase_face_value_usd\": 5000000,\n          \"execution_days\": 4,\n          \"execution_single_cycle\": true,\n          \"accounting_classification\": \"fair value through profit or loss\",\n          \"issuer_exposure_limit_controlled\": true,\n          \"settlement_requires_special_documentation\": true\n        },\n        \"credited_facts\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"Nadia\",\n            \"detail\": \"Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian.\"\n          },\n          {\n            \"type\": \"legal_condition\",\n            \"target\": \"Nadia\",\n            \"detail\": \"Transfer-agent memo must be attached to the trade file after this vote is recorded.\"\n          },\n          {\n            \"type\": \"accounting_condition\",\n            \"target\": \"Grace\",\n            \"detail\": \"Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation.\"\n          },\n          {\n            \"type\": \"accounting_condition\",\n            \"target\": \"Grace\",\n            \"detail\": \"Accounting memo documenting the contingent step-up finding is awaiting circulation.\"\n          },\n          {\n            \"type\": \"markets_condition\",\n            \"target\": \"Hassan\",\n            \"detail\": \"$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted.\"\n          },\n          {\n            \"type\": \"credit_risk_condition\",\n            \"target\": \"Victor\",\n            \"detail\": \"Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\",\n          \"PF3\",\n          \"PF4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"Nadia\",\n          \"detail\": \"Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian.\"\n        },\n        {\n          \"type\": \"legal_condition\",\n          \"target\": \"Nadia\",\n          \"detail\": \"Transfer-agent memo must be attached to the trade file after this vote is recorded.\"\n        },\n        {\n          \"type\": \"accounting_condition\",\n          \"target\": \"Grace\",\n          \"detail\": \"Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation.\"\n        },\n        {\n          \"type\": \"accounting_condition\",\n          \"target\": \"Grace\",\n          \"detail\": \"Accounting memo documenting the contingent step-up finding is awaiting circulation.\"\n        },\n        {\n          \"type\": \"markets_condition\",\n          \"target\": \"Hassan\",\n          \"detail\": \"$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted.\"\n        },\n        {\n          \"type\": \"credit_risk_condition\",\n          \"target\": \"Victor\",\n          \"detail\": \"Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\",\n        \"PF3\",\n        \"PF4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important accounting consideration. During my review of the bond terms this week, I identified a contingent step-up feature in the contractual cash flows. This has significant implications for how we would classify and measure the position, and I'd like to formally share my findings with the committee before we record the vote.\",\n          \"speaker\": \"A5\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important accounting consideration. During my review of the bond terms this week, I identified a contingent step-up feature in the contractual cash flows. This has significant implications for how we would classify and measure the position, and I'd like to formally share my findings with the committee before we record the vote.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"Before we proceed, I need to disclose a critical credit risk finding. In the exposure report I reviewed this morning, I confirmed that the bank already has $4,000,000 of exposure to this issuer. The applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. Given the $12,000,000 face value of the bonds being offered, we need to assess whether purchasing at 82 cents on the dollar would bring our total issuer exposure within or over the $10,000,000 limit before we record the vote.\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"Before we proceed, I need to disclose a critical credit risk finding. In the exposure report I reviewed this morning, I confirmed that the bank already has $4,000,000 of exposure to this issuer. The applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. Given the $12,000,000 face value of the bonds being offered, we need to assess whether purchasing at 82 cents on the dollar would bring our total issuer exposure within or over the $10,000,000 limit before we record the vote.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF3\",\n          \"text\": \"I need to share an important constraint from the execution desk. I confirmed with them today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. This is critical for sizing the trade correctly.\",\n          \"speaker\": \"A4\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF3\\\", \\\"text\\\": \\\"I need to share an important constraint from the execution desk. I confirmed with them today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. This is critical for sizing the trade correctly.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file. These requirements should be recorded as legal settlement conditions using the commitment type 'legal_condition'.\",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file. These requirements should be recorded as legal settlement conditions using the commitment type 'legal_condition'.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you all for your disclosures. Let me summarize the conditions I've heard before I record the vote:\\n\\n1. Victor (credit risk): Existing $4M issuer exposure, $10M single-issuer limit. At 82 cents on the dollar, a $5M face value purchase would cost $4.1M, but exposure is measured on face value, so total exposure would be $4M + $5M = $9M, within the $10M limit.\\n\\n2. Hassan (markets): $5M face value cap per cycle, executed over exactly four trading days in a single cycle.\\n\\n3. Nadia (legal): Settlement requires beneficial-owner certification and approved municipal-bond custodian, recorded as legal_condition commitments.\\n\\nGrace, you mentioned an accounting consideration regarding a contingent step-up feature and classification implications \\u2014 but I haven't yet heard your specific condition or implementation requirement. Under our normal pre-trade procedure, I need credit risk, legal, markets, AND accounting to each state their conditions before I record the vote. Could you please formally state your accounting condition or implementation requirement so I can proceed?\",\n          \"speaker\": \"A1\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you all for your disclosures. Let me summarize the conditions I've heard before I record the vote:\\\\n\\\\n1. Victor (credit risk): Existing $4M issuer exposure, $10M single-issuer limit. At 82 cents on the dollar, a $5M face value purchase would cost $4.1M, but exposure is measured on face value, so total exposure would be $4M + $5M = $9M, within the $10M limit.\\\\n\\\\n2. Hassan (markets): $5M face value cap per cycle, executed over exactly four trading days in a single cycle.\\\\n\\\\n3. Nadia (legal): Settlement requires beneficial-owner certification and approved municipal-bond custodian, recorded as legal_condition commitments.\\\\n\\\\nGrace, you mentioned an accounting consideration regarding a contingent step-up feature and classification implications \\u2014 but I haven't yet heard your specific condition or implementation requirement. Under our normal pre-trade procedure, I need credit risk, legal, markets, AND accounting to each state their conditions before I record the vote. Could you please formally state your accounting condition or implementation requirement so I can proceed?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Grace, please go ahead and state your accounting condition or implementation requirement. Elena is right that under our normal pre-trade procedure, all four functions \\u2014 credit risk, legal, markets, and accounting \\u2014 need to state their conditions before the vote can be recorded. Victor, Nadia, and I have each stated ours, so we're just waiting on you.\",\n          \"speaker\": \"A4\",\n          \"turn\": 5,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Grace, please go ahead and state your accounting condition or implementation requirement. Elena is right that under our normal pre-trade procedure, all four functions \\u2014 credit risk, legal, markets, and accounting \\u2014 need to state their conditions before the vote can be recorded. Victor, Nadia, and I have each stated ours, so we're just waiting on you.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"I want to confirm for the record that my credit risk condition is clear: the issuer exposure limit must be controlled. The existing $4M exposure plus the $5M face value purchase totals $9M, which is within the $10M single-issuer limit. When Elena records the vote, the decision field 'issuer_exposure_limit_controlled' must be set to true to confirm this limit has been checked. I have no further credit risk conditions beyond what I've already stated.\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"I want to confirm for the record that my credit risk condition is clear: the issuer exposure limit must be controlled. The existing $4M exposure plus the $5M face value purchase totals $9M, which is within the $10M single-issuer limit. When Elena records the vote, the decision field 'issuer_exposure_limit_controlled' must be set to true to confirm this limit has been checked. I have no further credit risk conditions beyond what I've already stated.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Victor. I want to confirm for the record that my legal settlement conditions are clear: the bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian, and these must be recorded using the commitment type 'legal_condition'. I also need to note that I have not yet attached the transfer-agent memo to the trade file, and I will do so after this vote is recorded. I have no further legal conditions beyond what I've already stated.\",\n          \"speaker\": \"A3\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Victor. I want to confirm for the record that my legal settlement conditions are clear: the bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian, and these must be recorded using the commitment type 'legal_condition'. I also need to note that I have not yet attached the transfer-agent memo to the trade file, and I will do so after this vote is recorded. I have no further legal conditions beyond what I've already stated.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF4\",\n          \"text\": \"My accounting condition is as follows: During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo documenting this finding is awaiting circulation. The implementation requirement is that the trade must be classified and measured at fair value through profit or loss upon purchase, and this classification must be reflected in the accounting records and trade documentation. I have no further accounting conditions beyond this.\",\n          \"speaker\": \"A5\",\n          \"turn\": 8,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF4\\\", \\\"text\\\": \\\"My accounting condition is as follows: During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo documenting this finding is awaiting circulation. The implementation requirement is that the trade must be classified and measured at fair value through profit or loss upon purchase, and this classification must be reflected in the accounting records and trade documentation. I have no further accounting conditions beyond this.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"purchase_approved\": true,\n              \"purchase_face_value_usd\": 5000000,\n              \"execution_days\": 4,\n              \"execution_single_cycle\": true,\n              \"accounting_classification\": \"fair value through profit or loss\",\n              \"issuer_exposure_limit_controlled\": true,\n              \"settlement_requires_special_documentation\": true\n            },\n            \"credited_facts\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"Nadia\",\n                \"detail\": \"Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian.\"\n              },\n              {\n                \"type\": \"legal_condition\",\n                \"target\": \"Nadia\",\n                \"detail\": \"Transfer-agent memo must be attached to the trade file after this vote is recorded.\"\n              },\n              {\n                \"type\": \"accounting_condition\",\n                \"target\": \"Grace\",\n                \"detail\": \"Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation.\"\n              },\n              {\n                \"type\": \"accounting_condition\",\n                \"target\": \"Grace\",\n                \"detail\": \"Accounting memo documenting the contingent step-up finding is awaiting circulation.\"\n              },\n              {\n                \"type\": \"markets_condition\",\n                \"target\": \"Hassan\",\n                \"detail\": \"$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted.\"\n              },\n              {\n                \"type\": \"credit_risk_condition\",\n                \"target\": \"Victor\",\n                \"detail\": \"Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\",\n              \"PF3\",\n              \"PF4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 9,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"purchase_approved\\\": true,\\n      \\\"purchase_face_value_usd\\\": 5000000,\\n      \\\"execution_days\\\": 4,\\n      \\\"execution_single_cycle\\\": true,\\n      \\\"accounting_classification\\\": \\\"fair value through profit or loss\\\",\\n      \\\"issuer_exposure_limit_controlled\\\": true,\\n      \\\"settlement_requires_special_documentation\\\": true\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"legal_condition\\\",\\n        \\\"target\\\": \\\"Nadia\\\",\\n        \\\"detail\\\": \\\"Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"legal_condition\\\",\\n        \\\"target\\\": \\\"Nadia\\\",\\n        \\\"detail\\\": \\\"Transfer-agent memo must be attached to the trade file after this vote is recorded.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"accounting_condition\\\",\\n        \\\"target\\\": \\\"Grace\\\",\\n        \\\"detail\\\": \\\"Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"accounting_condition\\\",\\n        \\\"target\\\": \\\"Grace\\\",\\n        \\\"detail\\\": \\\"Accounting memo documenting the contingent step-up finding is awaiting circulation.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"markets_condition\\\",\\n        \\\"target\\\": \\\"Hassan\\\",\\n        \\\"detail\\\": \\\"$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"credit_risk_condition\\\",\\n        \\\"target\\\": \\\"Victor\\\",\\n        \\\"detail\\\": \\\"Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"PF3\\\",\\n      \\\"PF4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 2,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 4,
+      "C2": 4,
+      "C3": 4,
+      "C4": 4,
+      "C5": 3,
+      "C6": 2,
+      "C8": 2
+    },
+    "provenance_check_tally": {
+      "P1": 3,
+      "P2": 4,
+      "P3": 4,
+      "P4": 4
+    },
+    "facts_linked_to_failing_checks": {
+      "C8": [
+        {
+          "fact_id": "PF3",
+          "owner": "A4",
+          "why": "The desk's explicit single-cycle instruction changes purchase_face_value_usd to exactly $5000000 face value, execution_days to exactly 4, and execution_single_cycle to true while requiring the execution commitment to state a single-cycle approach."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The existing $4000000 issuer exposure and $10000000 limit change issuer_exposure_limit_controlled from false or unspecified to true and require the $5000000 purchase to remain within a $6000000 incremental capacity."
+        }
+      ],
+      "C5": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The existing $4000000 issuer exposure and $10000000 limit change issuer_exposure_limit_controlled from false or unspecified to true and require the $5000000 purchase to remain within a $6000000 incremental capacity."
+        }
+      ],
+      "C6": [
+        {
+          "fact_id": "PF2",
+          "owner": "A3",
+          "why": "The transfer-agent memo changes settlement_requires_special_documentation from false or unspecified to true and adds both a beneficial-owner certification and an approved municipal-bond custodian to the settlement commitment."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.342,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 5,
+        "revealed_facts": [
+          "PF1",
+          "PF4",
+          "PF2",
+          "PF3"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true,
+          "P3": true,
+          "P4": true
+        },
+        "settlement": {
+          "decisions": {
+            "purchase_approved": true,
+            "purchase_face_value_usd": 5000000,
+            "execution_days": 4,
+            "execution_single_cycle": true,
+            "accounting_classification": "fair_value_through_profit_or_loss",
+            "issuer_exposure_limit_controlled": true,
+            "settlement_requires_special_documentation": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "legal_condition",
+              "target": "Nadia",
+              "detail": "Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "legal_condition",
+            "target": "Nadia",
+            "detail": "Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this bond issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet, so it may not be visible to everyone here. Given the bonds have a face value of $12,000,000, purchasing them at 82 cents on the dollar would cost approximately $9,840,000, and combined with our existing $4,000,000 exposure, our total exposure to this issuer would reach approximately $13,840,000 \u2014 well above the $10,000,000 single-issuer limit. I need to set a condition that the issuer exposure limit is confirmed and controlled before any purchase proceeds.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this bond issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet, so it may not be visible to everyone here. Given the bonds have a face value of $12,000,000, purchasing them at 82 cents on the dollar would cost approximately $9,840,000, and combined with our existing $4,000,000 exposure, our total exposure to this issuer would reach approximately $13,840,000 \u2014 well above the $10,000,000 single-issuer limit. I need to set a condition that the issuer exposure limit is confirmed and controlled before any purchase proceeds.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to flag an accounting issue before we proceed. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this is awaiting circulation, but I want the committee to be aware that this classification decision has been made and will need to be reflected in how we account for the position if we purchase it.",
+            "speaker": "A5",
+            "turn": 1,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to flag an accounting issue before we proceed. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this is awaiting circulation, but I want the committee to be aware that this classification decision has been made and will need to be reflected in how we account for the position if we purchase it.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this is a legal settlement condition that must be satisfied before any purchase can complete.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this is a legal settlement condition that must be satisfied before any purchase can complete.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to flag an execution constraint before we proceed. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.",
+            "speaker": "A4",
+            "turn": 3,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I need to flag an execution constraint before we proceed. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "purchase_approved": true,
+                "purchase_face_value_usd": 5000000,
+                "execution_days": 4,
+                "execution_single_cycle": true,
+                "accounting_classification": "fair_value_through_profit_or_loss",
+                "issuer_exposure_limit_controlled": true,
+                "settlement_requires_special_documentation": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "legal_condition",
+                  "target": "Nadia",
+                  "detail": "Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"purchase_approved\": true,\n      \"purchase_face_value_usd\": 5000000,\n      \"execution_days\": 4,\n      \"execution_single_cycle\": true,\n      \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n      \"issuer_exposure_limit_controlled\": true,\n      \"settlement_requires_special_documentation\": true\n    },\n    \"credited_facts\": [\"PF1\", \"PF2\", \"PF3\", \"PF4\"],\n    \"commitments\": [\n      {\n        \"type\": \"legal_condition\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Beneficial-owner certification and approved municipal-bond custodian must be provided before settlement can complete.\"\n      }\n    ],\n    \"justification_fact_ids\": [\"PF1\", \"PF2\", \"PF3\", \"PF4\"]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.389,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF3",
+          "PF2",
+          "PF4"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": false,
+          "C6": false,
+          "C8": false
+        },
+        "provenance_results": {
+          "P1": false,
+          "P2": true,
+          "P3": true,
+          "P4": true
+        },
+        "settlement": {
+          "decisions": {
+            "purchase_approved": true,
+            "purchase_face_value_usd": 5000000,
+            "execution_days": 4,
+            "execution_single_cycle": true,
+            "accounting_classification": "fair_value_through_profit_or_loss",
+            "issuer_exposure_limit_controlled": false,
+            "settlement_requires_special_documentation": true
+          },
+          "credited_facts": [
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "legal_condition",
+              "target": "settlement",
+              "detail": "Buyer must provide beneficial-owner certification before settlement"
+            },
+            {
+              "type": "legal_condition",
+              "target": "settlement",
+              "detail": "Buyer must use an approved municipal-bond custodian for settlement"
+            }
+          ],
+          "justification_fact_ids": [
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "legal_condition",
+            "target": "settlement",
+            "detail": "Buyer must provide beneficial-owner certification before settlement"
+          },
+          {
+            "type": "legal_condition",
+            "target": "settlement",
+            "detail": "Buyer must use an approved municipal-bond custodian for settlement"
+          }
+        ],
+        "justification_fact_ids": [
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important credit risk matter. I reviewed the exposure report this morning and found that we already have existing exposure to this issuer that needs to be factored into our decision. Let me share that with the committee now.",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important credit risk matter. I reviewed the exposure report this morning and found that we already have existing exposure to this issuer that needs to be factored into our decision. Let me share that with the committee now.\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to share important sizing constraints from the execution desk. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.",
+            "speaker": "A4",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to share important sizing constraints from the execution desk. I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this constitutes a legal settlement condition that must be reflected in our vote.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but this constitutes a legal settlement condition that must be reflected in our vote.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Victor, Hassan, and Nadia. Let me make sure I have everything before I record the vote. So far I have input from credit risk (Victor), legal (Nadia), and markets/execution (Hassan). Under our normal pre-trade procedure, I also need to hear from accounting before I can record the vote. I still need accounting to state any conditions or implementation requirements they may have. Once accounting has weighed in, I will record the decision immediately after, incorporating all conditions stated. Let me also note for the record that Hassan's sizing constraint of exactly $5,000,000 face value over exactly four trading days in a single cycle will be reflected, and Nadia's legal settlement conditions \u2014 beneficial-owner certification and use of an approved municipal-bond custodian \u2014 will be included as legal_condition commitments. Victor, please also share the specifics of the existing issuer exposure you flagged so I can confirm whether the issuer exposure limit is controlled before I set the decision field. Accounting, whenever you're ready, please state your conditions or confirm you have none.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Victor, Hassan, and Nadia. Let me make sure I have everything before I record the vote. So far I have input from credit risk (Victor), legal (Nadia), and markets/execution (Hassan). Under our normal pre-trade procedure, I also need to hear from accounting before I can record the vote. I still need accounting to state any conditions or implementation requirements they may have. Once accounting has weighed in, I will record the decision immediately after, incorporating all conditions stated. Let me also note for the record that Hassan's sizing constraint of exactly $5,000,000 face value over exactly four trading days in a single cycle will be reflected, and Nadia's legal settlement conditions \u2014 beneficial-owner certification and use of an approved municipal-bond custodian \u2014 will be included as legal_condition commitments. Victor, please also share the specifics of the existing issuer exposure you flagged so I can confirm whether the issuer exposure limit is controlled before I set the decision field. Accounting, whenever you're ready, please state your conditions or confirm you have none.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "I need to share an important accounting condition before the vote is recorded. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this classification determination is awaiting circulation, but the committee should be aware that the accounting treatment will be FVTPL, not amortized cost. This is an accounting implementation requirement that should be reflected in our decision.",
+            "speaker": "A5",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"I need to share an important accounting condition before the vote is recorded. While reviewing the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this classification determination is awaiting circulation, but the committee should be aware that the accounting treatment will be FVTPL, not amortized cost. This is an accounting implementation requirement that should be reflected in our decision.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "purchase_approved": true,
+                "purchase_face_value_usd": 5000000,
+                "execution_days": 4,
+                "execution_single_cycle": true,
+                "accounting_classification": "fair_value_through_profit_or_loss",
+                "issuer_exposure_limit_controlled": false,
+                "settlement_requires_special_documentation": true
+              },
+              "credited_facts": [
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "legal_condition",
+                  "target": "settlement",
+                  "detail": "Buyer must provide beneficial-owner certification before settlement"
+                },
+                {
+                  "type": "legal_condition",
+                  "target": "settlement",
+                  "detail": "Buyer must use an approved municipal-bond custodian for settlement"
+                }
+              ],
+              "justification_fact_ids": [
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"purchase_approved\":true,\"purchase_face_value_usd\":5000000,\"execution_days\":4,\"execution_single_cycle\":true,\"accounting_classification\":\"fair_value_through_profit_or_loss\",\"issuer_exposure_limit_controlled\":false,\"settlement_requires_special_documentation\":true},\"credited_facts\":[\"PF2\",\"PF3\",\"PF4\"],\"commitments\":[{\"type\":\"legal_condition\",\"target\":\"settlement\",\"detail\":\"Buyer must provide beneficial-owner certification before settlement\"},{\"type\":\"legal_condition\",\"target\":\"settlement\",\"detail\":\"Buyer must use an approved municipal-bond custodian for settlement\"}],\"justification_fact_ids\":[\"PF2\",\"PF3\",\"PF4\"]}}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.363,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true,
+          "P3": true,
+          "P4": true
+        },
+        "settlement": {
+          "decisions": {
+            "purchase_approved": true,
+            "purchase_face_value_usd": 5000000,
+            "execution_days": 4,
+            "execution_single_cycle": true,
+            "accounting_classification": "fair_value_through_profit_or_loss",
+            "issuer_exposure_limit_controlled": true,
+            "settlement_requires_special_documentation": true
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "legal_condition",
+              "target": "settlement",
+              "detail": "The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo."
+            },
+            {
+              "type": "accounting_condition",
+              "target": "trade_tickets_and_downstream_systems",
+              "detail": "The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows."
+            },
+            {
+              "type": "markets_condition",
+              "target": "execution_desk",
+              "detail": "The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum."
+            },
+            {
+              "type": "credit_risk_condition",
+              "target": "issuer_exposure",
+              "detail": "Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "legal_condition",
+            "target": "settlement",
+            "detail": "The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo."
+          },
+          {
+            "type": "accounting_condition",
+            "target": "trade_tickets_and_downstream_systems",
+            "detail": "The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows."
+          },
+          {
+            "type": "markets_condition",
+            "target": "execution_desk",
+            "detail": "The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum."
+          },
+          {
+            "type": "credit_risk_condition",
+            "target": "issuer_exposure",
+            "detail": "Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I understand we've been offered a block of distressed municipal bonds with a face value of $12 million, currently quoted at 82 cents on the dollar, maturing in 30 months. As chair of the Risk Committee, I'll be making the binding decision on whether we proceed and on what conditions. Before I record the vote, I need to hear from each of the four required functions under our normal pre-trade procedure: credit risk, legal, markets, and accounting. Please state any conditions or implementation requirements you have. I'll record the vote immediately after the last of those four has spoken. Who would like to begin?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, everyone. I understand we've been offered a block of distressed municipal bonds with a face value of $12 million, currently quoted at 82 cents on the dollar, maturing in 30 months. As chair of the Risk Committee, I'll be making the binding decision on whether we proceed and on what conditions. Before I record the vote, I need to hear from each of the four required functions under our normal pre-trade procedure: credit risk, legal, markets, and accounting. Please state any conditions or implementation requirements you have. I'll record the vote immediately after the last of those four has spoken. Who would like to begin?\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. This means that if we purchase the full $12 million face value of these bonds, our total exposure to this issuer would reach $16 million, which would exceed our single-issuer limit by $6 million. As a credit risk condition, we would need to either reduce the purchase size to stay within the $10 million limit, or obtain an exception to the single-issuer limit before proceeding.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to flag an important exposure issue before we proceed. I confirmed in the exposure report I reviewed this morning that the bank already has $4,000,000 of exposure to this issuer, and the applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. This means that if we purchase the full $12 million face value of these bonds, our total exposure to this issuer would reach $16 million, which would exceed our single-issuer limit by $6 million. As a credit risk condition, we would need to either reduce the purchase size to stay within the $10 million limit, or obtain an exception to the single-issuer limit before proceeding.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Victor. I'll go next on behalf of accounting. I have an important accounting implementation requirement to flag. During my review of the bond terms this week, I identified a feature of the contractual cash flows that affects how we would classify and measure this position. I'll disclose that finding now.",
+            "speaker": "A5",
+            "turn": 2,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Victor. I'll go next on behalf of accounting. I have an important accounting implementation requirement to flag. During my review of the bond terms this week, I identified a feature of the contractual cash flows that affects how we would classify and measure this position. I'll disclose that finding now.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but I'm disclosing this now so it's on the record. As a legal settlement condition, the purchase should be conditional on the bank providing the beneficial-owner certification and using an approved municipal-bond custodian before settlement.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to flag a legal settlement condition before we proceed. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file, but I'm disclosing this now so it's on the record. As a legal settlement condition, the purchase should be conditional on the bank providing the beneficial-owner certification and using an approved municipal-bond custodian before settlement.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Nadia. I'll go next on behalf of the markets function. I have an important implementation requirement to flag regarding execution sizing. Let me share what I confirmed with the execution desk today.",
+            "speaker": "A4",
+            "turn": 4,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Nadia. I'll go next on behalf of the markets function. I have an important implementation requirement to flag regarding execution sizing. Let me share what I confirmed with the execution desk today.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. I should also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.",
+            "speaker": "A4",
+            "turn": 5,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF3\",\"text\":\"I confirmed with the execution desk today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. I should also note that purchase_face_value_usd refers to face value, not purchase cost. The desk's liquidity note is still in my working blotter.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Hassan. That's very helpful. From a credit risk perspective, Hassan's markets condition actually helps resolve part of the exposure issue I raised. If we cap the purchase at $5,000,000 face value as the execution desk requires, our total exposure to this issuer would be $4,000,000 existing plus $5,000,000 new, equaling $9,000,000 \u2014 which stays within our $10,000,000 single-issuer limit. So the markets condition and the credit risk condition are compatible: we can proceed at $5,000,000 face value without breaching the single-issuer limit, and no exception would be needed. My credit risk condition is satisfied as long as the purchase is sized at $5,000,000 face value, keeping total issuer exposure at $9,000,000, which is within the $10,000,000 limit. I also want to confirm that the committee's vote template should use the decision field 'issuer_exposure_limit_controlled' set to true, since the issuer exposure limit is confirmed as controlled at $9,000,000 against the $10,000,000 limit.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Hassan. That's very helpful. From a credit risk perspective, Hassan's markets condition actually helps resolve part of the exposure issue I raised. If we cap the purchase at $5,000,000 face value as the execution desk requires, our total exposure to this issuer would be $4,000,000 existing plus $5,000,000 new, equaling $9,000,000 \u2014 which stays within our $10,000,000 single-issuer limit. So the markets condition and the credit risk condition are compatible: we can proceed at $5,000,000 face value without breaching the single-issuer limit, and no exception would be needed. My credit risk condition is satisfied as long as the purchase is sized at $5,000,000 face value, keeping total issuer exposure at $9,000,000, which is within the $10,000,000 limit. I also want to confirm that the committee's vote template should use the decision field 'issuer_exposure_limit_controlled' set to true, since the issuer exposure limit is confirmed as controlled at $9,000,000 against the $10,000,000 limit.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this finding is awaiting circulation. As an accounting implementation requirement, the trade tickets and downstream systems must be set up to classify and measure this position at fair value through profit or loss from inception, not at amortized cost.",
+            "speaker": "A5",
+            "turn": 7,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF4\",\"text\":\"During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. This means the position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo on this finding is awaiting circulation. As an accounting implementation requirement, the trade tickets and downstream systems must be set up to classify and measure this position at fair value through profit or loss from inception, not at amortized cost.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Grace. To summarize from legal's perspective: all four required functions \u2014 credit risk, legal, markets, and accounting \u2014 have now stated their conditions. From the legal side, my settlement condition remains as stated: the purchase must be conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo. I'll make sure the memo is attached to the trade file. Elena, the floor is yours to record the vote.",
+            "speaker": "A3",
+            "turn": 8,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Grace. To summarize from legal's perspective: all four required functions \u2014 credit risk, legal, markets, and accounting \u2014 have now stated their conditions. From the legal side, my settlement condition remains as stated: the purchase must be conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo. I'll make sure the memo is attached to the trade file. Elena, the floor is yours to record the vote.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "purchase_approved": true,
+                "purchase_face_value_usd": 5000000,
+                "execution_days": 4,
+                "execution_single_cycle": true,
+                "accounting_classification": "fair_value_through_profit_or_loss",
+                "issuer_exposure_limit_controlled": true,
+                "settlement_requires_special_documentation": true
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "legal_condition",
+                  "target": "settlement",
+                  "detail": "The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo."
+                },
+                {
+                  "type": "accounting_condition",
+                  "target": "trade_tickets_and_downstream_systems",
+                  "detail": "The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows."
+                },
+                {
+                  "type": "markets_condition",
+                  "target": "execution_desk",
+                  "detail": "The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum."
+                },
+                {
+                  "type": "credit_risk_condition",
+                  "target": "issuer_exposure",
+                  "detail": "Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 9,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"purchase_approved\": true,\n      \"purchase_face_value_usd\": 5000000,\n      \"execution_days\": 4,\n      \"execution_single_cycle\": true,\n      \"accounting_classification\": \"fair_value_through_profit_or_loss\",\n      \"issuer_exposure_limit_controlled\": true,\n      \"settlement_requires_special_documentation\": true\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"legal_condition\",\n        \"target\": \"settlement\",\n        \"detail\": \"The purchase is conditional on the bank providing a beneficial-owner certification and using an approved municipal-bond custodian before settlement, consistent with the transfer-agent memo.\"\n      },\n      {\n        \"type\": \"accounting_condition\",\n        \"target\": \"trade_tickets_and_downstream_systems\",\n        \"detail\": \"The position must be classified and measured at fair value through profit or loss from inception, not at amortized cost, due to the contingent step-up feature in the contractual cash flows.\"\n      },\n      {\n        \"type\": \"markets_condition\",\n        \"target\": \"execution_desk\",\n        \"detail\": \"The total purchase must be sized at exactly $5,000,000 face value executed over exactly four trading days in a single cycle, consistent with the desk's $5,000,000 per-cycle maximum.\"\n      },\n      {\n        \"type\": \"credit_risk_condition\",\n        \"target\": \"issuer_exposure\",\n        \"detail\": \"Total issuer exposure must remain at or below the $10,000,000 single-issuer limit. With $4,000,000 existing exposure and $5,000,000 new purchase, total exposure will be $9,000,000, within the limit.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.542,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 10,
+        "revealed_facts": [
+          "PF1",
+          "PF3",
+          "PF2",
+          "PF4"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true,
+          "C8": true
+        },
+        "provenance_results": {
+          "P1": true,
+          "P2": true,
+          "P3": true,
+          "P4": true
+        },
+        "settlement": {
+          "decisions": {
+            "purchase_approved": true,
+            "purchase_face_value_usd": 5000000,
+            "execution_days": 4,
+            "execution_single_cycle": true,
+            "accounting_classification": "fair value through profit or loss",
+            "issuer_exposure_limit_controlled": true,
+            "settlement_requires_special_documentation": true
+          },
+          "credited_facts": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ],
+          "commitments": [
+            {
+              "type": "legal_condition",
+              "target": "Nadia",
+              "detail": "Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian."
+            },
+            {
+              "type": "legal_condition",
+              "target": "Nadia",
+              "detail": "Transfer-agent memo must be attached to the trade file after this vote is recorded."
+            },
+            {
+              "type": "accounting_condition",
+              "target": "Grace",
+              "detail": "Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation."
+            },
+            {
+              "type": "accounting_condition",
+              "target": "Grace",
+              "detail": "Accounting memo documenting the contingent step-up finding is awaiting circulation."
+            },
+            {
+              "type": "markets_condition",
+              "target": "Hassan",
+              "detail": "$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted."
+            },
+            {
+              "type": "credit_risk_condition",
+              "target": "Victor",
+              "detail": "Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2",
+            "PF3",
+            "PF4"
+          ]
+        },
+        "credited_facts": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "commitments": [
+          {
+            "type": "legal_condition",
+            "target": "Nadia",
+            "detail": "Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian."
+          },
+          {
+            "type": "legal_condition",
+            "target": "Nadia",
+            "detail": "Transfer-agent memo must be attached to the trade file after this vote is recorded."
+          },
+          {
+            "type": "accounting_condition",
+            "target": "Grace",
+            "detail": "Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation."
+          },
+          {
+            "type": "accounting_condition",
+            "target": "Grace",
+            "detail": "Accounting memo documenting the contingent step-up finding is awaiting circulation."
+          },
+          {
+            "type": "markets_condition",
+            "target": "Hassan",
+            "detail": "$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted."
+          },
+          {
+            "type": "credit_risk_condition",
+            "target": "Victor",
+            "detail": "Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2",
+          "PF3",
+          "PF4"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important accounting consideration. During my review of the bond terms this week, I identified a contingent step-up feature in the contractual cash flows. This has significant implications for how we would classify and measure the position, and I'd like to formally share my findings with the committee before we record the vote.",
+            "speaker": "A5",
+            "turn": 0,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning everyone. Before we proceed with the vote on the distressed municipal bond block, I need to flag an important accounting consideration. During my review of the bond terms this week, I identified a contingent step-up feature in the contractual cash flows. This has significant implications for how we would classify and measure the position, and I'd like to formally share my findings with the committee before we record the vote.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "Before we proceed, I need to disclose a critical credit risk finding. In the exposure report I reviewed this morning, I confirmed that the bank already has $4,000,000 of exposure to this issuer. The applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. Given the $12,000,000 face value of the bonds being offered, we need to assess whether purchasing at 82 cents on the dollar would bring our total issuer exposure within or over the $10,000,000 limit before we record the vote.",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"Before we proceed, I need to disclose a critical credit risk finding. In the exposure report I reviewed this morning, I confirmed that the bank already has $4,000,000 of exposure to this issuer. The applicable single-issuer limit is $10,000,000. This position has not yet been added to the committee packet. Given the $12,000,000 face value of the bonds being offered, we need to assess whether purchasing at 82 cents on the dollar would bring our total issuer exposure within or over the $10,000,000 limit before we record the vote.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF3",
+            "text": "I need to share an important constraint from the execution desk. I confirmed with them today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. This is critical for sizing the trade correctly.",
+            "speaker": "A4",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF3\", \"text\": \"I need to share an important constraint from the execution desk. I confirmed with them today that the desk's $5,000,000 cap is a per-cycle maximum, and the committee must size the total purchase at exactly $5,000,000 face value executed over exactly four trading days in a single cycle. Multi-cycle phasing to exceed $5,000,000 total is not permitted. Also, purchase_face_value_usd refers to face value, not purchase cost. This is critical for sizing the trade correctly.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file. These requirements should be recorded as legal settlement conditions using the commitment type 'legal_condition'.",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"I need to disclose an important legal settlement condition. I received a transfer-agent memo this afternoon stating that this bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian. I have not yet attached the memo to the trade file. These requirements should be recorded as legal settlement conditions using the commitment type 'legal_condition'.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you all for your disclosures. Let me summarize the conditions I've heard before I record the vote:\n\n1. Victor (credit risk): Existing $4M issuer exposure, $10M single-issuer limit. At 82 cents on the dollar, a $5M face value purchase would cost $4.1M, but exposure is measured on face value, so total exposure would be $4M + $5M = $9M, within the $10M limit.\n\n2. Hassan (markets): $5M face value cap per cycle, executed over exactly four trading days in a single cycle.\n\n3. Nadia (legal): Settlement requires beneficial-owner certification and approved municipal-bond custodian, recorded as legal_condition commitments.\n\nGrace, you mentioned an accounting consideration regarding a contingent step-up feature and classification implications \u2014 but I haven't yet heard your specific condition or implementation requirement. Under our normal pre-trade procedure, I need credit risk, legal, markets, AND accounting to each state their conditions before I record the vote. Could you please formally state your accounting condition or implementation requirement so I can proceed?",
+            "speaker": "A1",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you all for your disclosures. Let me summarize the conditions I've heard before I record the vote:\\n\\n1. Victor (credit risk): Existing $4M issuer exposure, $10M single-issuer limit. At 82 cents on the dollar, a $5M face value purchase would cost $4.1M, but exposure is measured on face value, so total exposure would be $4M + $5M = $9M, within the $10M limit.\\n\\n2. Hassan (markets): $5M face value cap per cycle, executed over exactly four trading days in a single cycle.\\n\\n3. Nadia (legal): Settlement requires beneficial-owner certification and approved municipal-bond custodian, recorded as legal_condition commitments.\\n\\nGrace, you mentioned an accounting consideration regarding a contingent step-up feature and classification implications \u2014 but I haven't yet heard your specific condition or implementation requirement. Under our normal pre-trade procedure, I need credit risk, legal, markets, AND accounting to each state their conditions before I record the vote. Could you please formally state your accounting condition or implementation requirement so I can proceed?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Grace, please go ahead and state your accounting condition or implementation requirement. Elena is right that under our normal pre-trade procedure, all four functions \u2014 credit risk, legal, markets, and accounting \u2014 need to state their conditions before the vote can be recorded. Victor, Nadia, and I have each stated ours, so we're just waiting on you.",
+            "speaker": "A4",
+            "turn": 5,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Grace, please go ahead and state your accounting condition or implementation requirement. Elena is right that under our normal pre-trade procedure, all four functions \u2014 credit risk, legal, markets, and accounting \u2014 need to state their conditions before the vote can be recorded. Victor, Nadia, and I have each stated ours, so we're just waiting on you.\"}"
+          },
+          {
+            "type": "say",
+            "text": "I want to confirm for the record that my credit risk condition is clear: the issuer exposure limit must be controlled. The existing $4M exposure plus the $5M face value purchase totals $9M, which is within the $10M single-issuer limit. When Elena records the vote, the decision field 'issuer_exposure_limit_controlled' must be set to true to confirm this limit has been checked. I have no further credit risk conditions beyond what I've already stated.",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\": \"say\", \"text\": \"I want to confirm for the record that my credit risk condition is clear: the issuer exposure limit must be controlled. The existing $4M exposure plus the $5M face value purchase totals $9M, which is within the $10M single-issuer limit. When Elena records the vote, the decision field 'issuer_exposure_limit_controlled' must be set to true to confirm this limit has been checked. I have no further credit risk conditions beyond what I've already stated.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Victor. I want to confirm for the record that my legal settlement conditions are clear: the bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian, and these must be recorded using the commitment type 'legal_condition'. I also need to note that I have not yet attached the transfer-agent memo to the trade file, and I will do so after this vote is recorded. I have no further legal conditions beyond what I've already stated.",
+            "speaker": "A3",
+            "turn": 7,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Victor. I want to confirm for the record that my legal settlement conditions are clear: the bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian, and these must be recorded using the commitment type 'legal_condition'. I also need to note that I have not yet attached the transfer-agent memo to the trade file, and I will do so after this vote is recorded. I have no further legal conditions beyond what I've already stated.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF4",
+            "text": "My accounting condition is as follows: During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo documenting this finding is awaiting circulation. The implementation requirement is that the trade must be classified and measured at fair value through profit or loss upon purchase, and this classification must be reflected in the accounting records and trade documentation. I have no further accounting conditions beyond this.",
+            "speaker": "A5",
+            "turn": 8,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF4\", \"text\": \"My accounting condition is as follows: During my review of the bond terms this week, I determined that the contractual cash flows include a contingent step-up feature. As a result, this position must be recorded at fair value through profit or loss rather than held at amortized cost. My accounting memo documenting this finding is awaiting circulation. The implementation requirement is that the trade must be classified and measured at fair value through profit or loss upon purchase, and this classification must be reflected in the accounting records and trade documentation. I have no further accounting conditions beyond this.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "purchase_approved": true,
+                "purchase_face_value_usd": 5000000,
+                "execution_days": 4,
+                "execution_single_cycle": true,
+                "accounting_classification": "fair value through profit or loss",
+                "issuer_exposure_limit_controlled": true,
+                "settlement_requires_special_documentation": true
+              },
+              "credited_facts": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ],
+              "commitments": [
+                {
+                  "type": "legal_condition",
+                  "target": "Nadia",
+                  "detail": "Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian."
+                },
+                {
+                  "type": "legal_condition",
+                  "target": "Nadia",
+                  "detail": "Transfer-agent memo must be attached to the trade file after this vote is recorded."
+                },
+                {
+                  "type": "accounting_condition",
+                  "target": "Grace",
+                  "detail": "Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation."
+                },
+                {
+                  "type": "accounting_condition",
+                  "target": "Grace",
+                  "detail": "Accounting memo documenting the contingent step-up finding is awaiting circulation."
+                },
+                {
+                  "type": "markets_condition",
+                  "target": "Hassan",
+                  "detail": "$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted."
+                },
+                {
+                  "type": "credit_risk_condition",
+                  "target": "Victor",
+                  "detail": "Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2",
+                "PF3",
+                "PF4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 9,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"purchase_approved\": true,\n      \"purchase_face_value_usd\": 5000000,\n      \"execution_days\": 4,\n      \"execution_single_cycle\": true,\n      \"accounting_classification\": \"fair value through profit or loss\",\n      \"issuer_exposure_limit_controlled\": true,\n      \"settlement_requires_special_documentation\": true\n    },\n    \"credited_facts\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"legal_condition\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Bond block may settle only after the buyer provides a beneficial-owner certification and uses an approved municipal-bond custodian.\"\n      },\n      {\n        \"type\": \"legal_condition\",\n        \"target\": \"Nadia\",\n        \"detail\": \"Transfer-agent memo must be attached to the trade file after this vote is recorded.\"\n      },\n      {\n        \"type\": \"accounting_condition\",\n        \"target\": \"Grace\",\n        \"detail\": \"Trade must be classified and measured at fair value through profit or loss upon purchase, reflected in accounting records and trade documentation.\"\n      },\n      {\n        \"type\": \"accounting_condition\",\n        \"target\": \"Grace\",\n        \"detail\": \"Accounting memo documenting the contingent step-up finding is awaiting circulation.\"\n      },\n      {\n        \"type\": \"markets_condition\",\n        \"target\": \"Hassan\",\n        \"detail\": \"$5,000,000 face value executed over exactly four trading days in a single cycle; multi-cycle phasing to exceed $5,000,000 total is not permitted.\"\n      },\n      {\n        \"type\": \"credit_risk_condition\",\n        \"target\": \"Victor\",\n        \"detail\": \"Existing $4,000,000 issuer exposure plus $5,000,000 face value purchase totals $9,000,000, within the $10,000,000 single-issuer limit.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\",\n      \"PF3\",\n      \"PF4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "1. C6 (ENCODING MISMATCH, rollouts 0 and 1): Loosen C6's check to accept settlements where settlement_requires_special_documentation=true AND at least one commitment of type \"legal_condition\" mentions \"beneficial-owner certification\" OR \"beneficial owner certification\" AND \"municipal-bond custodian\" OR \"municipal bond custodian\" \u2014 regardless of whether both requirements appear in a single commitment or are split across two separate legal_condition commitments. The current check appears to require a single combined entry or specific bridging wording (e.g., \"consistent with the transfer-agent memo\") that only appeared in the passing rollouts 2 and 3. Flag: this loosening does NOT risk a LEAKED regression because settlement_requires_special_documentation=true requires PF2's content, and the commitment wording (beneficial-owner certification + municipal-bond custodian) is specific enough that a lone decision-maker without PF2 would not naturally produce it.\n\n2. C8 (ENCODING MISMATCH, rollouts 0 and 1): Loosen C8's check to accept settlements where execution_single_cycle=true AND purchase_face_value_usd=5000000 AND execution_days=4, without additionally requiring a specific commitment string containing phrases like \"consistent with the desk's $5,000,000 per-cycle maximum\" or \"multi-cycle phasing to exceed $5,000,000 total is not permitted.\" The decision fields alone are sufficient evidence that PF3 was used. The current check conflates commitment-detail wording with the content check, causing false negatives when the settlement is compact but correct. Flag: this loosening does NOT risk a LEAKED regression because the combination of all three decision fields (exact $5M face value, exact 4 days, single_cycle=true) is the specific content PF3 provides \u2014 a lone decision-maker without PF3 would not know to set all three to these exact values.\n\n3. C5 and P1 (NEVER REVEALED, rollout 1 only): Add a shared_context sentence strengthening the consultation norm for A2, such as: \"Each function-holder must use a formal reveal action to disclose their specific findings \u2014 stating that a finding exists without disclosing its content via a reveal action does not satisfy the pre-trade disclosure requirement.\" This addresses A2's behavior in rollout 1 where it used a \"say\" action (\"I reviewed the exposure report this morning and found that we already have existing exposure to this issuer\") instead of a \"reveal\" action for PF1. Do NOT modify C5 or P1's check wording \u2014 they correctly failed when PF1 was not revealed. The fix is to the disclosure norm, not the checks."
+}

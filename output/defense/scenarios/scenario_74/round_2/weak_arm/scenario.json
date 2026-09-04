@@ -1,0 +1,140 @@
+{
+  "scenario_id": "scenario_74",
+  "scenario_type": "maintenance_prioritization",
+  "description": "A battalion executive officer must prioritize tire replacement for three support vehicles when the motor pool has only enough replacement tires to complete two vehicles before the next work cycle, while setting the work order and follow-on supply action.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "Battalion Executive Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Motor Pool Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lt. Farouk",
+      "role": "S-4 Logistics Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Vehicles V-11, V-14, and V-19 each require a complete four-tire replacement before their next scheduled work cycle.",
+    "S2": "The motor pool currently has exactly eight serviceable replacement tires available, enough to complete two vehicles.",
+    "S3": "Maj. Alvarez issues the battalion's final maintenance-priority order.",
+    "S4": "The maintenance section can complete one vehicle at a time, beginning at 0700 tomorrow, with each complete tire replacement taking four hours.",
+    "S5": "During the routine morning readiness huddle, Maj. Alvarez asks the motor pool and S-4 representatives to report any current tasking or supply information that should affect the priority order."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "V-11 is assigned to a confirmed 0600-1000 inspection and support movement the day after tomorrow, and it must have all four replacement tires installed before that task; SFC Morgan received the signed tasking from the operations cell this morning, but the assignment has not yet been added to the maintenance board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "A confirmed shipment of four tires for V-14 is scheduled to arrive at the motor pool by 1600 tomorrow, so V-14 should be deferred until that shipment rather than consume the eight tires on hand; Lt. Farouk received the carrier confirmation this morning, but the revised delivery is not yet reflected in the battalion supply tracker."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 12,
+    "settle_requires_all_revealed": true,
+    "settle_requires_decision_maker_synthesis": true,
+    "ignore_unparsable_turns_for_settlement": true
+  },
+  "settlement_schema": {
+    "decisions": {
+      "first_vehicle": "string",
+      "second_vehicle": "string",
+      "deferred_vehicle": "string",
+      "deferred_vehicle_work_date": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "V-11 must be first in the maintenance sequence.",
+    "V-19 must be second in the maintenance sequence.",
+    "V-14 must be deferred until the scheduled tire shipment arrives tomorrow.",
+    "The deferred V-14 work date must identify both 1600 and tomorrow.",
+    "A commitment detail must mention V-11 and either its 0600 tasking, the maintenance board, or the tasking.",
+    "A commitment detail must mention both V-14 and the supply tracker."
+  ],
+  "content_checks": {
+    "C1": "decisions['first_vehicle'] == 'V-11'",
+    "C2": "decisions['second_vehicle'] == 'V-19'",
+    "C3": "decisions['deferred_vehicle'] == 'V-14'",
+    "C4": "'1600' in decisions['deferred_vehicle_work_date'] and 'tomorrow' in decisions['deferred_vehicle_work_date']",
+    "C5": "any('V-11' in c['detail'] and ('0600' in c['detail'] or 'maintenance board' in c['detail'] or 'tasking' in c['detail']) for c in commitments)",
+    "C6": "any('V-14' in c['detail'] and ('supply tracker' in c['detail'] or 'supply_tracker' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C5",
+        "P1"
+      ],
+      "why": "The confirmed 0600 inspection and support movement changes V-11 from one of three otherwise equivalent vehicles to the exact first-priority vehicle and requires its tasking or maintenance-board information to be recorded."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The confirmed four-tire shipment arriving tomorrow by 1600 changes V-14 from a candidate for the eight tires on hand to the exact deferred vehicle, fixes its work timing with the 1600 tomorrow constraint, and requires the supply tracker to be updated."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

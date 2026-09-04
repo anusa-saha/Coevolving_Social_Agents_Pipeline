@@ -1,0 +1,141 @@
+{
+  "scenario_id": "scenario_72",
+  "scenario_type": "convoy_manifest_composition",
+  "description": "A convoy commander must finalize the vehicle assignments and loading order for three routine sustainment cargoes, while recording the equipment checks and coordination actions needed before the convoy departs.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Morgan",
+      "role": "Convoy Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Sgt. Patel",
+      "role": "Logistics NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "SFC Alvarez",
+      "role": "Motor Pool Maintenance NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The convoy has three cargoes: a 3,800-kilogram engineering pallet, a 1,200-kilogram refrigerated medical-supply crate, and 1,800 kilograms of general stores.",
+    "S2": "The available vehicles are V-1 with a 5,000-kilogram payload rating, V-2 with a 5,000-kilogram payload rating, and V-3 with a 3,000-kilogram payload rating.",
+    "S3": "Each cargo must travel on a single vehicle, and no vehicle may carry more than one of the three listed cargoes.",
+    "S4": "The convoy manifest and loading sequence are finalized at the routine pre-load review, where the commander asks the logistics and motor-pool representatives for current cargo or vehicle constraints before issuing the binding plan.",
+    "S5": "The loading team uses the published sequence, and every assigned vehicle requires a documented pre-load inspection or equipment-coordination action before departure."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The refrigerated medical-supply crate is approved only for V-3 because its temperature-control unit requires V-3's installed inverter; Sgt. Patel confirmed the compatibility label with the medical supply section this morning, but the manifest worksheet still lists the vehicle as unassigned. This requires a V-3-specific equipment-coordination commitment confirming inverter compatibility and temperature-control unit functionality before loading; a standard pre-load inspection alone is insufficient."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "V-2 has a temporary 3,000-kilogram payload limit until its rear-suspension inspection is completed, so the 3,800-kilogram engineering pallet cannot be placed on V-2; SFC Alvarez recorded the restriction in the motor-pool inspection log this morning, but the fleet status board has not been updated. This requires a V-2 rear-suspension inspection commitment, not merely confirmation that the 3,000-kilogram limit is respected."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 9
+  },
+  "settlement_schema": {
+    "decisions": {
+      "cargo_vehicle_assignments": {
+        "engineering_pallet": "string",
+        "refrigerated_medical_crate": "string",
+        "general_stores": "string"
+      },
+      "loading_sequence": [
+        "string"
+      ]
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The engineering pallet must be assigned to V-1.",
+    "The refrigerated medical-supply crate must be assigned to V-3.",
+    "The general stores must be assigned to V-2.",
+    "The loading sequence must contain exactly three cargo entries.",
+    "A commitment addressing V-2's temporary payload limit or rear-suspension inspection must be recorded.",
+    "A commitment addressing V-3, its inverter compatibility, or temperature-control coordination must be recorded.",
+    "The vehicle-compatibility fact must be cited by the commander as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['cargo_vehicle_assignments']['engineering_pallet'] == 'V-1'",
+    "C2": "decisions['cargo_vehicle_assignments']['refrigerated_medical_crate'] == 'V-3'",
+    "C3": "decisions['cargo_vehicle_assignments']['general_stores'] == 'V-2'",
+    "C4": "len(decisions['loading_sequence']) == 3",
+    "C5": "any(c['target'] == 'V-2' and ('3,000' in c['detail'] or 'payload' in c['detail'] or 'rear-suspension' in c['detail']) for c in commitments)",
+    "C6": "any('V-3' in c['detail'] or 'inverter' in c['detail'] or 'temperature-control' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C6",
+        "P1"
+      ],
+      "why": "The approved V-3 inverter compatibility changes the refrigerated crate assignment from an otherwise open vehicle choice to exactly V-3 and requires a V-3-specific equipment-coordination commitment confirming inverter compatibility and temperature-control unit functionality; a standard pre-load inspection alone is insufficient."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C5"
+      ],
+      "why": "The temporary V-2 payload limit changes the 3,800-kilogram engineering pallet assignment from V-2 being a nominally valid option to exactly V-1 and requires a V-2 rear-suspension inspection commitment, not merely confirmation that the 3,000-kilogram limit is respected."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

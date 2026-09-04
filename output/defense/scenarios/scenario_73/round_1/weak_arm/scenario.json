@@ -1,0 +1,133 @@
+{
+  "scenario_id": "scenario_73",
+  "scenario_type": "maintenance_prioritization",
+  "description": "A company commander must publish the next-day maintenance plan for two power generators using one maintenance team, setting the service order and exact work windows while recording the coordination needed for the required replacement part.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Morgan",
+      "role": "Company Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Patel",
+      "role": "Motor Pool Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Sgt. Lawson",
+      "role": "Supply NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "Generators G-12 and G-19 both require scheduled preventive maintenance tomorrow.",
+    "S2": "One maintenance team is available, with a normal work block from 0800 to 1200 and a second work block from 1300 to 1700.",
+    "S3": "Capt. Morgan issues the final maintenance priority and scheduling order.",
+    "S4": "The motor pool normally uses the morning maintenance huddle to confirm equipment status, parts availability, and the next-day work sequence before the commander publishes the plan."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "SFC Patel's diagnostic check this morning confirmed that G-12 needs only exactly 2 hours of maintenance rather than the nominal 4-hour service block; the completed diagnostic sheet is still being filed and has not been added to the commander's planning packet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "G-19 cannot be serviced until its replacement controller arrives at exactly 1230 tomorrow, and the controller requires exactly 4 hours of installation and testing; Sgt. Lawson received the carrier confirmation this afternoon, but the delivery ticket is not yet posted on the motor pool status board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "first_generator": "string",
+      "g12_start": "string",
+      "g12_end": "string",
+      "g19_start": "string",
+      "g19_end": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "G-12 must be scheduled first.",
+    "G-12 must be scheduled from 0800 to exactly 1000.",
+    "G-19 must be scheduled from exactly 1300 to 1700.",
+    "The plan must include a commitment to confirm receipt of G-19's replacement controller.",
+    "The controller delivery fact must be cited by the commander as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['first_generator'] == 'G-12'",
+    "C2": "decisions['g12_start'] == '0800'",
+    "C3": "decisions['g12_end'] == '1000'",
+    "C4": "decisions['g19_start'] == '1300'",
+    "C5": "decisions['g19_end'] == '1700'",
+    "C6": "any(c['type'] == 'controller_receipt_confirmation' and c['target'] == 'G-19' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C3"
+      ],
+      "why": "The confirmed 2-hour G-12 service changes its required completion time from the nominal 1200 end of the morning block to exactly 1000."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C4",
+        "C5",
+        "C6",
+        "P1"
+      ],
+      "why": "The controller's exact 1230 arrival and 4-hour installation requirement place G-19 in the 1300-1700 afternoon block, require G-12 to go first, and require a controller-receipt confirmation commitment and citation."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

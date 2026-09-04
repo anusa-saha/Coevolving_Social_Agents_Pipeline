@@ -1,0 +1,750 @@
+{
+  "stage": "strong_arm",
+  "reject_tag": "UNCOORDINATED",
+  "diagnosis": "Two checks failed across two rollouts (rollout 1 and rollout 3), while rollouts 0 and 2 passed all checks. The failing checks are C6 and P1, both tied to fact PF1 (owner A2).\n\n**C6 failures (2 of 4 rollouts):**\n- Rollout 1 (C6=false): In the settlement, `disciplinary_response` was set to the concatenated string \"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\" instead of the expected discrete value. All other decision fields were correct (suspension_days=1, assignment_score=0, redo_due_within_school_days=5, conduct_code=\"AI-2\"). PF1 was properly revealed by A2 at turn 2 and cited in justification_fact_ids. This is an **ENCODING MISMATCH**: the model understood the correct outcome for every component but encoded the `disciplinary_response` field as a summary sentence combining all four decisions rather than as the standalone value the check expects. The check C6 apparently requires `disciplinary_response` to be exactly \"in-school suspension\" (the value that passed in rollouts 0 and 2), but the model sometimes writes a composite string into that field.\n- Rollout 3 (C6=false): The settlement's `disciplinary_response` was set to \"in-school suspension and formal conduct entry\" \u2014 again a composite/embellished string rather than the bare \"in-school suspension.\" All other decision fields were correct. PF1 was never formally revealed via a reveal action in this rollout (A2's turn 1 output was unparsable, and turn 3 was a plain `say` without a reveal action), so PF1 is absent from both revealed_facts and justification_fact_ids. However, the settlement still contains all the correct PF1-derived values (assignment_score=0, redo_due_within_school_days=5). This is a **NEVER REVEALED** failure for the provenance dimension (PF1 was not revealed via a reveal action) combined with an **ENCODING MISMATCH** for C6 (the `disciplinary_response` field is a composite string rather than the bare value). The decision values themselves are correct; the field encoding is the C6 failure mode.\n\n**P1 failures (1 of 4 rollouts, with 3 of 4 passing):**\n- Rollout 3 (P1=false): PF1 was never revealed via a `reveal` action. A2's turn 1 produced an unparsable output (JSON syntax error: `Expecting ',' delimiter`), and A2's turn 3 was a `say` event that described all the PF1 content in plain text but did not use a `reveal` action with `fact_id: PF1`. The settlement's `justification_fact_ids` contains only [S1, S2, S3, S4, PF2] \u2014 PF1 is absent. This is a **NEVER REVEALED** failure: the fact's owner attempted to disclose it but the first attempt was lost to a JSON parsing error, and the retry used a `say` action instead of a `reveal` action. The model then settled with all the correct PF1-derived values anyway (assignment_score=0, redo_due_within_school_days=5), which suggests the information was communicated in plain text but not through the required reveal mechanism.\n- Rollout 1 (P1=true): PF1 was properly revealed at turn 2 and cited in justification_fact_ids, so P1 passed.\n\n**Root cause of the unparsable outputs:** In both rollout 1 (turn 6, speaker A2) and rollout 3 (turn 1, speaker A2), the raw output shows the same JSON syntax error: `{\"type\":\" \"say\"...}` \u2014 a stray space and extra quote between the key `type` and its value. This is a model output formatting issue that occurs specifically when A2 tries to produce a `say` or `reveal` action. In rollout 1 this happened on a `say` turn (not critical since PF1 was already revealed at turn 2), but in rollout 3 it happened on the turn where A2 should have issued the `reveal` for PF1, causing the entire reveal to be lost.\n\nNo turn-cap auto-fails occurred; all 4 rollouts settled within 6-8 turns.",
+  "evidence": "{\n  \"gate\": \"strong_arm\",\n  \"pass_count\": 2,\n  \"n_rollouts\": 4,\n  \"min_pass_required\": 3,\n  \"settled_count\": 4,\n  \"auto_failed_count\": 0,\n  \"content_check_tally\": {\n    \"C1\": 4,\n    \"C2\": 4,\n    \"C3\": 4,\n    \"C4\": 4,\n    \"C5\": 4,\n    \"C6\": 2\n  },\n  \"provenance_check_tally\": {\n    \"P1\": 3\n  },\n  \"facts_linked_to_failing_checks\": {\n    \"C6\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The confirmed 38-percent match and admission change the assignment outcome to exactly 0, set the redo deadline to exactly 5 school days, and require a parent conference.\"\n      }\n    ],\n    \"P1\": [\n      {\n        \"fact_id\": \"PF1\",\n        \"owner\": \"A2\",\n        \"why\": \"The confirmed 38-percent match and admission change the assignment outcome to exactly 0, set the redo deadline to exactly 5 school days, and require a parent conference.\"\n      }\n    ]\n  },\n  \"rollouts\": [\n    {\n      \"rollout_index\": 0,\n      \"temperature\": 0.27,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 8,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"disciplinary_response\": \"in-school suspension\",\n          \"suspension_days\": 1,\n          \"assignment_score\": 0,\n          \"redo_due_within_school_days\": 5,\n          \"conduct_code\": \"AI-2\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_directive\",\n            \"target\": \"Ms. Ibarra\",\n            \"detail\": \"Attach the completed conduct audit to the case file as part of this review record.\"\n          },\n          {\n            \"type\": \"parent_conference\",\n            \"target\": \"student's parents/guardians\",\n            \"detail\": \"Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"PF1\",\n          \"PF2\",\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_directive\",\n          \"target\": \"Ms. Ibarra\",\n          \"detail\": \"Attach the completed conduct audit to the case file as part of this review record.\"\n        },\n        {\n          \"type\": \"parent_conference\",\n          \"target\": \"student's parents/guardians\",\n          \"detail\": \"Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"PF1\",\n        \"PF2\",\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Before we proceed, I need to share something from a conduct audit I completed this morning. My audit found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Before we proceed, I need to share something from a conduct audit I completed this morning. My audit found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Ms. Ibarra. I appreciate you bringing this forward before we proceed. However, I need to be careful here: I have not yet seen or verified that audit myself, and my case-review routine requires me to hear one report from the referring teacher and one from the registrar before I can close the review and record a decision. I'd like us to continue with those required reports so I have the full picture before making any determination about the appropriate disciplinary response.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Ms. Ibarra. I appreciate you bringing this forward before we proceed. However, I need to be careful here: I have not yet seen or verified that audit myself, and my case-review routine requires me to hear one report from the referring teacher and one from the registrar before I can close the review and record a decision. I'd like us to continue with those required reports so I have the full picture before making any determination about the appropriate disciplinary response.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I need to share my findings from the assignment review. My review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I need to share my findings from the assignment review. My review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mr. Bennett, for that report. I now have the required report from the referring teacher regarding the assignment review. I still need to hear one report from the registrar before I can close this review and record my decision, per the case-review routine. Could the registrar please provide their report?\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Mr. Bennett, for that report. I now have the required report from the referring teacher regarding the assignment review. I still need to hear one report from the registrar before I can close this review and record my decision, per the case-review routine. Could the registrar please provide their report?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"As my official registrar's report for this case review: I completed a conduct audit this morning which found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file, but I am formally presenting it now as part of this review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"As my official registrar's report for this case review: I completed a conduct audit this morning which found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file, but I am formally presenting it now as part of this review.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Ms. Ibarra, for presenting that as your official registrar's report. Ms. Okafor, you now have both required reports \\u2014 my referring-teacher report regarding the 38 percent match and the student's acknowledgment, and Ms. Ibarra's registrar's report regarding the prior substantiated violation from 8 months ago. I'll defer to you to close the review and record your decision.\",\n          \"speaker\": \"A2\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Thank you, Ms. Ibarra, for presenting that as your official registrar's report. Ms. Okafor, you now have both required reports \\u2014 my referring-teacher report regarding the 38 percent match and the student's acknowledgment, and Ms. Ibarra's registrar's report regarding the prior substantiated violation from 8 months ago. I'll defer to you to close the review and record your decision.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Ms. Okafor, both required reports have now been provided \\u2014 Mr. Bennett's referring-teacher report and my registrar's report. Per the case-review routine, you have what you need to close the review and record your decision. I would note that under the handbook, the prior substantiated violation from 8 months ago, combined with the current confirmed violation, triggers the mandatory escalation to 1 school day of in-school suspension and conduct code AI-2. I stand ready to attach my audit to the case file once you direct it.\",\n          \"speaker\": \"A3\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Ms. Okafor, both required reports have now been provided \\u2014 Mr. Bennett's referring-teacher report and my registrar's report. Per the case-review routine, you have what you need to close the review and record your decision. I would note that under the handbook, the prior substantiated violation from 8 months ago, combined with the current confirmed violation, triggers the mandatory escalation to 1 school day of in-school suspension and conduct code AI-2. I stand ready to attach my audit to the case file once you direct it.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"disciplinary_response\": \"in-school suspension\",\n              \"suspension_days\": 1,\n              \"assignment_score\": 0,\n              \"redo_due_within_school_days\": 5,\n              \"conduct_code\": \"AI-2\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_directive\",\n                \"target\": \"Ms. Ibarra\",\n                \"detail\": \"Attach the completed conduct audit to the case file as part of this review record.\"\n              },\n              {\n                \"type\": \"parent_conference\",\n                \"target\": \"student's parents/guardians\",\n                \"detail\": \"Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"PF1\",\n              \"PF2\",\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"disciplinary_response\\\": \\\"in-school suspension\\\",\\n      \\\"suspension_days\\\": 1,\\n      \\\"assignment_score\\\": 0,\\n      \\\"redo_due_within_school_days\\\": 5,\\n      \\\"conduct_code\\\": \\\"AI-2\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"record_directive\\\",\\n        \\\"target\\\": \\\"Ms. Ibarra\\\",\\n        \\\"detail\\\": \\\"Attach the completed conduct audit to the case file as part of this review record.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"parent_conference\\\",\\n        \\\"target\\\": \\\"student's parents/guardians\\\",\\n        \\\"detail\\\": \\\"Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\",\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 1,\n      \"temperature\": 0.448,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 8,\n      \"revealed_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"disciplinary_response\": \"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\",\n          \"suspension_days\": 1,\n          \"assignment_score\": 0,\n          \"redo_due_within_school_days\": 5,\n          \"conduct_code\": \"AI-2\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_decision\",\n            \"target\": \"case system\",\n            \"detail\": \"Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_decision\",\n          \"target\": \"case system\",\n          \"detail\": \"Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I'm ready to provide my registrar's report on this tenth-grade student's case whenever the review gets underway. I understand we'll be hearing from the referring teacher as well before a decision is made.\",\n          \"speaker\": \"A3\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I'm ready to provide my registrar's report on this tenth-grade student's case whenever the review gets underway. I understand we'll be hearing from the referring teacher as well before a decision is made.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Ms. Ibarra. Thank you for being ready. As Dean of Students, I'll be conducting this review and ultimately approving the disciplinary response and student-record entry. Per our case-review routine, I need to hear one report from the referring teacher and one from you as registrar before I can close the review and record my decision. Let's begin whenever the referring teacher is ready to present their report.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Ms. Ibarra. Thank you for being ready. As Dean of Students, I'll be conducting this review and ultimately approving the disciplinary response and student-record entry. Per our case-review routine, I need to hear one report from the referring teacher and one from you as registrar before I can close the review and record my decision. Let's begin whenever the referring teacher is ready to present their report.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"I'm the referring teacher for this case. Here is my report: My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\",\n          \"speaker\": \"A2\",\n          \"turn\": 2,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF1\\\", \\\"text\\\": \\\"I'm the referring teacher for this case. Here is my report: My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mr. Bennett, for your report. I note the 38 percent match to an uncited online source and the student's acknowledgment of using the source without attribution. I also note your recommendation under the handbook for a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra, I now need to hear your registrar's report before I can close this review and record my decision. Please go ahead whenever you're ready.\",\n          \"speaker\": \"A1\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Mr. Bennett, for your report. I note the 38 percent match to an uncited online source and the student's acknowledgment of using the source without attribution. I also note your recommendation under the handbook for a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra, I now need to hear your registrar's report before I can close this review and record my decision. Please go ahead whenever you're ready.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Ms. Okafor. I've provided my report as the referring teacher, and I'll defer to Ms. Ibarra for her registrar's report now.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"say\\\",\\\"text\\\":\\\"Thank you, Ms. Okafor. I've provided my report as the referring teacher, and I'll defer to Ms. Ibarra for her registrar's report now.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"My registrar's report is as follows: This morning I completed a conduct audit on this student and found one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case system, but I am presenting it now as my registrar's report for this review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"My registrar's report is as follows: This morning I completed a conduct audit on this student and found one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case system, but I am presenting it now as my registrar's report for this review.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 6,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Thank you, Ms. Ibarra, for your registrar's report. I note the finding of one prior substantiated academic-integrity violation from 8 months ago, which under the handbook would elevate this to a second violation within 12 months requiring 1 school day of in-school suspension and conduct code AI-2. Ms. Okafor, both reports have now been provided \\u2014 my report as the referring teacher and Ms. Ibarra's as registrar \\u2014 so per the case-review routine you should be positioned to close the review and record your decision.\\\"}\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"disciplinary_response\": \"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\",\n              \"suspension_days\": 1,\n              \"assignment_score\": 0,\n              \"redo_due_within_school_days\": 5,\n              \"conduct_code\": \"AI-2\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_decision\",\n                \"target\": \"case system\",\n                \"detail\": \"Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 7,\n          \"raw_output\": \"{\\\"type\\\":\\\"settle\\\",\\\"settlement\\\":{\\\"decisions\\\":{\\\"disciplinary_response\\\":\\\"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\\\",\\\"suspension_days\\\":1,\\\"assignment_score\\\":0,\\\"redo_due_within_school_days\\\":5,\\\"conduct_code\\\":\\\"AI-2\\\"},\\\"credited_facts\\\":[\\\"PF1\\\",\\\"PF2\\\"],\\\"commitments\\\":[{\\\"type\\\":\\\"record_decision\\\",\\\"target\\\":\\\"case system\\\",\\\"detail\\\":\\\"Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record.\\\"}],\\\"justification_fact_ids\\\":[\\\"S1\\\",\\\"S2\\\",\\\"S3\\\",\\\"S4\\\",\\\"PF1\\\",\\\"PF2\\\"]}}\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 2,\n      \"temperature\": 0.414,\n      \"settled\": true,\n      \"passed\": true,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 7,\n      \"revealed_facts\": [\n        \"PF2\",\n        \"PF1\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": true\n      },\n      \"provenance_results\": {\n        \"P1\": true\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"disciplinary_response\": \"in-school suspension\",\n          \"suspension_days\": 1,\n          \"assignment_score\": 0,\n          \"redo_due_within_school_days\": 5,\n          \"conduct_code\": \"AI-2\"\n        },\n        \"credited_facts\": [\n          \"PF1\",\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"parent_conference\",\n            \"target\": \"student's parents/guardians\",\n            \"detail\": \"Schedule a parent conference as required by the handbook for confirmed match above 30 percent.\"\n          },\n          {\n            \"type\": \"assignment_redo\",\n            \"target\": \"student\",\n            \"detail\": \"Student must complete a required redo of the assignment within 5 school days.\"\n          },\n          {\n            \"type\": \"in-school_suspension\",\n            \"target\": \"student\",\n            \"detail\": \"1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months.\"\n          },\n          {\n            \"type\": \"formal_record_entry\",\n            \"target\": \"student_record\",\n            \"detail\": \"Record conduct code AI-2 and the disciplinary response in the student's formal conduct record.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF1\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"parent_conference\",\n          \"target\": \"student's parents/guardians\",\n          \"detail\": \"Schedule a parent conference as required by the handbook for confirmed match above 30 percent.\"\n        },\n        {\n          \"type\": \"assignment_redo\",\n          \"target\": \"student\",\n          \"detail\": \"Student must complete a required redo of the assignment within 5 school days.\"\n        },\n        {\n          \"type\": \"in-school_suspension\",\n          \"target\": \"student\",\n          \"detail\": \"1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months.\"\n        },\n        {\n          \"type\": \"formal_record_entry\",\n          \"target\": \"student_record\",\n          \"detail\": \"Record conduct code AI-2 and the disciplinary response in the student's formal conduct record.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF1\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. I understand we're here to review a tenth-grade student's English research assignment for a possible academic-integrity violation. As the referring teacher, I'm prepared to share my findings from the assignment review. Before we proceed, I'd like to confirm \\u2014 is Ms. Okafor present, and do we have the registrar available as well, so we can follow the case-review routine properly?\",\n          \"speaker\": \"A2\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. I understand we're here to review a tenth-grade student's English research assignment for a possible academic-integrity violation. As the referring teacher, I'm prepared to share my findings from the assignment review. Before we proceed, I'd like to confirm \\u2014 is Ms. Okafor present, and do we have the registrar available as well, so we can follow the case-review routine properly?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Mr. Bennett. Yes, I'm present as Dean of Students. I'm ready to hear your report as the referring teacher. We'll also need to hear from the registrar before I can close the review and record my decision, per our case-review routine. Please go ahead with your findings.\",\n          \"speaker\": \"A1\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Mr. Bennett. Yes, I'm present as Dean of Students. I'm ready to hear your report as the referring teacher. We'll also need to hear from the registrar before I can close the review and record my decision, per our case-review routine. Please go ahead with your findings.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Before we proceed, I need to share a finding from a conduct audit I completed this morning. My audit identified one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case, but I'm disclosing it now so it can be properly considered in this review.\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Before we proceed, I need to share a finding from a conduct audit I completed this morning. My audit identified one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case, but I'm disclosing it now so it can be properly considered in this review.\\\"}\"\n        },\n        {\n          \"type\": \" \",\n          \"speaker\": \"A3\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF1\",\n          \"text\": \"My assignment review found that 38 percent of the submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\",\n          \"speaker\": \"A2\",\n          \"turn\": 4,\n          \"raw_output\": \"{\\\"type\\\":\\\"reveal\\\",\\\"fact_id\\\":\\\"PF1\\\",\\\"text\\\":\\\"My assignment review found that 38 percent of the submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Thank you, Mr. Bennett and Ms. Ibarra, for both reports. I now have the referring teacher's report confirming a 38 percent match with an uncited source and the student's acknowledgment, and the registrar's report identifying a prior substantiated academic-integrity violation from 8 months ago. Per the case-review routine, I've received both required reports \\u2014 one from the referring teacher and one from the registrar \\u2014 so I'm now in a position to close the review and record my decision. Before I do so, I want to confirm my understanding of how these two findings interact under the handbook: Mr. Bennett's finding triggers a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra's finding indicates this would be a second substantiated violation within 12 months, which requires 1 day of in-school suspension and conduct code AI-2. Are there any additional facts either of you needs to formally disclose before I record my decision?\",\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"say\\\",\\n  \\\"text\\\": \\\"Thank you, Mr. Bennett and Ms. Ibarra, for both reports. I now have the referring teacher's report confirming a 38 percent match with an uncited source and the student's acknowledgment, and the registrar's report identifying a prior substantiated academic-integrity violation from 8 months ago. Per the case-review routine, I've received both required reports \\u2014 one from the referring teacher and one from the registrar \\u2014 so I'm now in a position to close the review and record my decision. Before I do so, I want to confirm my understanding of how these two findings interact under the handbook: Mr. Bennett's finding triggers a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra's finding indicates this would be a second substantiated violation within 12 months, which requires 1 day of in-school suspension and conduct code AI-2. Are there any additional facts either of you needs to formally disclose before I record my decision?\\\"\\n}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"disciplinary_response\": \"in-school suspension\",\n              \"suspension_days\": 1,\n              \"assignment_score\": 0,\n              \"redo_due_within_school_days\": 5,\n              \"conduct_code\": \"AI-2\"\n            },\n            \"credited_facts\": [\n              \"PF1\",\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"parent_conference\",\n                \"target\": \"student's parents/guardians\",\n                \"detail\": \"Schedule a parent conference as required by the handbook for confirmed match above 30 percent.\"\n              },\n              {\n                \"type\": \"assignment_redo\",\n                \"target\": \"student\",\n                \"detail\": \"Student must complete a required redo of the assignment within 5 school days.\"\n              },\n              {\n                \"type\": \"in-school_suspension\",\n                \"target\": \"student\",\n                \"detail\": \"1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months.\"\n              },\n              {\n                \"type\": \"formal_record_entry\",\n                \"target\": \"student_record\",\n                \"detail\": \"Record conduct code AI-2 and the disciplinary response in the student's formal conduct record.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF1\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 6,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"disciplinary_response\\\": \\\"in-school suspension\\\",\\n      \\\"suspension_days\\\": 1,\\n      \\\"assignment_score\\\": 0,\\n      \\\"redo_due_within_school_days\\\": 5,\\n      \\\"conduct_code\\\": \\\"AI-2\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"parent_conference\\\",\\n        \\\"target\\\": \\\"student's parents/guardians\\\",\\n        \\\"detail\\\": \\\"Schedule a parent conference as required by the handbook for confirmed match above 30 percent.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"assignment_redo\\\",\\n        \\\"target\\\": \\\"student\\\",\\n        \\\"detail\\\": \\\"Student must complete a required redo of the assignment within 5 school days.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"in-school_suspension\\\",\\n        \\\"target\\\": \\\"student\\\",\\n        \\\"detail\\\": \\\"1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"formal_record_entry\\\",\\n        \\\"target\\\": \\\"student_record\\\",\\n        \\\"detail\\\": \\\"Record conduct code AI-2 and the disciplinary response in the student's formal conduct record.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF1\\\",\\n      \\\"PF2\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    },\n    {\n      \"rollout_index\": 3,\n      \"temperature\": 0.475,\n      \"settled\": true,\n      \"passed\": false,\n      \"auto_failed_on_turn_cap\": false,\n      \"turn_count\": 6,\n      \"revealed_facts\": [\n        \"PF2\"\n      ],\n      \"content_results\": {\n        \"C1\": true,\n        \"C2\": true,\n        \"C3\": true,\n        \"C4\": true,\n        \"C5\": true,\n        \"C6\": false\n      },\n      \"provenance_results\": {\n        \"P1\": false\n      },\n      \"settlement\": {\n        \"decisions\": {\n          \"disciplinary_response\": \"in-school suspension and formal conduct entry\",\n          \"suspension_days\": 1,\n          \"assignment_score\": 0,\n          \"redo_due_within_school_days\": 5,\n          \"conduct_code\": \"AI-2\"\n        },\n        \"credited_facts\": [\n          \"PF2\"\n        ],\n        \"commitments\": [\n          {\n            \"type\": \"record_entry\",\n            \"target\": \"student_record\",\n            \"detail\": \"Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months.\"\n          },\n          {\n            \"type\": \"disciplinary_action\",\n            \"target\": \"student\",\n            \"detail\": \"Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months.\"\n          },\n          {\n            \"type\": \"academic_action\",\n            \"target\": \"student\",\n            \"detail\": \"Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match.\"\n          },\n          {\n            \"type\": \"parent_notification\",\n            \"target\": \"parent_guardian\",\n            \"detail\": \"Schedule parent conference as required by handbook for confirmed match above 30 percent.\"\n          }\n        ],\n        \"justification_fact_ids\": [\n          \"S1\",\n          \"S2\",\n          \"S3\",\n          \"S4\",\n          \"PF2\"\n        ]\n      },\n      \"credited_facts\": [\n        \"PF2\"\n      ],\n      \"commitments\": [\n        {\n          \"type\": \"record_entry\",\n          \"target\": \"student_record\",\n          \"detail\": \"Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months.\"\n        },\n        {\n          \"type\": \"disciplinary_action\",\n          \"target\": \"student\",\n          \"detail\": \"Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months.\"\n        },\n        {\n          \"type\": \"academic_action\",\n          \"target\": \"student\",\n          \"detail\": \"Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match.\"\n        },\n        {\n          \"type\": \"parent_notification\",\n          \"target\": \"parent_guardian\",\n          \"detail\": \"Schedule parent conference as required by handbook for confirmed match above 30 percent.\"\n        }\n      ],\n      \"justification_fact_ids\": [\n        \"S1\",\n        \"S2\",\n        \"S3\",\n        \"S4\",\n        \"PF2\"\n      ],\n      \"transcript\": [\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, everyone. Thank you for joining this case review. As you know, we're here to review a tenth-grade student regarding a possible academic-integrity violation on an English research assignment. Per our case-review routine, I need to hear one report from the referring teacher and one from the registrar before I can close the review and record my decision. Could the referring teacher please begin with their report?\",\n          \"speaker\": \"A1\",\n          \"turn\": 0,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, everyone. Thank you for joining this case review. As you know, we're here to review a tenth-grade student regarding a possible academic-integrity violation on an English research assignment. Per our case-review routine, I need to hear one report from the referring teacher and one from the registrar before I can close the review and record my decision. Could the referring teacher please begin with their report?\\\"}\\n```\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]\",\n          \"speaker\": \"A2\",\n          \"turn\": 1,\n          \"raw_output\": \"{\\\"type\\\":\\\" \\\"say\\\", \\\"text\\\": \\\"Good morning, Ms. Okafor. I'm the referring teacher in this case. My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using that source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system. I'll share the formal documentation now.\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Ms. Okafor. I'm ready to provide my report as registrar, but I first need to hear Mr. Bennett's report from the referring teacher, as our case-review routine specifies you hear one report from the referring teacher and one from the registrar. Mr. Bennett, could you please go ahead with your report?\",\n          \"speaker\": \"A3\",\n          \"turn\": 2,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Ms. Okafor. I'm ready to provide my report as registrar, but I first need to hear Mr. Bennett's report from the referring teacher, as our case-review routine specifies you hear one report from the referring teacher and one from the registrar. Mr. Bennett, could you please go ahead with your report?\\\"}\"\n        },\n        {\n          \"type\": \"say\",\n          \"text\": \"Good morning, Ms. Okafor and Ms. Ibarra. I apologize for the technical difficulty a moment ago. Here is my report as the referring teacher. I completed my review of the student's English research assignment yesterday. My findings were significant: 38 percent of the submission matched an uncited online source, and when I met with the student in conference, they acknowledged using that source without attribution. Under our academic-integrity handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I have not yet entered this finding in the case system, which is why I'm presenting it now. I'll now hand things over to Ms. Ibarra for the registrar's report.\",\n          \"speaker\": \"A2\",\n          \"turn\": 3,\n          \"raw_output\": \"{\\\"type\\\": \\\"say\\\", \\\"text\\\": \\\"Good morning, Ms. Okafor and Ms. Ibarra. I apologize for the technical difficulty a moment ago. Here is my report as the referring teacher. I completed my review of the student's English research assignment yesterday. My findings were significant: 38 percent of the submission matched an uncited online source, and when I met with the student in conference, they acknowledged using that source without attribution. Under our academic-integrity handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I have not yet entered this finding in the case system, which is why I'm presenting it now. I'll now hand things over to Ms. Ibarra for the registrar's report.\\\"}\"\n        },\n        {\n          \"type\": \"reveal\",\n          \"fact_id\": \"PF2\",\n          \"text\": \"Thank you, Mr. Bennett. Here is my report as registrar. This morning I completed a conduct audit on the student and found one prior substantiated academic-integrity violation from 8 months ago. Under our academic-integrity handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I completed this audit this morning but had not yet attached it to the case. I am presenting it now as my registrar's report.\",\n          \"speaker\": \"A3\",\n          \"turn\": 4,\n          \"raw_output\": \"```json\\n{\\\"type\\\": \\\"reveal\\\", \\\"fact_id\\\": \\\"PF2\\\", \\\"text\\\": \\\"Thank you, Mr. Bennett. Here is my report as registrar. This morning I completed a conduct audit on the student and found one prior substantiated academic-integrity violation from 8 months ago. Under our academic-integrity handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I completed this audit this morning but had not yet attached it to the case. I am presenting it now as my registrar's report.\\\"}\\n```\"\n        },\n        {\n          \"type\": \"settle\",\n          \"settlement\": {\n            \"decisions\": {\n              \"disciplinary_response\": \"in-school suspension and formal conduct entry\",\n              \"suspension_days\": 1,\n              \"assignment_score\": 0,\n              \"redo_due_within_school_days\": 5,\n              \"conduct_code\": \"AI-2\"\n            },\n            \"credited_facts\": [\n              \"PF2\"\n            ],\n            \"commitments\": [\n              {\n                \"type\": \"record_entry\",\n                \"target\": \"student_record\",\n                \"detail\": \"Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months.\"\n              },\n              {\n                \"type\": \"disciplinary_action\",\n                \"target\": \"student\",\n                \"detail\": \"Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months.\"\n              },\n              {\n                \"type\": \"academic_action\",\n                \"target\": \"student\",\n                \"detail\": \"Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match.\"\n              },\n              {\n                \"type\": \"parent_notification\",\n                \"target\": \"parent_guardian\",\n                \"detail\": \"Schedule parent conference as required by handbook for confirmed match above 30 percent.\"\n              }\n            ],\n            \"justification_fact_ids\": [\n              \"S1\",\n              \"S2\",\n              \"S3\",\n              \"S4\",\n              \"PF2\"\n            ]\n          },\n          \"speaker\": \"A1\",\n          \"turn\": 5,\n          \"raw_output\": \"```json\\n{\\n  \\\"type\\\": \\\"settle\\\",\\n  \\\"settlement\\\": {\\n    \\\"decisions\\\": {\\n      \\\"disciplinary_response\\\": \\\"in-school suspension and formal conduct entry\\\",\\n      \\\"suspension_days\\\": 1,\\n      \\\"assignment_score\\\": 0,\\n      \\\"redo_due_within_school_days\\\": 5,\\n      \\\"conduct_code\\\": \\\"AI-2\\\"\\n    },\\n    \\\"credited_facts\\\": [\\n      \\\"PF2\\\"\\n    ],\\n    \\\"commitments\\\": [\\n      {\\n        \\\"type\\\": \\\"record_entry\\\",\\n        \\\"target\\\": \\\"student_record\\\",\\n        \\\"detail\\\": \\\"Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"disciplinary_action\\\",\\n        \\\"target\\\": \\\"student\\\",\\n        \\\"detail\\\": \\\"Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"academic_action\\\",\\n        \\\"target\\\": \\\"student\\\",\\n        \\\"detail\\\": \\\"Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match.\\\"\\n      },\\n      {\\n        \\\"type\\\": \\\"parent_notification\\\",\\n        \\\"target\\\": \\\"parent_guardian\\\",\\n        \\\"detail\\\": \\\"Schedule parent conference as required by handbook for confirmed match above 30 percent.\\\"\\n      }\\n    ],\\n    \\\"justification_fact_ids\\\": [\\n      \\\"S1\\\",\\n      \\\"S2\\\",\\n      \\\"S3\\\",\\n      \\\"S4\\\",\\n      \\\"PF2\\\"\\n    ]\\n  }\\n}\\n```\"\n        }\n      ]\n    }\n  ],\n  \"llm_call_error\": null\n}",
+  "evidence_data": {
+    "gate": "strong_arm",
+    "pass_count": 2,
+    "n_rollouts": 4,
+    "min_pass_required": 3,
+    "settled_count": 4,
+    "auto_failed_count": 0,
+    "content_check_tally": {
+      "C1": 4,
+      "C2": 4,
+      "C3": 4,
+      "C4": 4,
+      "C5": 4,
+      "C6": 2
+    },
+    "provenance_check_tally": {
+      "P1": 3
+    },
+    "facts_linked_to_failing_checks": {
+      "C6": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The confirmed 38-percent match and admission change the assignment outcome to exactly 0, set the redo deadline to exactly 5 school days, and require a parent conference."
+        }
+      ],
+      "P1": [
+        {
+          "fact_id": "PF1",
+          "owner": "A2",
+          "why": "The confirmed 38-percent match and admission change the assignment outcome to exactly 0, set the redo deadline to exactly 5 school days, and require a parent conference."
+        }
+      ]
+    },
+    "rollouts": [
+      {
+        "rollout_index": 0,
+        "temperature": 0.27,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 8,
+        "revealed_facts": [
+          "PF2",
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "disciplinary_response": "in-school suspension",
+            "suspension_days": 1,
+            "assignment_score": 0,
+            "redo_due_within_school_days": 5,
+            "conduct_code": "AI-2"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "record_directive",
+              "target": "Ms. Ibarra",
+              "detail": "Attach the completed conduct audit to the case file as part of this review record."
+            },
+            {
+              "type": "parent_conference",
+              "target": "student's parents/guardians",
+              "detail": "Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response."
+            }
+          ],
+          "justification_fact_ids": [
+            "PF1",
+            "PF2",
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "record_directive",
+            "target": "Ms. Ibarra",
+            "detail": "Attach the completed conduct audit to the case file as part of this review record."
+          },
+          {
+            "type": "parent_conference",
+            "target": "student's parents/guardians",
+            "detail": "Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response."
+          }
+        ],
+        "justification_fact_ids": [
+          "PF1",
+          "PF2",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "transcript": [
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Before we proceed, I need to share something from a conduct audit I completed this morning. My audit found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Before we proceed, I need to share something from a conduct audit I completed this morning. My audit found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Ms. Ibarra. I appreciate you bringing this forward before we proceed. However, I need to be careful here: I have not yet seen or verified that audit myself, and my case-review routine requires me to hear one report from the referring teacher and one from the registrar before I can close the review and record a decision. I'd like us to continue with those required reports so I have the full picture before making any determination about the appropriate disciplinary response.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Thank you, Ms. Ibarra. I appreciate you bringing this forward before we proceed. However, I need to be careful here: I have not yet seen or verified that audit myself, and my case-review routine requires me to hear one report from the referring teacher and one from the registrar before I can close the review and record a decision. I'd like us to continue with those required reports so I have the full picture before making any determination about the appropriate disciplinary response.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I need to share my findings from the assignment review. My review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I need to share my findings from the assignment review. My review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mr. Bennett, for that report. I now have the required report from the referring teacher regarding the assignment review. I still need to hear one report from the registrar before I can close this review and record my decision, per the case-review routine. Could the registrar please provide their report?",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Mr. Bennett, for that report. I now have the required report from the referring teacher regarding the assignment review. I still need to hear one report from the registrar before I can close this review and record my decision, per the case-review routine. Could the registrar please provide their report?\"}\n```"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "As my official registrar's report for this case review: I completed a conduct audit this morning which found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file, but I am formally presenting it now as part of this review.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"As my official registrar's report for this case review: I completed a conduct audit this morning which found one prior substantiated academic-integrity violation from 8 months ago for this student. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2 rather than a warning or informal note. I have not yet attached this audit to the case file, but I am formally presenting it now as part of this review.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Ms. Ibarra, for presenting that as your official registrar's report. Ms. Okafor, you now have both required reports \u2014 my referring-teacher report regarding the 38 percent match and the student's acknowledgment, and Ms. Ibarra's registrar's report regarding the prior substantiated violation from 8 months ago. I'll defer to you to close the review and record your decision.",
+            "speaker": "A2",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Thank you, Ms. Ibarra, for presenting that as your official registrar's report. Ms. Okafor, you now have both required reports \u2014 my referring-teacher report regarding the 38 percent match and the student's acknowledgment, and Ms. Ibarra's registrar's report regarding the prior substantiated violation from 8 months ago. I'll defer to you to close the review and record your decision.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Ms. Okafor, both required reports have now been provided \u2014 Mr. Bennett's referring-teacher report and my registrar's report. Per the case-review routine, you have what you need to close the review and record your decision. I would note that under the handbook, the prior substantiated violation from 8 months ago, combined with the current confirmed violation, triggers the mandatory escalation to 1 school day of in-school suspension and conduct code AI-2. I stand ready to attach my audit to the case file once you direct it.",
+            "speaker": "A3",
+            "turn": 6,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Ms. Okafor, both required reports have now been provided \u2014 Mr. Bennett's referring-teacher report and my registrar's report. Per the case-review routine, you have what you need to close the review and record your decision. I would note that under the handbook, the prior substantiated violation from 8 months ago, combined with the current confirmed violation, triggers the mandatory escalation to 1 school day of in-school suspension and conduct code AI-2. I stand ready to attach my audit to the case file once you direct it.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "disciplinary_response": "in-school suspension",
+                "suspension_days": 1,
+                "assignment_score": 0,
+                "redo_due_within_school_days": 5,
+                "conduct_code": "AI-2"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "record_directive",
+                  "target": "Ms. Ibarra",
+                  "detail": "Attach the completed conduct audit to the case file as part of this review record."
+                },
+                {
+                  "type": "parent_conference",
+                  "target": "student's parents/guardians",
+                  "detail": "Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response."
+                }
+              ],
+              "justification_fact_ids": [
+                "PF1",
+                "PF2",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"disciplinary_response\": \"in-school suspension\",\n      \"suspension_days\": 1,\n      \"assignment_score\": 0,\n      \"redo_due_within_school_days\": 5,\n      \"conduct_code\": \"AI-2\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"record_directive\",\n        \"target\": \"Ms. Ibarra\",\n        \"detail\": \"Attach the completed conduct audit to the case file as part of this review record.\"\n      },\n      {\n        \"type\": \"parent_conference\",\n        \"target\": \"student's parents/guardians\",\n        \"detail\": \"Schedule and hold a parent conference regarding the confirmed academic-integrity violation and the escalated disciplinary response.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"PF1\",\n      \"PF2\",\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 1,
+        "temperature": 0.448,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 8,
+        "revealed_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "disciplinary_response": "1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference",
+            "suspension_days": 1,
+            "assignment_score": 0,
+            "redo_due_within_school_days": 5,
+            "conduct_code": "AI-2"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "record_decision",
+              "target": "case system",
+              "detail": "Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "record_decision",
+            "target": "case system",
+            "detail": "Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I'm ready to provide my registrar's report on this tenth-grade student's case whenever the review gets underway. I understand we'll be hearing from the referring teacher as well before a decision is made.",
+            "speaker": "A3",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. I'm ready to provide my registrar's report on this tenth-grade student's case whenever the review gets underway. I understand we'll be hearing from the referring teacher as well before a decision is made.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Ms. Ibarra. Thank you for being ready. As Dean of Students, I'll be conducting this review and ultimately approving the disciplinary response and student-record entry. Per our case-review routine, I need to hear one report from the referring teacher and one from you as registrar before I can close the review and record my decision. Let's begin whenever the referring teacher is ready to present their report.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Ms. Ibarra. Thank you for being ready. As Dean of Students, I'll be conducting this review and ultimately approving the disciplinary response and student-record entry. Per our case-review routine, I need to hear one report from the referring teacher and one from you as registrar before I can close the review and record my decision. Let's begin whenever the referring teacher is ready to present their report.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "I'm the referring teacher for this case. Here is my report: My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.",
+            "speaker": "A2",
+            "turn": 2,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF1\", \"text\": \"I'm the referring teacher for this case. Here is my report: My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mr. Bennett, for your report. I note the 38 percent match to an uncited online source and the student's acknowledgment of using the source without attribution. I also note your recommendation under the handbook for a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra, I now need to hear your registrar's report before I can close this review and record my decision. Please go ahead whenever you're ready.",
+            "speaker": "A1",
+            "turn": 3,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Mr. Bennett, for your report. I note the 38 percent match to an uncited online source and the student's acknowledgment of using the source without attribution. I also note your recommendation under the handbook for a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra, I now need to hear your registrar's report before I can close this review and record my decision. Please go ahead whenever you're ready.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Ms. Okafor. I've provided my report as the referring teacher, and I'll defer to Ms. Ibarra for her registrar's report now.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"say\",\"text\":\"Thank you, Ms. Okafor. I've provided my report as the referring teacher, and I'll defer to Ms. Ibarra for her registrar's report now.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "My registrar's report is as follows: This morning I completed a conduct audit on this student and found one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case system, but I am presenting it now as my registrar's report for this review.",
+            "speaker": "A3",
+            "turn": 5,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"My registrar's report is as follows: This morning I completed a conduct audit on this student and found one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case system, but I am presenting it now as my registrar's report for this review.\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 6,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Thank you, Ms. Ibarra, for your registrar's report. I note the finding of one prior substantiated academic-integrity violation from 8 months ago, which under the handbook would elevate this to a second violation within 12 months requiring 1 school day of in-school suspension and conduct code AI-2. Ms. Okafor, both reports have now been provided \u2014 my report as the referring teacher and Ms. Ibarra's as registrar \u2014 so per the case-review routine you should be positioned to close the review and record your decision.\"}"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "disciplinary_response": "1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference",
+                "suspension_days": 1,
+                "assignment_score": 0,
+                "redo_due_within_school_days": 5,
+                "conduct_code": "AI-2"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "record_decision",
+                  "target": "case system",
+                  "detail": "Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 7,
+            "raw_output": "{\"type\":\"settle\",\"settlement\":{\"decisions\":{\"disciplinary_response\":\"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\",\"suspension_days\":1,\"assignment_score\":0,\"redo_due_within_school_days\":5,\"conduct_code\":\"AI-2\"},\"credited_facts\":[\"PF1\",\"PF2\"],\"commitments\":[{\"type\":\"record_decision\",\"target\":\"case system\",\"detail\":\"Record the disciplinary decision of 1 day in-school suspension, zero on assignment, required redo within 5 school days, parent conference, and conduct code AI-2 in the student's record.\"}],\"justification_fact_ids\":[\"S1\",\"S2\",\"S3\",\"S4\",\"PF1\",\"PF2\"]}}"
+          }
+        ]
+      },
+      {
+        "rollout_index": 2,
+        "temperature": 0.414,
+        "settled": true,
+        "passed": true,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 7,
+        "revealed_facts": [
+          "PF2",
+          "PF1"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true
+        },
+        "provenance_results": {
+          "P1": true
+        },
+        "settlement": {
+          "decisions": {
+            "disciplinary_response": "in-school suspension",
+            "suspension_days": 1,
+            "assignment_score": 0,
+            "redo_due_within_school_days": 5,
+            "conduct_code": "AI-2"
+          },
+          "credited_facts": [
+            "PF1",
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "parent_conference",
+              "target": "student's parents/guardians",
+              "detail": "Schedule a parent conference as required by the handbook for confirmed match above 30 percent."
+            },
+            {
+              "type": "assignment_redo",
+              "target": "student",
+              "detail": "Student must complete a required redo of the assignment within 5 school days."
+            },
+            {
+              "type": "in-school_suspension",
+              "target": "student",
+              "detail": "1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months."
+            },
+            {
+              "type": "formal_record_entry",
+              "target": "student_record",
+              "detail": "Record conduct code AI-2 and the disciplinary response in the student's formal conduct record."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF1",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF1",
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "parent_conference",
+            "target": "student's parents/guardians",
+            "detail": "Schedule a parent conference as required by the handbook for confirmed match above 30 percent."
+          },
+          {
+            "type": "assignment_redo",
+            "target": "student",
+            "detail": "Student must complete a required redo of the assignment within 5 school days."
+          },
+          {
+            "type": "in-school_suspension",
+            "target": "student",
+            "detail": "1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months."
+          },
+          {
+            "type": "formal_record_entry",
+            "target": "student_record",
+            "detail": "Record conduct code AI-2 and the disciplinary response in the student's formal conduct record."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF1",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. I understand we're here to review a tenth-grade student's English research assignment for a possible academic-integrity violation. As the referring teacher, I'm prepared to share my findings from the assignment review. Before we proceed, I'd like to confirm \u2014 is Ms. Okafor present, and do we have the registrar available as well, so we can follow the case-review routine properly?",
+            "speaker": "A2",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. I understand we're here to review a tenth-grade student's English research assignment for a possible academic-integrity violation. As the referring teacher, I'm prepared to share my findings from the assignment review. Before we proceed, I'd like to confirm \u2014 is Ms. Okafor present, and do we have the registrar available as well, so we can follow the case-review routine properly?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Mr. Bennett. Yes, I'm present as Dean of Students. I'm ready to hear your report as the referring teacher. We'll also need to hear from the registrar before I can close the review and record my decision, per our case-review routine. Please go ahead with your findings.",
+            "speaker": "A1",
+            "turn": 1,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Mr. Bennett. Yes, I'm present as Dean of Students. I'm ready to hear your report as the referring teacher. We'll also need to hear from the registrar before I can close the review and record my decision, per our case-review routine. Please go ahead with your findings.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Before we proceed, I need to share a finding from a conduct audit I completed this morning. My audit identified one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case, but I'm disclosing it now so it can be properly considered in this review.",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Before we proceed, I need to share a finding from a conduct audit I completed this morning. My audit identified one prior substantiated academic-integrity violation from 8 months ago. Under the handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I have not yet attached this audit to the case, but I'm disclosing it now so it can be properly considered in this review.\"}"
+          },
+          {
+            "type": " ",
+            "speaker": "A3",
+            "turn": 3,
+            "raw_output": "{\"type\":\" \"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF1",
+            "text": "My assignment review found that 38 percent of the submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.",
+            "speaker": "A2",
+            "turn": 4,
+            "raw_output": "{\"type\":\"reveal\",\"fact_id\":\"PF1\",\"text\":\"My assignment review found that 38 percent of the submission matches an uncited online source, and the student acknowledged using the source without attribution during a conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed the review yesterday but have not yet entered it in the case system.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Thank you, Mr. Bennett and Ms. Ibarra, for both reports. I now have the referring teacher's report confirming a 38 percent match with an uncited source and the student's acknowledgment, and the registrar's report identifying a prior substantiated academic-integrity violation from 8 months ago. Per the case-review routine, I've received both required reports \u2014 one from the referring teacher and one from the registrar \u2014 so I'm now in a position to close the review and record my decision. Before I do so, I want to confirm my understanding of how these two findings interact under the handbook: Mr. Bennett's finding triggers a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra's finding indicates this would be a second substantiated violation within 12 months, which requires 1 day of in-school suspension and conduct code AI-2. Are there any additional facts either of you needs to formally disclose before I record my decision?",
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"say\",\n  \"text\": \"Thank you, Mr. Bennett and Ms. Ibarra, for both reports. I now have the referring teacher's report confirming a 38 percent match with an uncited source and the student's acknowledgment, and the registrar's report identifying a prior substantiated academic-integrity violation from 8 months ago. Per the case-review routine, I've received both required reports \u2014 one from the referring teacher and one from the registrar \u2014 so I'm now in a position to close the review and record my decision. Before I do so, I want to confirm my understanding of how these two findings interact under the handbook: Mr. Bennett's finding triggers a zero on the assignment, a required redo within 5 school days, and a parent conference. Ms. Ibarra's finding indicates this would be a second substantiated violation within 12 months, which requires 1 day of in-school suspension and conduct code AI-2. Are there any additional facts either of you needs to formally disclose before I record my decision?\"\n}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "disciplinary_response": "in-school suspension",
+                "suspension_days": 1,
+                "assignment_score": 0,
+                "redo_due_within_school_days": 5,
+                "conduct_code": "AI-2"
+              },
+              "credited_facts": [
+                "PF1",
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "parent_conference",
+                  "target": "student's parents/guardians",
+                  "detail": "Schedule a parent conference as required by the handbook for confirmed match above 30 percent."
+                },
+                {
+                  "type": "assignment_redo",
+                  "target": "student",
+                  "detail": "Student must complete a required redo of the assignment within 5 school days."
+                },
+                {
+                  "type": "in-school_suspension",
+                  "target": "student",
+                  "detail": "1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months."
+                },
+                {
+                  "type": "formal_record_entry",
+                  "target": "student_record",
+                  "detail": "Record conduct code AI-2 and the disciplinary response in the student's formal conduct record."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF1",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 6,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"disciplinary_response\": \"in-school suspension\",\n      \"suspension_days\": 1,\n      \"assignment_score\": 0,\n      \"redo_due_within_school_days\": 5,\n      \"conduct_code\": \"AI-2\"\n    },\n    \"credited_facts\": [\n      \"PF1\",\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"parent_conference\",\n        \"target\": \"student's parents/guardians\",\n        \"detail\": \"Schedule a parent conference as required by the handbook for confirmed match above 30 percent.\"\n      },\n      {\n        \"type\": \"assignment_redo\",\n        \"target\": \"student\",\n        \"detail\": \"Student must complete a required redo of the assignment within 5 school days.\"\n      },\n      {\n        \"type\": \"in-school_suspension\",\n        \"target\": \"student\",\n        \"detail\": \"1 school day of in-school suspension per handbook requirement for second substantiated violation within 12 months.\"\n      },\n      {\n        \"type\": \"formal_record_entry\",\n        \"target\": \"student_record\",\n        \"detail\": \"Record conduct code AI-2 and the disciplinary response in the student's formal conduct record.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF1\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "rollout_index": 3,
+        "temperature": 0.475,
+        "settled": true,
+        "passed": false,
+        "auto_failed_on_turn_cap": false,
+        "turn_count": 6,
+        "revealed_facts": [
+          "PF2"
+        ],
+        "content_results": {
+          "C1": true,
+          "C2": true,
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": false
+        },
+        "provenance_results": {
+          "P1": false
+        },
+        "settlement": {
+          "decisions": {
+            "disciplinary_response": "in-school suspension and formal conduct entry",
+            "suspension_days": 1,
+            "assignment_score": 0,
+            "redo_due_within_school_days": 5,
+            "conduct_code": "AI-2"
+          },
+          "credited_facts": [
+            "PF2"
+          ],
+          "commitments": [
+            {
+              "type": "record_entry",
+              "target": "student_record",
+              "detail": "Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months."
+            },
+            {
+              "type": "disciplinary_action",
+              "target": "student",
+              "detail": "Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months."
+            },
+            {
+              "type": "academic_action",
+              "target": "student",
+              "detail": "Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match."
+            },
+            {
+              "type": "parent_notification",
+              "target": "parent_guardian",
+              "detail": "Schedule parent conference as required by handbook for confirmed match above 30 percent."
+            }
+          ],
+          "justification_fact_ids": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "PF2"
+          ]
+        },
+        "credited_facts": [
+          "PF2"
+        ],
+        "commitments": [
+          {
+            "type": "record_entry",
+            "target": "student_record",
+            "detail": "Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months."
+          },
+          {
+            "type": "disciplinary_action",
+            "target": "student",
+            "detail": "Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months."
+          },
+          {
+            "type": "academic_action",
+            "target": "student",
+            "detail": "Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match."
+          },
+          {
+            "type": "parent_notification",
+            "target": "parent_guardian",
+            "detail": "Schedule parent conference as required by handbook for confirmed match above 30 percent."
+          }
+        ],
+        "justification_fact_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "PF2"
+        ],
+        "transcript": [
+          {
+            "type": "say",
+            "text": "Good morning, everyone. Thank you for joining this case review. As you know, we're here to review a tenth-grade student regarding a possible academic-integrity violation on an English research assignment. Per our case-review routine, I need to hear one report from the referring teacher and one from the registrar before I can close the review and record my decision. Could the referring teacher please begin with their report?",
+            "speaker": "A1",
+            "turn": 0,
+            "raw_output": "```json\n{\"type\": \"say\", \"text\": \"Good morning, everyone. Thank you for joining this case review. As you know, we're here to review a tenth-grade student regarding a possible academic-integrity violation on an English research assignment. Per our case-review routine, I need to hear one report from the referring teacher and one from the registrar before I can close the review and record my decision. Could the referring teacher please begin with their report?\"}\n```"
+          },
+          {
+            "type": "say",
+            "text": "[unparsable model output: Expecting ',' delimiter: line 1 column 12 (char 11)]",
+            "speaker": "A2",
+            "turn": 1,
+            "raw_output": "{\"type\":\" \"say\", \"text\": \"Good morning, Ms. Okafor. I'm the referring teacher in this case. My assignment review found that 38 percent of the student's submission matches an uncited online source, and the student acknowledged using that source without attribution during our conference. Under the handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I completed this review yesterday but have not yet entered it in the case system. I'll share the formal documentation now.\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Ms. Okafor. I'm ready to provide my report as registrar, but I first need to hear Mr. Bennett's report from the referring teacher, as our case-review routine specifies you hear one report from the referring teacher and one from the registrar. Mr. Bennett, could you please go ahead with your report?",
+            "speaker": "A3",
+            "turn": 2,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Ms. Okafor. I'm ready to provide my report as registrar, but I first need to hear Mr. Bennett's report from the referring teacher, as our case-review routine specifies you hear one report from the referring teacher and one from the registrar. Mr. Bennett, could you please go ahead with your report?\"}"
+          },
+          {
+            "type": "say",
+            "text": "Good morning, Ms. Okafor and Ms. Ibarra. I apologize for the technical difficulty a moment ago. Here is my report as the referring teacher. I completed my review of the student's English research assignment yesterday. My findings were significant: 38 percent of the submission matched an uncited online source, and when I met with the student in conference, they acknowledged using that source without attribution. Under our academic-integrity handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I have not yet entered this finding in the case system, which is why I'm presenting it now. I'll now hand things over to Ms. Ibarra for the registrar's report.",
+            "speaker": "A2",
+            "turn": 3,
+            "raw_output": "{\"type\": \"say\", \"text\": \"Good morning, Ms. Okafor and Ms. Ibarra. I apologize for the technical difficulty a moment ago. Here is my report as the referring teacher. I completed my review of the student's English research assignment yesterday. My findings were significant: 38 percent of the submission matched an uncited online source, and when I met with the student in conference, they acknowledged using that source without attribution. Under our academic-integrity handbook, a confirmed match above 30 percent requires a zero on the assignment, a required redo within 5 school days, and a parent conference. I have not yet entered this finding in the case system, which is why I'm presenting it now. I'll now hand things over to Ms. Ibarra for the registrar's report.\"}"
+          },
+          {
+            "type": "reveal",
+            "fact_id": "PF2",
+            "text": "Thank you, Mr. Bennett. Here is my report as registrar. This morning I completed a conduct audit on the student and found one prior substantiated academic-integrity violation from 8 months ago. Under our academic-integrity handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I completed this audit this morning but had not yet attached it to the case. I am presenting it now as my registrar's report.",
+            "speaker": "A3",
+            "turn": 4,
+            "raw_output": "```json\n{\"type\": \"reveal\", \"fact_id\": \"PF2\", \"text\": \"Thank you, Mr. Bennett. Here is my report as registrar. This morning I completed a conduct audit on the student and found one prior substantiated academic-integrity violation from 8 months ago. Under our academic-integrity handbook, a second substantiated violation within 12 months requires 1 school day of in-school suspension and the conduct code AI-2, rather than a warning or informal note. I completed this audit this morning but had not yet attached it to the case. I am presenting it now as my registrar's report.\"}\n```"
+          },
+          {
+            "type": "settle",
+            "settlement": {
+              "decisions": {
+                "disciplinary_response": "in-school suspension and formal conduct entry",
+                "suspension_days": 1,
+                "assignment_score": 0,
+                "redo_due_within_school_days": 5,
+                "conduct_code": "AI-2"
+              },
+              "credited_facts": [
+                "PF2"
+              ],
+              "commitments": [
+                {
+                  "type": "record_entry",
+                  "target": "student_record",
+                  "detail": "Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months."
+                },
+                {
+                  "type": "disciplinary_action",
+                  "target": "student",
+                  "detail": "Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months."
+                },
+                {
+                  "type": "academic_action",
+                  "target": "student",
+                  "detail": "Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match."
+                },
+                {
+                  "type": "parent_notification",
+                  "target": "parent_guardian",
+                  "detail": "Schedule parent conference as required by handbook for confirmed match above 30 percent."
+                }
+              ],
+              "justification_fact_ids": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "PF2"
+              ]
+            },
+            "speaker": "A1",
+            "turn": 5,
+            "raw_output": "```json\n{\n  \"type\": \"settle\",\n  \"settlement\": {\n    \"decisions\": {\n      \"disciplinary_response\": \"in-school suspension and formal conduct entry\",\n      \"suspension_days\": 1,\n      \"assignment_score\": 0,\n      \"redo_due_within_school_days\": 5,\n      \"conduct_code\": \"AI-2\"\n    },\n    \"credited_facts\": [\n      \"PF2\"\n    ],\n    \"commitments\": [\n      {\n        \"type\": \"record_entry\",\n        \"target\": \"student_record\",\n        \"detail\": \"Record formal conduct entry with code AI-2 for second substantiated academic-integrity violation within 12 months.\"\n      },\n      {\n        \"type\": \"disciplinary_action\",\n        \"target\": \"student\",\n        \"detail\": \"Assign 1 day of in-school suspension per handbook requirement for second violation within 12 months.\"\n      },\n      {\n        \"type\": \"academic_action\",\n        \"target\": \"student\",\n        \"detail\": \"Record zero on the English research assignment and require redo within 5 school days per Mr. Bennett's report of 38% uncited match.\"\n      },\n      {\n        \"type\": \"parent_notification\",\n        \"target\": \"parent_guardian\",\n        \"detail\": \"Schedule parent conference as required by handbook for confirmed match above 30 percent.\"\n      }\n    ],\n    \"justification_fact_ids\": [\n      \"S1\",\n      \"S2\",\n      \"S3\",\n      \"S4\",\n      \"PF2\"\n    ]\n  }\n}\n```"
+          }
+        ]
+      }
+    ],
+    "llm_call_error": null
+  },
+  "fix_instructions": "**For C6 (ENCODING MISMATCH, 2 rollouts):** The check likely expects `disciplinary_response` to be exactly the string \"in-school suspension\" but the model sometimes encodes it as a composite sentence like \"1 day in-school suspension, zero on assignment, required redo within 5 school days, and parent conference\" or \"in-school suspension and formal conduct entry.\" The check wording should be loosened to accept any value that contains the substring \"in-school suspension\" (case-insensitive), rather than requiring an exact match. However, this loosening carries a **LEAKED regression risk**: a lone decision-maker who guesses \"in-school suspension\" without knowing PF1 would also pass, since that value is already the baseline for a first offense under PF2 alone. To mitigate this risk, C6 should additionally require that `assignment_score` equals 0 AND `redo_due_within_school_days` equals 5 \u2014 values that are specifically driven by PF1 and not by PF2 alone. If C6 already checks these fields, then the only fix needed is relaxing the `disciplinary_response` field match from exact equality to a substring/contains check for \"in-school suspension\" while keeping the other field exact-match requirements intact. If C6 only checks `disciplinary_response`, add the `assignment_score==0` and `redo_due_within_school_days==5` conditions to C6 so that the loosened `disciplinary_response` match does not become guessable without PF1.\n\n**For P1 (NEVER REVEALED, 1 rollout \u2014 rollout 3):** The failure was caused by A2's turn 1 output being unparsable (JSON syntax error in the raw_output), which lost the intended `reveal` action for PF1. A2 then retried with a `say` action at turn 3 that contained all the PF1 information but did not use the `reveal` action type with `fact_id: PF1`. This is not a check-wording problem \u2014 it is a disclosure reliability problem. The fix should be in the shared_context or the consultation norm for A2: add an instruction that if a prior output was not acknowledged or if the agent is unsure whether their reveal was received, they MUST re-issue the information using an explicit `reveal` action with the correct `fact_id`, not merely a `say` action. Alternatively, add a shared_context sentence such as: \"If your previous action was not acknowledged or you suspect a technical error, you must re-issue any undisclosed private finding using a new reveal action with the correct fact_id before the review closes.\" No change to the P1 check wording is needed \u2014 P1's logic (requiring PF1 in justification_fact_ids AND revealed in transcript) is sound; the problem is that A2 failed to complete the reveal action in rollout 3."
+}

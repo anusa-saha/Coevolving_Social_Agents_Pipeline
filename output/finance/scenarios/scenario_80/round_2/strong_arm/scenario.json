@@ -1,0 +1,133 @@
+{
+  "scenario_id": "scenario_80",
+  "scenario_type": "derivatives_collateral_allocation",
+  "description": "A collateral management director must finalize the collateral to replace a derivatives margin posting, including the asset type, amount, currency, account structure, and operating instructions, with input from regulatory capital and counterparty coverage.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maya",
+      "role": "Collateral Management Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Jonas",
+      "role": "Regulatory Capital Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Elena",
+      "role": "Counterparty Coverage Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "The bank must replace collateral supporting a derivatives position before the next collateral settlement cycle.",
+    "S2": "The counterparty's current margin call shows $6,000,000 of required delivered collateral value.",
+    "S3": "The draft operations instruction proposes delivering $6,000,000 of the bank's corporate bonds.",
+    "S4": "Maya makes the binding collateral instruction, and the bank's standard pre-settlement routine is a brief round-robin in which regulatory capital and counterparty coverage each state any relevant issue before Maya may release or amend the instruction immediately."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Jonas found a regulatory capital memo this morning stating that the proposed corporate bonds are no longer eligible collateral for this derivatives portfolio; the replacement must be cash, and the delivered collateral value must still equal exactly $6,000,000. The memo has not yet been attached to the settlement file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Elena confirmed in a counterparty email received this morning that $500,000 of existing cash collateral will remain credited toward this call, so only $5,500,000 of new USD cash must be posted, and it must go into a segregated account. She has not yet updated the counterparty terms record."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "collateral_type": "string",
+      "new_collateral_amount_usd": "integer",
+      "collateral_currency": "string",
+      "segregated_account_required": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The replacement collateral must be cash.",
+    "The new cash posting must be exactly $5,500,000.",
+    "The new cash must be denominated in USD.",
+    "The new cash must be placed in a segregated account.",
+    "The settlement instruction must include a commitment addressing the counterparty terms record or segregated-account instruction."
+  ],
+  "content_checks": {
+    "C1": "decisions['collateral_type'] == 'cash' or decisions['collateral_type'] == 'Cash' or decisions['collateral_type'] == 'USD cash' or decisions['collateral_type'] == 'USD Cash' or decisions['collateral_type'] == 'usd cash'",
+    "C2": "decisions['new_collateral_amount_usd'] == 5500000",
+    "C3": "decisions['collateral_currency'] == 'USD'",
+    "C4": "decisions['segregated_account_required'] == True",
+    "C5": "any('counterparty' in c['target'] and 'terms' in c['target'] and 'record' in c['target'] for c in commitments) or any(c['target'] == 'Elena' and 'segregated account' in c['detail'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "P1"
+      ],
+      "why": "The public draft calls for corporate bonds, but PF1 changes collateral_type from corporate bonds to cash and supplies the regulatory reason that must be cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "P2"
+      ],
+      "why": "PF2 changes the new posting from the publicly stated $6,000,000 call to exactly $5,500,000 of USD cash, requires a segregated account, and supplies the counterparty terms-record or segregated-account instruction needed for the settlement commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

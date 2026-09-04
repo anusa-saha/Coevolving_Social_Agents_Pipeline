@@ -1,0 +1,148 @@
+{
+  "scenario_id": "scenario_59",
+  "scenario_type": "cargo_staging_and_dispatch",
+  "description": "A convoy commander must finalize the staging and dispatch plan for two routine support loads moving from a forward logistics point to a support compound, including vehicle assignments, departure timing, and required maintenance coordination.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Morgan",
+      "role": "Convoy Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Sgt. Alvarez",
+      "role": "Distribution NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "WO1 Patel",
+      "role": "Motor Transport Warrant Officer"
+    }
+  ],
+  "shared_context": {
+    "S1": "Two loads are ready at the forward logistics point: four pallets of temperature-sensitive clinic supplies and six pallets of generator repair parts.",
+    "S2": "Truck 12 and Truck 18 are available, and the normal assignment places the clinic supplies on Truck 18 and the generator parts on Truck 12.",
+    "S3": "The receiving support compound is three hours away, and both trucks can normally carry their assigned loads.",
+    "S4": "Capt. Morgan issues the final convoy dispatch plan.",
+    "S5": "Before dispatch orders are published, the convoy conducts its routine load-and-vehicle confirmation with the distribution NCO and motor transport warrant officer.",
+    "S6": "When a vehicle's powered cargo inverter is found unavailable, the dispatch plan must include a maintenance/repair request for that inverter as a committed action item.",
+    "S7": "If Truck 18's inverter is unavailable but the truck itself is otherwise operational, and Truck 12 is certified for exactly six pallets, the correct reassignment is: Truck 12 takes the four pallets of clinic supplies, which are within its six-pallet certification and can use its operational inverter, and Truck 18 takes the six pallets of generator repair parts, which do not require powered refrigeration."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Sgt. Alvarez confirmed this morning that the receiving clinic has an exact 0930-1000 appointment for the temperature-sensitive supplies, so the convoy must depart at 0630 to meet the three-hour transit time; the appointment has not yet been entered on the movement board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "WO1 Patel's inspection found that Truck 18's powered cargo inverter is unavailable, while Truck 12's current payload certification is exactly six pallets; the inspection result is still being entered in the motor-pool system."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "departure_time": "string",
+      "clinic_supplies_vehicle": "string",
+      "generator_parts_vehicle": "string",
+      "clinic_receiving_window": "string",
+      "truck_18_dispatch_status": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The convoy must depart at 0630 to meet the clinic appointment.",
+    "The clinic supplies must be assigned to Truck 12.",
+    "The generator repair parts must be assigned to Truck 18.",
+    "The clinic receiving window must be recorded as 0930-1000.",
+    "Truck 18's unavailable powered inverter must trigger a maintenance coordination commitment.",
+    "Truck 18's dispatch status must identify that it is carrying the generator parts.",
+    "The motor-transport inspection finding must be cited in the justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['departure_time'] in ['0630', 'exactly 0630', 'No later than 0630', 'NLT 0630']",
+    "C2": "decisions['clinic_supplies_vehicle'] == 'Truck 12'",
+    "C3": "decisions['generator_parts_vehicle'] == 'Truck 18'",
+    "C4": "decisions['clinic_receiving_window'] == '0930-1000'",
+    "C5": "any((c['type'] == 'maintenance_request' or c['type'] == 'maintenance_repair_request') and 'Truck 18' in c['target'] and 'inverter' in c['target'] for c in commitments)",
+    "C6": "'generator parts' in decisions['truck_18_dispatch_status']"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C4"
+      ],
+      "why": "The exact 0930-1000 receiving appointment changes the departure from the normal 0700 plan to exactly 0630 and changes the recorded clinic receiving window to 0930-1000."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C2",
+        "C3",
+        "C5",
+        "C6",
+        "P1"
+      ],
+      "why": "Truck 18's unavailable inverter and Truck 12's exact six-pallet certification change the assignments to four clinic pallets on Truck 12 and six generator-part pallets on Truck 18, establish that Truck 18 is dispatched with generator parts, and require an inverter maintenance request."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

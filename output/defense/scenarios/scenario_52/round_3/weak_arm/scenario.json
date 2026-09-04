@@ -1,0 +1,166 @@
+{
+  "scenario_id": "scenario_52",
+  "scenario_type": "warehouse_storage_and_issue_planning",
+  "description": "An S-4 logistics officer must publish the next three-day warehouse slotting and issue plan for chemical supplies, clinic consumables, and vehicle filters, assigning storage bays, setting issue dates, and recording the controls needed to keep the plan executable.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "S-4 Logistics Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Warehouse NCO"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lt. Shah",
+      "role": "Medical Logistics Liaison"
+    },
+    {
+      "agent_id": "A4",
+      "name": "SSG Petrov",
+      "role": "Maintenance Supply NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The warehouse has three available bays: Bay 1 holds up to 8 pallets of ordinary dry goods, Bay 2 is a caged bay holding up to 8 pallets, and Bay 3 is a temperature-controlled bay holding up to 8 pallets.",
+    "S2": "The current draft places the 2-pallet chemical-supply shipment in Bay 1, the 2-pallet clinic-consumables shipment in Bay 3, and the 6-pallet vehicle-filter shipment in Bay 2.",
+    "S3": "The warehouse is receiving all three shipments this week and must issue each shipment to its supported section by the end of the workweek.",
+    "S4": "Maj. Alvarez publishes the binding warehouse plan after the routine weekly synchronization round, in which the warehouse, medical logistics, and maintenance supply representatives report changes to their receiving or issue requirements."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "SFC Morgan confirmed this morning that the chemical shipment contains oxidizing material requiring the caged Bay 2 and a mandatory 48-hour stabilization hold after Tuesday 0800 receipt, so its issue date must be Thursday 0800; the receiving paperwork is still being reconciled and has not been added to the draft plan."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Lt. Shah confirmed with the clinic this morning that its shipment must remain in temperature-controlled Bay 3 and that the clinic receiving dock is unavailable on Wednesday and Thursday, fixing the issue appointment at Friday 0900; the dock calendar update has not yet reached the warehouse draft."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "SSG Petrov confirmed that the 6-pallet filter shipment is not authorized for the caged Bay 2 or temperature-controlled Bay 3 and must instead be stored in ordinary-goods Bay 1, with maintenance requesting issue on Monday at 1500 for an inspection cycle; the handling restriction is recorded in the maintenance ledger but has not been entered on the warehouse board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "chemical_storage_bay": "string",
+      "chemical_issue_time": "string",
+      "clinic_storage_bay": "string",
+      "clinic_issue_time": "string",
+      "filter_storage_bay": "string",
+      "filter_issue_time": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The chemical shipment must be stored in Bay 2 and issued Thursday at 0800.",
+    "The clinic shipment must remain in Bay 3 and be issued Friday at 0900.",
+    "The filter shipment must be stored in Bay 1 and issued Monday at 1500.",
+    "The plan must include a chemical stabilization-hold control.",
+    "The plan must include a clinic dock-availability control.",
+    "The plan must include a filter-capacity verification control.",
+    "The decision-maker must cite the medical logistics fact in the justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['chemical_storage_bay'] == 'Bay 2'",
+    "C2": "decisions['chemical_issue_time'] == 'Thursday 0800'",
+    "C3": "decisions['clinic_storage_bay'] == 'Bay 3'",
+    "C4": "decisions['clinic_issue_time'] == 'Friday 0900'",
+    "C5": "decisions['filter_storage_bay'] == 'Bay 1'",
+    "C6": "decisions['filter_issue_time'] == 'Monday 1500'",
+    "C7": "any('stabilization' in c['type'] or 'stabilization' in c['detail'] or 'hold' in c['type'] or 'hold' in c['detail'] for c in commitments) or (decisions['chemical_issue_time'] == 'Thursday 0800' and 'PF1' in justification_fact_ids)",
+    "C8": "any('dock' in c['type'] or 'dock' in c['detail'] or 'calendar' in c['type'] or 'calendar' in c['detail'] or 'clinic' in c['type'] or 'clinic' in c['detail'] for c in commitments) or (decisions['clinic_issue_time'] == 'Friday 0900' and 'PF2' in justification_fact_ids)",
+    "C9": "any('capacity' in c['type'] or 'capacity' in c['detail'] or 'verification' in c['type'] or 'verification' in c['detail'] or 'pallet' in c['type'] or 'pallet' in c['detail'] for c in commitments) or (decisions['filter_storage_bay'] == 'Bay 1' and 'PF3' in justification_fact_ids)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C7"
+      ],
+      "why": "The oxidizing-material restriction changes chemical storage from Bay 1 to Bay 2, changes its issue time to Thursday 0800 after the exact 48-hour hold, and requires the stabilization-hold control."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C8",
+        "P1"
+      ],
+      "why": "The clinic dock closure changes the issue appointment to Friday 0900, requires the clinic dock-coordination control, and supplies the specific medical logistics fact that must be cited."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C5",
+        "C6",
+        "C9"
+      ],
+      "why": "The handling restriction changes filter storage from the draft Bay 2 assignment to Bay 1, sets issue for Monday 1500 for the inspection cycle, and requires a filter capacity-verification control."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 4
+}

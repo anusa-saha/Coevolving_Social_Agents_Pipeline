@@ -1,0 +1,173 @@
+{
+  "scenario_id": "scenario_62",
+  "scenario_type": "dividend_authorization",
+  "description": "A finance director must authorize and structure a proposed dividend from a regulated subsidiary to its parent, deciding the dividend amount, post-payment capital position, tax remittance, and required cash reserve with input from capital risk, tax, and subsidiary controllership.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Finance Director"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Martin",
+      "role": "Capital Risk Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Nadia",
+      "role": "Tax Manager"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jonas",
+      "role": "Subsidiary Controller"
+    }
+  ],
+  "shared_context": {
+    "S1": "The regulated subsidiary has proposed a $6,000,000 dividend to its parent.",
+    "S2": "The subsidiary currently reports $8,000,000 of distributable retained earnings.",
+    "S3": "Elena makes the final authorization decision for the upstream dividend.",
+    "S4": "As part of the normal month-end capital distribution routine, Elena asks capital risk, tax, and subsidiary controllership to report any constraints before authorizing the payment."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Martin's stress test completed this morning shows that the subsidiary can pay no more than $4,000,000 while retaining the required 12.0% post-dividend capital ratio; the test also requires monthly capital-ratio monitoring for six months, but Martin has not yet entered the result in the distribution worksheet."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Nadia confirmed in a tax memo received this morning that the dividend is subject to 12% withholding: a $4,000,000 dividend creates exactly $480,000 of withholding and a $3,520,000 net receipt, with the tax due within five business days; the memo has not yet been circulated to finance."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "While reviewing the intercompany funding agreement this week, Jonas found that the subsidiary must retain a $1,500,000 debt-service reserve after any dividend; its current cash forecast can support a $4,000,000 payment while preserving that reserve, but the clause is not yet recorded in the payment checklist."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "dividend_approved": "boolean",
+      "dividend_amount_usd": "integer",
+      "post_dividend_capital_ratio_pct": "number",
+      "withholding_tax_usd": "integer",
+      "parent_net_receipt_usd": "integer",
+      "debt_service_reserve_usd": "integer",
+      "tax_remittance_due_within_days": "integer"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The dividend must be approved for exactly $4,000,000.",
+    "The post-dividend capital ratio must be recorded as exactly 12.0%.",
+    "Withholding tax must be set at exactly $480,000 and the parent's net receipt at exactly $3,520,000.",
+    "The subsidiary must retain exactly $1,500,000 for debt service.",
+    "The withholding tax must be remitted within five business days.",
+    "The authorization must include six months of monthly capital-ratio monitoring."
+  ],
+  "content_checks": {
+    "C1": "decisions['dividend_approved'] == True",
+    "C2": "decisions['dividend_amount_usd'] == 4000000",
+    "C3": "decisions['post_dividend_capital_ratio_pct'] == 12.0",
+    "C4": "decisions['withholding_tax_usd'] == 480000",
+    "C5": "decisions['parent_net_receipt_usd'] == 3520000",
+    "C6": "decisions['debt_service_reserve_usd'] == 1500000",
+    "C7": "decisions['tax_remittance_due_within_days'] <= 5",
+    "C8": "any(c['type'] == 'capital_ratio_monitoring' for c in commitments)",
+    "C9": "any(c['type'] == 'tax_remittance' for c in commitments)",
+    "C10": "any(c['type'] == 'debt_service_reserve' for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed",
+    "P2": "'PF2' in justification_fact_ids and 'PF2' in revealed",
+    "P3": "'PF3' in justification_fact_ids and 'PF3' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C3",
+        "C8",
+        "P1"
+      ],
+      "why": "The proposed $6,000,000 payment would not preserve the required capital position; PF1 changes dividend_amount_usd to exactly $4,000,000, post_dividend_capital_ratio_pct to exactly 12.0%, and adds six months of monthly monitoring."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C4",
+        "C5",
+        "C7",
+        "C9",
+        "P2"
+      ],
+      "why": "PF2 changes withholding_tax_usd to exactly $480,000, parent_net_receipt_usd to exactly $3,520,000, and tax_remittance_due_within_days to five days while adding the tax-remittance commitment."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C6",
+        "C10",
+        "P3"
+      ],
+      "why": "PF3 changes the authorization from an unsupported payment to an approved $4,000,000 payment that preserves exactly $1,500,000 of debt-service reserve and adds the reserve commitment."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}

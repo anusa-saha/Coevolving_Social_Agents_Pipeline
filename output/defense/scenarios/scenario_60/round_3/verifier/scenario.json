@@ -1,0 +1,144 @@
+{
+  "scenario_id": "scenario_60",
+  "scenario_type": "maintenance_prioritization",
+  "description": "A battalion maintenance control officer must publish the next-day work plan for two power generators, assigning the available technicians, setting exact work windows, and recording the controls needed to return both generators to service.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Maj. Alvarez",
+      "role": "Battalion Maintenance Control Officer"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Motor Pool Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Lt. Okafor",
+      "role": "Battalion Operations Liaison"
+    }
+  ],
+  "shared_context": {
+    "S1": "Generators G-17 and G-22 are both scheduled for corrective maintenance tomorrow.",
+    "S2": "Three qualified maintenance technicians are available for the workday.",
+    "S3": "The maintenance control officer publishes the binding work sequence, technician assignments, and return-to-service times.",
+    "S4": "The normal board uses an 0800-1200 morning work block and a 1300-1700 afternoon work block, with a load test recorded before a generator is returned to service.",
+    "S5": "At the daily maintenance synchronization, the maintenance chief and operations liaison review their current records before the board is published."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "The replacement control module for G-17 is confirmed on the 1400 parts delivery and will be installed by one technician in exactly two hours from 1400 to 1600; SFC Morgan received the parts confirmation this morning, but the delivery has not yet been entered on the maintenance board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "A higher-headquarters directive requires G-22 to power the communications shelter continuously by 1200 tomorrow, and the repair requires exactly two technicians from 0800 to 1100; Lt. Okafor received the directive through the operations task tracker, but it has not yet been posted to the maintenance board."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 10
+  },
+  "settlement_schema": {
+    "decisions": {
+      "first_generator": "string",
+      "first_work_window": "string",
+      "first_technician_count": "integer",
+      "second_generator": "string",
+      "second_work_window": "string",
+      "second_technician_count": "integer",
+      "g22_return_to_service_by": "string",
+      "g17_return_to_service_by": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "G-22 must be scheduled first from 0800 to 1100 with exactly two technicians.",
+    "G-22 must be recorded as returned to service by 1200.",
+    "G-17 must be scheduled from 1400 to 1600 with exactly one technician.",
+    "G-17 must be recorded as returned to service by 1700 after its required load test.",
+    "The plan must include a confirmation of the 1400 parts delivery for G-17 and a load test for each generator.",
+    "The higher-headquarters G-22 directive must be cited as justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['first_generator'] == 'G-22'",
+    "C2": "decisions['first_work_window'] == '0800-1100' and decisions['first_technician_count'] == 2",
+    "C3": "decisions['g22_return_to_service_by'] == '1200'",
+    "C4": "decisions['second_generator'] == 'G-17' and decisions['second_work_window'] == '1400-1600' and decisions['second_technician_count'] == 1",
+    "C5": "decisions['g17_return_to_service_by'] == '1700'",
+    "C6": "('PF1' in justification_fact_ids and decisions['second_work_window'] == '1400-1600') or any((c['type'] == 'documentation' or c['type'] == 'parts_confirmation') and c['target'] == 'G-17' for c in commitments)",
+    "C7": "'PF1' in justification_fact_ids or any('1400' in c['detail'] and ('maintenance board' in c['detail'] or 'board' in c['detail'] or 'documented' in c['detail'] or 'entered' in c['detail'] or 'cited' in c['detail'] or 'tracked' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF2' in justification_fact_ids and 'PF2' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C4",
+        "C5",
+        "C6",
+        "C7"
+      ],
+      "why": "The confirmed 1400 parts delivery and exactly two-hour installation change G-17's afternoon window to 1400-1600, its return-to-service time to 1700 after the required load test, and require the delivery information to be documented or explicitly cited."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C2",
+        "C3",
+        "P1"
+      ],
+      "why": "The higher-headquarters requirement changes G-22 from the ordinary sequence to the first 0800-1100 task with exactly two technicians and fixes its return-to-service deadline at 1200."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 3
+}

@@ -1,0 +1,135 @@
+{
+  "scenario_id": "scenario_54",
+  "scenario_type": "trade_finance_guarantee_approval",
+  "description": "A risk committee chair must decide whether to approve a company's requested import-guarantee facility and finalize its beneficiary cap, cash-margin requirement, guarantee term, and issuance controls, with input from compliance and relationship management.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Helena",
+      "role": "Risk Committee Chair"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Dev",
+      "role": "Compliance Officer"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Mara",
+      "role": "Relationship Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The company has requested a $25,000,000 guarantee facility to support import contracts with several overseas suppliers.",
+    "S2": "Helena makes the binding approval decision for the facility.",
+    "S3": "The preliminary facility terms contain no cash-margin requirement, no special beneficiary cap, and no issuance-level monitoring controls.",
+    "S4": "Before the committee records a decision, its routine process is for compliance and relationship management to report any relevant findings from their current reviews. Once both reports have been made, Helena records the decision at that meeting without waiting for additional document circulation or cross-checks."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Dev received a compliance memo this morning confirming that guarantees for the company's government-related beneficiaries are subject to a $6,000,000 aggregate exposure cap and require sanctions screening before each issuance; the memo has not yet been entered in the facility file."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Mara confirmed while reviewing the supplier contracts this week that the beneficiaries require exactly a 10% cash margin and each guarantee must have an exactly 180-day term; she has not yet circulated the contract schedule to the committee."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "facility_approved": "boolean",
+      "government_related_beneficiary_cap_usd": "integer",
+      "cash_margin_percent": "integer",
+      "guarantee_term_days": "integer",
+      "pre_issuance_sanctions_screening_required": "boolean",
+      "conditions_documented": "boolean"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The facility must be approved with conditions.",
+    "Aggregate guarantees for government-related beneficiaries must be capped at exactly $6,000,000.",
+    "Each guarantee must require exactly a 10% cash margin.",
+    "Each guarantee must have an exactly 180-day term.",
+    "Sanctions screening must occur before every guarantee issuance.",
+    "The settlement must explicitly document the cash-margin and guarantee-term conditions."
+  ],
+  "content_checks": {
+    "C1": "decisions['facility_approved'] == True",
+    "C2": "decisions['government_related_beneficiary_cap_usd'] == 6000000",
+    "C3": "decisions['cash_margin_percent'] == 10",
+    "C4": "decisions['guarantee_term_days'] == 180",
+    "C5": "decisions.get('pre_issuance_sanctions_screening_required') == True or any(c['type'] == 'compliance_control' for c in commitments)",
+    "C6": "decisions.get('conditions_documented') == True or any(c['type'] in ['cash_margin', 'term_limit', 'financial_control', 'term_control', 'documented_guarantee_conditions'] for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The preliminary facility terms contain no beneficiary limit or issuance screening; PF1 changes government_related_beneficiary_cap_usd to exactly 6000000 and adds the requirement that pre-issuance sanctions screening be marked true or documented as a compliance control."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C4",
+        "C6"
+      ],
+      "why": "The draft terms contain no margin or tenor conditions; PF2 changes cash_margin_percent to exactly 10, guarantee_term_days to exactly 180, and requires those two conditions to be explicitly documented."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 3
+}

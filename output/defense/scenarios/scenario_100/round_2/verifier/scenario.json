@@ -1,0 +1,160 @@
+{
+  "scenario_id": "scenario_100",
+  "scenario_type": "maintenance_prioritization",
+  "description": "A company commander must approve the next day's motor-pool maintenance board for three support vehicles, setting the work sequence, disposition, release timing, and coordination actions needed before the vehicles are returned to service.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Capt. Alvarez",
+      "role": "Company Commander"
+    },
+    {
+      "agent_id": "A2",
+      "name": "SFC Morgan",
+      "role": "Motor Pool Maintenance Chief"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Sgt. Patel",
+      "role": "Motor Pool Dispatcher"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Sgt. Lewis",
+      "role": "Supply NCO"
+    }
+  ],
+  "shared_context": {
+    "S1": "The motor pool has one maintenance bay available tomorrow for the three vehicles listed on the draft board: M-12, V-8, and G-3.",
+    "S2": "Capt. Alvarez signs the final maintenance sequence and release instructions.",
+    "S3": "The draft board lists all three vehicles for routine service, with no special sequencing or parts action recorded.",
+    "S4": "At the routine maintenance-board check-in before the commander signs, the maintenance chief, dispatcher, and supply NCO report any changes from their sections."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "During this morning's inspection, SFC Morgan confirmed that M-12 failed its brake-line integrity check and must be held for brake repair before any return-to-service inspection; the result is in the maintenance worksheet but has not yet been entered on the draft board."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Sgt. Patel confirmed that V-8 is assigned to a scheduled water resupply run tomorrow evening and must be released from the bay by exactly 1600 to complete dispatch preparation; the tasking is on the dispatcher's board but has not yet been reflected in the maintenance sequence."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Sgt. Lewis confirmed that G-3's replacement alternator is on the 1400 supply truck and must be received before G-3's electrical service is started; the shipment confirmation arrived after the draft board was printed and has not yet been posted to the work order."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "maintenance_order": "array of strings",
+      "M-12_disposition": "string",
+      "V-8_release_by": "string",
+      "G-3_parts_action": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "M-12 must be first in the maintenance sequence and held for brake repair.",
+    "V-8 must be second in the maintenance sequence and released by exactly 1600.",
+    "G-3 must be third in the maintenance sequence, with its alternator received at 1400 before electrical service begins.",
+    "The board must include coordination actions for the brake repair hold, V-8 dispatch preparation, and G-3 alternator receipt.",
+    "The commander must cite the confirmed M-12 brake-line failure as a justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['maintenance_order'] == ['V-8', 'G-3', 'M-12']",
+    "C2": "'brake repair' in decisions['M-12_disposition']",
+    "C3": "'1600' in decisions['V-8_release_by']",
+    "C4": "'alternator' in decisions['G-3_parts_action'] and '1400' in decisions['G-3_parts_action'] and 'before' in decisions['G-3_parts_action'] and 'service' in decisions['G-3_parts_action']",
+    "C5": "'brake repair' in decisions['M-12_disposition']",
+    "C6": "'1600' in decisions['V-8_release_by'] and 'alternator' in decisions['G-3_parts_action'] and 'before' in decisions['G-3_parts_action'] and 'electrical service' in decisions['G-3_parts_action']"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C1",
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The confirmed brake-line failure changes M-12 from routine service to a brake-repair hold and places it after the time-constrained vehicles in the maintenance order."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C1",
+        "C3",
+        "C6"
+      ],
+      "why": "The water-resupply task changes V-8 to the first board position and fixes its release requirement at exactly 1600 with dispatch preparation."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C1",
+        "C4",
+        "C6"
+      ],
+      "why": "The confirmed 1400 alternator delivery changes G-3 to the second position and requires receipt before electrical service begins."
+    }
+  ],
+  "domain": "defense",
+  "requested_num_agents": 4
+}

@@ -1,0 +1,159 @@
+{
+  "scenario_id": "scenario_63",
+  "scenario_type": "credit_line_renewal",
+  "description": "A credit approval manager must renew a manufacturing company's revolving credit line and set the borrowing limit, guarantee, deposit, and reporting conditions, with input from credit risk, legal, and relationship management.",
+  "agents": [
+    {
+      "agent_id": "A1",
+      "name": "Elena",
+      "role": "Credit Approval Manager"
+    },
+    {
+      "agent_id": "A2",
+      "name": "Ravi",
+      "role": "Credit Risk Analyst"
+    },
+    {
+      "agent_id": "A3",
+      "name": "Maya",
+      "role": "Banking Counsel"
+    },
+    {
+      "agent_id": "A4",
+      "name": "Jon",
+      "role": "Relationship Manager"
+    }
+  ],
+  "shared_context": {
+    "S1": "The manufacturing company is requesting renewal of its $10,000,000 revolving credit line for another twelve months.",
+    "S2": "The current facility expires in sixty days, and the submitted financial statements show stable annual revenue and positive operating cash flow.",
+    "S3": "Elena has authority to make the binding renewal decision and set the facility conditions.",
+    "S4": "As part of the bank's normal renewal meeting, Elena asks credit risk, legal, and relationship management to report any matters that should affect the final terms before she records the decision."
+  },
+  "private_facts": {
+    "PF1": {
+      "owner": "A2",
+      "text": "Ravi completed the latest borrowing-base review this morning and found that the eligible receivables and inventory support a maximum committed line of exactly $8,000,000 after the applicable collateral adjustments; he has not yet uploaded the review to the credit file. The same review calls for a monthly borrowing-base certificate."
+    },
+    "PF2": {
+      "owner": "A3",
+      "text": "Maya found while reviewing the renewal documents this week that the operating subsidiary's existing guarantee is not enforceable for this facility; legal approval therefore requires a new parent-company guarantee before renewal, and she has not yet circulated her memorandum."
+    },
+    "PF3": {
+      "owner": "A4",
+      "text": "Jon confirmed with the company's treasurer yesterday that the company will maintain a minimum operating deposit of exactly $1,200,000 throughout the renewed facility; this concession was agreed in a client call and has not yet been added to the renewal request."
+    }
+  },
+  "views": {
+    "A1": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "A2": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF1"
+    ],
+    "A3": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF2"
+    ],
+    "A4": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "PF3"
+    ]
+  },
+  "decision_maker": "A1",
+  "interaction_config": {
+    "turn_order": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "turn_cap": 14
+  },
+  "settlement_schema": {
+    "decisions": {
+      "facility_renewed": "boolean",
+      "committed_line_usd": "integer",
+      "parent_guarantee_required": "boolean",
+      "minimum_operating_deposit_usd": "integer",
+      "borrowing_base_reporting_frequency": "string"
+    },
+    "credited_facts": [
+      "fact_id"
+    ],
+    "commitments": [
+      {
+        "type": "string",
+        "target": "string",
+        "detail": "string"
+      }
+    ],
+    "justification_fact_ids": [
+      "fact_id"
+    ]
+  },
+  "acceptance_conditions": [
+    "The facility must be renewed at exactly $8,000,000.",
+    "A new parent-company guarantee must be required as a condition of renewal.",
+    "The borrower must maintain exactly $1,200,000 as a minimum operating deposit.",
+    "A monthly borrowing-base certificate must be required.",
+    "The borrowing-base review must be cited in the decision justification."
+  ],
+  "content_checks": {
+    "C1": "decisions['facility_renewed'] == True",
+    "C2": "decisions['committed_line_usd'] == 8000000",
+    "C3": "decisions['parent_guarantee_required'] == True",
+    "C4": "decisions['minimum_operating_deposit_usd'] == 1200000",
+    "C5": "decisions['borrowing_base_reporting_frequency'] == 'monthly'",
+    "C6": "any('parent' in c['detail'] and 'guarantee' in c['detail'] for c in commitments)",
+    "C7": "any('operating deposit' in c['detail'] and ('1,200,000' in c['detail'] or '1200000' in c['detail']) for c in commitments)"
+  },
+  "provenance_checks": {
+    "P1": "'PF1' in justification_fact_ids and 'PF1' in revealed"
+  },
+  "decisive_facts": [
+    {
+      "fact_id": "PF1",
+      "owner": "A2",
+      "flips": [
+        "C2",
+        "C5",
+        "P1"
+      ],
+      "why": "The submitted request is for $10,000,000 with no reporting frequency; PF1 changes committed_line_usd to exactly $8,000,000 and borrowing_base_reporting_frequency to exactly monthly."
+    },
+    {
+      "fact_id": "PF2",
+      "owner": "A3",
+      "flips": [
+        "C3",
+        "C6"
+      ],
+      "why": "The existing subsidiary guarantee appears usable in the submitted documents; PF2 changes parent_guarantee_required from false or unspecified to true and adds a commitment whose detail requires a new parent-company guarantee."
+    },
+    {
+      "fact_id": "PF3",
+      "owner": "A4",
+      "flips": [
+        "C4",
+        "C7"
+      ],
+      "why": "The renewal request specifies no operating-deposit condition; PF3 changes minimum_operating_deposit_usd to exactly $1,200,000 and adds a commitment whose detail requires that minimum operating deposit."
+    }
+  ],
+  "domain": "finance",
+  "requested_num_agents": 4
+}
