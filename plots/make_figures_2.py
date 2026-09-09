@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from make_figures import (
+from plots.make_figures import (
     load_all_scenarios, load_all_round_events, find_domain_dirs,
     ensure_outdir, tqdm, _vibrant, _add_headroom, TAG_COLORS, STAGE_ORDER,
 )
