@@ -30,11 +30,13 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat                                        # noqa: E402
 import config                                        # noqa: E402
 import prm as prm_mod                                # noqa: E402
 import prompt_epo as pe                              # noqa: E402
-from detectors import assert_identical_to_ppdpp      # noqa: E402
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core.detectors import assert_matches_ppdpp  # noqa: E402
 from env_epo import EPOEnv                           # noqa: E402
 from strategist import EPOStrategist                 # noqa: E402
 
@@ -161,7 +163,7 @@ def main():
     # not after a 15GB checkpoint download.
     if compat.report():
         raise SystemExit('\nfix the blocking problems above, then re-run')
-    assert_identical_to_ppdpp()                      # disclosure detector drift check
+    assert_matches_ppdpp()                      # disclosure detector drift check
 
     data = config.load_csa()
     train_cases, eval_cases = data['train'], data[cli.eval_split]

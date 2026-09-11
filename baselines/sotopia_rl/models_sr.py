@@ -23,7 +23,8 @@ import os
 import torch
 import torch.nn as nn
 
-import compat
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat as compat
 
 POLICY = 'policy'
 REWARD = 'rm'

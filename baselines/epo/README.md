@@ -3,49 +3,50 @@
 EPO ([Liu et al., ACL 2025](https://arxiv.org/abs/2502.12486)) applied to the CSA
 hidden-profile benchmark, as a drop-in replacement for the PPDPP planner.
 
-The comparison is the point: the environment dynamics, the scenario splits, the
-disclosure detector and the verifier are held identical to `ppdpp_csa/`, so any
-difference in the numbers is attributable to the planner and nothing else. This package
-reads from `ppdpp_csa/` and never modifies it.
+The comparison is the point: the scenario splits, the disclosure detector and the
+verifier all come from `csa_core/`, so any difference in the numbers is attributable to
+the planner and nothing else.
 
 See `epo-vs-vanilla.pdf` for what had to change relative to the paper, and why.
 
 ---
 
-## Where this folder lives
+## The one thing borrowed from PPDPP
 
-It can live anywhere. `config.py` locates `ppdpp_csa/` by walking up the directory tree
-looking for `verifier.py`, `prompt.py` and `data/`, so it handles the folder sitting
-beside `ppdpp_csa/`, beside `ppdpp/`, or a couple of levels away. If it is somewhere the
-search does not reach:
+EPO renders its utterances with **`ppdpp/prompt.py`** — personas, view filtering and the
+settlement schema. That is deliberate and it is not duplication: holding LLM_d's prompt
+byte-identical across PPDPP and EPO is what makes the two arms comparable at all.
+Reimplementing it here would quietly change the experiment rather than tidy it.
+
+`config.py` finds `ppdpp/` by walking up the tree. If it is somewhere the search does not
+reach:
 
 ```bash
-export CSA_PPDPP_DIR=/path/to/baselines/ppdpp/ppdpp_csa
+export CSA_PPDPP_DIR=/path/to/baselines/ppdpp
 ```
 
 A wrong or missing path fails immediately with the list of places it looked, rather than
 surfacing as `ModuleNotFoundError: No module named 'prompt'` three imports later.
 
-## What is reused, and what is parallel
+## What is shared, and what is the port
 
-| Reused from `ppdpp_csa/` (must be identical) | Reimplemented here (this is the port) |
+| Shared (must be identical across arms) | Reimplemented here (this is the port) |
 |---|---|
-| `data/csa-{train,valid,test}.txt` — 99/9/42 splits | turn loop and reward (`env_epo.py`) |
-| `verifier.py` — `score`, `floor_score` | prompts (`prompt_epo.py`) |
-| `prompt.py` — personas, view filtering, schema | process reward (`prm.py`) |
-| the 0.35 disclosure threshold | policy and optimiser (`strategist.py`) |
+| `csa_core.data_csa` — the scenario split | turn loop and reward (`env_epo.py`) |
+| `csa_core.verifier` — `score`, `floor_score` | strategist prompt (`prompt_epo.py`) |
+| `csa_core.detectors` — threshold frozen at 0.35 | process reward (`prm.py`) |
+| `ppdpp/prompt.py` — LLM_d's prompt layer | policy and optimiser (`strategist.py`) |
 
-`detectors.py` holds a verbatim copy of the lexical disclosure detector so that stage 1
-runs without a GPU stack. `run_epo.py` calls `assert_identical_to_ppdpp()` at startup and
-fails loudly if that copy has drifted.
+`run_epo.py` calls `csa_core.detectors.assert_matches_ppdpp()` at startup, which fails
+loudly if `ppdpp/env.py`'s inline copy of the overlap rule has drifted from the shared
+one.
 
 ## Layout
 
 ```
 epo/
-  config.py             paths, dataset loader, every default in one place
-  compat.py             version shims + `python compat.py` environment report
-  detectors.py          disclosure detector (verbatim copy + drift check)
+  config.py             ppdpp/ discovery, dataset loader, every default in one place
+  paths.py              data/, logs/, ckpt/ for this arm; the rest from csa_core
   prompt_epo.py         strategist prompt, chair injection, sigma cleaning
   prm.py                VerifierPRM (deterministic) and JudgePRM (EPO-faithful)
   env_epo.py            the meeting environment
@@ -71,7 +72,7 @@ Then check what the box actually has. This prints versions, GPU inventory, and a
 that blocks the run — it is the first thing to paste if something fails:
 
 ```bash
-python compat.py
+python ../csa_core/compat.py
 ```
 
 **Only one hard version floor: `transformers >= 4.37`**, where Qwen2 architecture support
@@ -95,7 +96,7 @@ the strategist in the training process.
 
 ## Stage 1 — manufacture the SFT targets
 
-`../ppdpp_csa/data_sft/` already holds 949 labelled chair turns (650 train / 164 valid /
+the archived `ppdpp/data_sft/` already holds 949 labelled chair turns (650 train / 164 valid /
 135 test). Each gives the prompt and the **act tag**, but nothing after the colon: the
 annotator was told *"Answer with exactly one word"*, so no rationale was ever recorded.
 EPO's target is the full `tau: sigma` line, so `sigma` has to be produced.
@@ -156,7 +157,7 @@ python run_epo.py --episodes 700 --adapter ckpt/sft --eval_every 175
 ```
 
 **Output:** `logs/Record-<run>-<tag>.txt` in exactly the format
-`../ppdpp_csa/compute_all_metrics.py` consumes, plus `logs/<run>-history.jsonl`
+`../ppdpp/compute_all_metrics.py` consumes, plus `logs/<run>-history.jsonl`
 (per-group training trace) and `logs/<run>-summary.json`.
 
 ### Knobs that matter
@@ -217,8 +218,8 @@ emitting a parseable act tag, and three sites in the environment depend on that 
 Records are schema-compatible, so:
 
 ```bash
-cd ../ppdpp_csa
-python compute_all_metrics.py --records ../epo/logs/Record-<run>-final.txt
+cd ../ppdpp
+python ../ppdpp/compute_all_metrics.py --records logs/Record-<run>-final.txt
 ```
 
 Pair per scenario against `tmp/csa/eval_result/Record-epoch-6-*.txt` — same 42 scenarios,

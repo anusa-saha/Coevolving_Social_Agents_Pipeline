@@ -1,19 +1,21 @@
 """Paths, dataset loading and every default in one place.
 
-This package sits BESIDE ppdpp_csa/ and never modifies it. What it reuses from there
-is deliberately limited to the two things that must be byte-identical for the two
-planners to be comparable at all:
+The split, the disclosure detector and the verifier come from csa_core, so every arm
+is measured with one instrument.
 
-  * the scenario splits in ppdpp_csa/data/csa-{train,valid,test}.txt
-  * verifier.score / floor_score
-
-Everything else -- prompts, turn loop, reward, policy -- is reimplemented here, because
-that is exactly what the EPO port changes.
+One thing is still borrowed from ppdpp_csa, deliberately: prompt.py, the LLM_d prompt
+layer. Holding the dialogue agent's prompt byte-identical across PPDPP and EPO is what
+makes the two arms comparable at all -- reimplementing it here would quietly change the
+experiment rather than tidy it. Everything else (turn loop, reward, policy) is EPO's own,
+because that is exactly what the port changes.
 """
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(HERE)
+if _ROOT not in sys.path:                    # so csa_core imports without an install
+    sys.path.insert(0, _ROOT)
 
 
 def _find_ppdpp_csa():
@@ -25,22 +27,22 @@ def _find_ppdpp_csa():
     rather than a ModuleNotFoundError three imports later.
     """
     def ok(d):
-        return (d and os.path.isfile(os.path.join(d, 'verifier.py'))
-                and os.path.isfile(os.path.join(d, 'prompt.py'))
-                and os.path.isdir(os.path.join(d, 'data')))
+        # Only prompt.py now. The split and the verifier moved to csa_core; the prompt
+        # layer stays borrowed on purpose, so LLM_d is byte-identical across PPDPP and
+        # EPO and the two arms remain comparable.
+        return d and os.path.isfile(os.path.join(d, 'prompt.py'))
 
     env = os.environ.get('CSA_PPDPP_DIR')
     if env:
         if not ok(os.path.abspath(env)):
             raise SystemExit('CSA_PPDPP_DIR=%r does not look like ppdpp_csa/ '
-                             '(needs verifier.py, prompt.py and data/)' % env)
+                             '(needs prompt.py)' % env)
         return os.path.abspath(env)
 
     seen, node = [], HERE
     for _ in range(6):                       # this dir, then five ancestors
-        for cand in (os.path.join(node, 'ppdpp_csa'),
-                     os.path.join(node, 'ppdpp', 'ppdpp_csa'),
-                     os.path.join(node, 'baselines', 'ppdpp', 'ppdpp_csa')):
+        for cand in (os.path.join(node, 'ppdpp'),
+                     os.path.join(node, 'baselines', 'ppdpp')):
             seen.append(os.path.abspath(cand))
             if ok(cand):
                 return os.path.abspath(cand)
@@ -53,13 +55,15 @@ def _find_ppdpp_csa():
         'cannot find ppdpp_csa/. This package reads its splits and verifier from there.\n'
         'Looked in:\n  %s\n\n'
         'Fix: point CSA_PPDPP_DIR at it, e.g.\n'
-        '  export CSA_PPDPP_DIR=/path/to/baselines/ppdpp/ppdpp_csa'
+        '  export CSA_PPDPP_DIR=/path/to/baselines/ppdpp'
         % '\n  '.join(dict.fromkeys(seen)))
 
 
 PPDPP = _find_ppdpp_csa()
+
+from csa_core import data_csa, paths  # noqa: E402
 # raw/ sits beside ppdpp_csa/, not beside this package.
-RAW = os.path.abspath(os.path.join(PPDPP, '..', 'raw'))
+RAW = paths.find_raw()          # the shared dataset, one copy at the repo root
 
 DATA = os.path.join(HERE, 'data')
 LOGS = os.path.join(HERE, 'logs')
@@ -75,25 +79,15 @@ if PPDPP not in sys.path:
 
 # ---------------------------------------------------------------- dataset
 def load_csa(split=None):
-    """The exact splits the PPDPP runs used: 99 / 9 / 42, scenario-disjoint.
+    """The scenario split, from csa_core.
 
-    ppdpp_csa/utils.load_dataset resolves './data' relative to the CURRENT working
-    directory, so calling it from here would silently look in epo/data and find
-    nothing. The paths are pinned instead.
+    Re-derived by csa_core.data_csa rather than read out of ppdpp/data/csa-*.txt, so this
+    arm follows the configured benchmark (domain list and per-domain cap) instead of a
+    file pinned to one old configuration.
     """
-    out = {}
-    for key in ('train', 'valid', 'test'):
-        path = os.path.join(PPDPP, 'data', 'csa-%s.txt' % key)
-        rows = []
-        with open(path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip('\n')
-                if line:
-                    rows.append(eval(line))     # same format load_dataset expects
-        out[key] = rows
     if split:
-        return out[split]
-    return out
+        return data_csa.load(split)
+    return {k: data_csa.load(k) for k in ('train', 'valid', 'test')}
 
 
 def case_index():
@@ -155,8 +149,8 @@ class Defaults:
     resolve_provenance = True
 
     # --- manufacturing (stage 1)
-    or_base_url = 'https://openrouter.ai/api/v1'
-    or_model = 'google/gemma-3-27b-it'   # override with --model
+    or_base_url = paths.ANNOTATOR_BASE_URL
+    or_model = paths.ANNOTATOR_MODEL     # shared with PPDPP; --model overrides
     or_max_tokens = 48
     or_max_retries = 6
 

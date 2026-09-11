@@ -31,9 +31,10 @@ Three details that are easy to get wrong and that change the numbers:
 """
 import statistics
 
-from detectors_sr import (REVEAL_THRESHOLD, addressed_in, disclosures, is_eliciting,
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core.detectors import (REVEAL_THRESHOLD, addressed_in, disclosures, is_eliciting,
                           leaks as leak_check)
-from verifier_sr import flipped_checks, score
+from csa_core.verifier import flipped_checks, score
 
 DIMS = ('pool', 'use', 'cover')
 
@@ -187,6 +188,8 @@ class Normaliser:
 
     def apply(self, raw):
         n = len(raw[DIMS[0]])
+        if not n:
+            return []                    # a zero-turn episode has no labels to normalise
         out = {}
         for d in DIMS:
             if self.within_episode:

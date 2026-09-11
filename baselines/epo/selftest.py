@@ -9,7 +9,8 @@ copied disclosure detector still matches ppdpp_csa.
 import sys
 import traceback
 
-import compat
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat
 import config
 import prm
 import prompt_epo as pe
@@ -31,7 +32,19 @@ def check(name, fn):
 def t_splits():
     d = config.load_csa()
     got = {k: len(v) for k, v in d.items()}
-    assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    if paths.is_published_config():
+        assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    else:
+        # A reconfigured benchmark has no published shape to match, so check the
+        # properties that must hold under ANY configuration instead: every scenario
+        # lands in exactly one split, and none is lost.
+        total = len(paths.DOMAINS) * paths.SCENARIOS_PER_DOMAIN
+        assert sum(got.values()) == total, (got, total)
+        uids = [r['uid'] for v in d.values() for r in v]
+        assert len(set(uids)) == total, 'split overlaps or drops scenarios'
+        print('        %d domains x %d = %d -> %d/%d/%d'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN, total,
+                 got['train'], got['valid'], got['test']))
     uids = [r['uid'] for rows in d.values() for r in rows]
     assert len(uids) == len(set(uids)), 'uid collision across splits'
     for name, rows in d.items():
@@ -57,7 +70,7 @@ def t_strategist_prompt_is_filtered():
             for f in pe.CSA_ORACLE_ONLY:
                 assert f not in blob, '%s leaked oracle field %s' % (case['uid'], f)
             n += 1
-    assert n == 150, n
+    assert n == len(config.case_index()), n
 
 
 def t_chair_injection():
@@ -151,8 +164,8 @@ def t_sft_targets_if_present():
 
 
 def t_detector_drift():
-    from detectors import assert_identical_to_ppdpp
-    assert_identical_to_ppdpp()          # returns None if torch is unavailable
+    from csa_core.detectors import assert_matches_ppdpp
+    assert_matches_ppdpp()          # returns None if torch is unavailable
 
 
 if __name__ == '__main__':
@@ -161,8 +174,8 @@ if __name__ == '__main__':
     print('\nppdpp_csa: %s\n' % config.PPDPP)
 
     for name, fn in [
-        ('splits 99/9/42, chair holds no private fact', t_splits),
-        ('strategist prompt is view-filtered (all 150 cases)', t_strategist_prompt_is_filtered),
+        ('split is complete, chair holds no private fact', t_splits),
+        ('strategist prompt is view-filtered (every case)', t_strategist_prompt_is_filtered),
         ('chair injection keeps schema last', t_chair_injection),
         ('strategy parsing', t_parse),
         ('verifier process reward', t_prm),

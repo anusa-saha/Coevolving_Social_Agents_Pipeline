@@ -28,7 +28,8 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat                                        # noqa: E402
 import config                                        # noqa: E402
 import prompt_epo as pe                              # noqa: E402
 from strategist import EPOStrategist                 # noqa: E402

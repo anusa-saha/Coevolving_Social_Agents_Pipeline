@@ -14,37 +14,34 @@ See `sotopia-rl-vs-vanilla.pdf` for every deviation from the paper and why.
 
 ---
 
-## Self-contained by construction
+## Measured with the shared instrument
 
-This package imports **no code** from `ppdpp_csa/` or `epo/`. It reads the raw scenario
-JSON and rebuilds the 99/9/42 split itself, and it has its own verifier, detectors and
-prompts.
+The split, the disclosure detector and the verifier come from `csa_core/`, so this arm is
+scored by exactly the same code as every other. What stays local is what the method owns:
+the attribution rule, the prompts, the environment and the three training stages.
 
-Re-deriving rather than reusing would be pointless if it silently diverged, so both are
+`csa_core.data_csa` re-derives the split from a fixed procedure rather than
+reading a split file. Re-deriving would be pointless if it silently diverged, so it is
 checked against the published artefacts *as data*:
 
 | Check | Result |
 |---|---|
-| split reproduces the published 99/9/42, order included | **exact** |
+| split reproduces the published 99/9/42 under `CSA_DOMAINS=published`, order included | **exact** |
 | verifier reproduces published `cbar`/`pbar`/`disclosure` on 297 episodes | **exact, all 297** |
 | `is_eliciting` vs 650 annotated act labels | acc 0.817, P 0.845, R 0.803 |
 
-Both comparisons skip cleanly if the other baselines aren't present. Nothing in the
-training path reads them.
+Those comparisons need the archived records (`CSA_ARTIFACTS_DIR`); without them the
+checks skip cleanly and say so. Nothing in the training path reads them.
 
 ## Layout
 
 ```
 sotopia_rl/
-  paths.py             locate raw/, define data/logs/ckpt
-  data_csa.py          load scenarios, rebuild the split from scratch
-  verifier_sr.py       executable checks, canonicalisation, provenance resolution
-  detectors_sr.py      disclosure / leak / addressing / is_eliciting
+  paths.py             data/, logs/, ckpt/ for this arm; the rest from csa_core
   prompts_sr.py        chair, advisor, settlement prompts (view-filtered)
   attribution.py       r_t = G . A(a_t, tau), computed          <- the core
   env_sr.py            the meeting; snapshot/restore for candidate lookahead
   models_sr.py         SharedBackbone + PolicyView / RewardView (one model, three roles)
-  compat.py            version shims + `python compat.py` report
   collect_episodes.py  STAGE 1    self-play episodes, verifier-filtered
   make_rm_data.py      STAGE 1b   attributed labels + fitted normaliser
   train_sft.py         STAGE 2.1  behaviour cloning
@@ -59,7 +56,7 @@ sotopia_rl/
 ```bash
 pip install -r requirements.txt
 python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
-python compat.py && python selftest.py
+python ../csa_core/compat.py && python selftest.py
 ```
 
 ### One model in memory, three roles
@@ -123,7 +120,7 @@ export CSA_RAW_DIR=/path/to/raw         # skip the Hub, use a local copy
 
 The download is `paths.download_raw()`; `data_csa.load_raw()` reads whatever it returns.
 Verified byte-identical (sha256) to the copy the other two baselines used, and
-`selftest.py` confirms the rebuilt split is still exactly 99/9/42.
+`selftest.py` confirms the rebuilt split is complete and scenario-disjoint (363/33/154 over 11 domains x 50 scenarios; `CSA_DOMAINS=published` restores the original 3-domain 99/9/42).
 
 > **Only three of the eleven domains are downloaded.** The Hub repo also ships
 > `bargaining`, `education`, `entertainment`, `family_friends_informal`, `finance`,

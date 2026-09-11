@@ -46,7 +46,7 @@ import paths                                         # noqa: E402
 import prompts_sr as P                               # noqa: E402
 from env_sr import SREnv                             # noqa: E402
 from models_sr import POLICY, REWARD, PolicyView, RewardView, SharedBackbone  # noqa: E402
-from verifier_sr import flipped_checks, score        # noqa: E402
+from csa_core.verifier import flipped_checks, score        # noqa: E402
 
 
 class Scorer(object):

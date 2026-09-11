@@ -77,10 +77,11 @@ python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 python selftest.py
 ```
 
-Self-contained — imports no code from the other baselines. Scenarios download from
+The split, detectors and verifier come from `csa_core/`; the prompts and the InfoMgmt
+metric are this arm's own. Scenarios download from
 [`anusasaha/Coevolving_Social_Agents`](https://huggingface.co/datasets/anusasaha/Coevolving_Social_Agents)
 into `data/raw/` on first use; nothing needs exporting. `selftest.py` verifies the
-rebuilt split is exactly 99/9/42 and matches the other arms, and that the verifier
+rebuilt split is complete and matches the other arms, and that the verifier
 reproduces published scores on 297 episodes.
 
 No `peft` needed — nothing trains here.
@@ -106,7 +107,7 @@ python run_tom.py --compare
 ```
 
 Records land in `logs/Record-tom-<arm>-test.txt` in the same schema as the other
-baselines, so `ppdpp_csa/compute_all_metrics.py` runs on them and every arm pairs per
+baselines, so `analysis/compute_extended_metrics.py` runs on them and every arm pairs per
 scenario. The report prints a per-arm table plus paired sign tests against `stripped`.
 
 ## Cost

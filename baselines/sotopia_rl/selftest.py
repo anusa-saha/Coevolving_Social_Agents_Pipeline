@@ -16,12 +16,12 @@ import sys
 import traceback
 
 import attribution
-import compat
-import data_csa
-import detectors_sr as D
-import paths
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat as compat
+from csa_core import data_csa as data_csa
+from csa_core import detectors as D
 import prompts_sr as P
-import verifier_sr as V
+from csa_core import verifier as V
 
 FAILS = []
 
@@ -39,13 +39,30 @@ def check(name, fn):
 def t_split():
     d = data_csa.load()
     got = {k: len(v) for k, v in d.items()}
-    assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    if paths.is_published_config():
+        assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    else:
+        # A reconfigured benchmark has no published shape to match, so check the
+        # properties that must hold under ANY configuration instead: every scenario
+        # lands in exactly one split, and none is lost.
+        total = len(paths.DOMAINS) * paths.SCENARIOS_PER_DOMAIN
+        assert sum(got.values()) == total, (got, total)
+        uids = [r['uid'] for k in ('train', 'valid', 'test') for r in data_csa.load(k)]
+        assert len(set(uids)) == total, 'split overlaps or drops scenarios'
+        print('        %d domains x %d = %d -> %d/%d/%d'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN, total,
+                 got['train'], got['valid'], got['test']))
     bad = data_csa.check_invariants(data_csa.load_raw())
     assert not bad, bad[:3]
 
 
 def t_split_matches_published():
     for name in ('train', 'valid', 'test'):
+        if not paths.is_published_config():
+            print('        (skipped: benchmark reconfigured to %d domains x %d; '
+                  'the published split describes a different dataset)'
+                  % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
+            return
         ref = paths.find_reference('data/csa-%s.txt' % name)
         if not ref:
             print('        (skipped: no published split to compare)')
@@ -91,7 +108,7 @@ def t_chair_prompt_is_filtered():
         for f in P.ORACLE_ONLY:
             assert f not in blob, 'oracle field %s leaked in %s' % (f, case['uid'])
         n += 1
-    assert n == 150, n
+    assert n == len(data_csa.load_raw()), n
 
 
 def t_advisor_sees_only_own_facts():
@@ -199,10 +216,10 @@ if __name__ == '__main__':
     print('\nraw scenarios: %s\n' % paths.find_raw())
 
     for name, fn in [
-        ('split is 99/9/42 and invariants hold', t_split),
+        ('split is complete and invariants hold', t_split),
         ('split matches the published one exactly', t_split_matches_published),
         ('verifier matches published scores', t_verifier_matches_published),
-        ('chair prompt is view-filtered (all 150)', t_chair_prompt_is_filtered),
+        ('chair prompt is view-filtered (every case)', t_chair_prompt_is_filtered),
         ('advisors see only their own facts', t_advisor_sees_only_own_facts),
         ('verifier semantics', t_verifier_semantics),
         ('is_eliciting vs annotated acts', t_eliciting_detector),

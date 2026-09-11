@@ -75,8 +75,13 @@ def efficiency(rec):
     cap = max(1, int(rec.get('max_turn') or 1))
     if not turns:
         return 0.0
+    # reveal_turn is 1-BASED: the environment increments its step counter before the
+    # advisors reply, so a fact surfaced in response to the first chair turn is recorded
+    # as turn 1, not 0. Subtracting the 1 is what makes the earliest possible disclosure
+    # score 1.0; without it the best achievable EFF was 1 - 1/cap (0.67 on a 3-turn
+    # scenario), so the metric never reached its own top end.
     med = statistics.median(turns)
-    return max(0.0, min(1.0, 1.0 - (med / cap)))
+    return max(0.0, min(1.0, 1.0 - ((med - 1.0) / cap)))
 
 
 def infomgmt(rec):

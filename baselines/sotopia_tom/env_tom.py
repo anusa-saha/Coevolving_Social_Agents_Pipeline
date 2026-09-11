@@ -14,10 +14,11 @@ import re
 
 import torch
 
-import compat
-import detectors_tom as D
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat as compat
+from csa_core import detectors as D
 import prompts_tom as P
-from verifier_tom import floor_score, score
+from csa_core.verifier import floor_score, score
 
 try:
     import nltk

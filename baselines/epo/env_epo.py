@@ -18,12 +18,14 @@ import re
 
 import torch
 
-import compat
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat
 import config                                        # noqa: F401  (sys.path shim)
 import prompt_epo as pe
-from detectors import _overlap
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core.detectors import overlap as _overlap
 from prm import Trace
-from verifier import floor_score, score              # ppdpp_csa, byte-identical
+from csa_core.verifier import floor_score, score
 
 try:
     import nltk

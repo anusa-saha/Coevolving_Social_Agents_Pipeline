@@ -6,14 +6,14 @@ import json
 import sys
 import traceback
 
-import compat
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat as compat
 import config
-import data_csa
-import detectors_tom as D
+from csa_core import data_csa as data_csa
+from csa_core import detectors as D
 import metrics_tom as M
-import paths
 import prompts_tom as P
-import verifier_tom as V
+from csa_core import verifier as V
 
 FAILS = []
 
@@ -30,12 +30,29 @@ def check(name, fn):
 
 def t_split():
     got = {k: len(v) for k, v in data_csa.load().items()}
-    assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    if paths.is_published_config():
+        assert got == {'train': 99, 'valid': 9, 'test': 42}, got
+    else:
+        # A reconfigured benchmark has no published shape to match, so check the
+        # properties that must hold under ANY configuration instead: every scenario
+        # lands in exactly one split, and none is lost.
+        total = len(paths.DOMAINS) * paths.SCENARIOS_PER_DOMAIN
+        assert sum(got.values()) == total, (got, total)
+        uids = [r['uid'] for k in ('train', 'valid', 'test') for r in data_csa.load(k)]
+        assert len(set(uids)) == total, 'split overlaps or drops scenarios'
+        print('        %d domains x %d = %d -> %d/%d/%d'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN, total,
+                 got['train'], got['valid'], got['test']))
     assert not data_csa.check_invariants(data_csa.load_raw())
 
 
 def t_split_matches_published():
     for name in ('train', 'valid', 'test'):
+        if not paths.is_published_config():
+            print('        (skipped: benchmark reconfigured to %d domains x %d; '
+                  'the published split describes a different dataset)'
+                  % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
+            return
         ref = paths.find_reference('data/csa-%s.txt' % name)
         if not ref:
             print('        (skipped: no published split to compare)')
@@ -81,7 +98,7 @@ def t_every_strategy_builds_and_is_filtered():
                 for f in P.ORACLE_ONLY:
                     assert f not in blob, '%s leaked (%s)' % (f, arm)
         n += 1
-    assert n == 150, n
+    assert n == len(data_csa.load_raw()), n
 
 
 def t_strategies_actually_differ():
@@ -182,10 +199,10 @@ if __name__ == '__main__':
     print('model        : %s\n' % config.Defaults.model)
 
     for name, fn in [
-        ('split is 99/9/42 and invariants hold', t_split),
+        ('split is complete and invariants hold', t_split),
         ('split matches the published one exactly', t_split_matches_published),
         ('verifier matches published scores', t_verifier_matches_published),
-        ('all 5 arms build, chair prompt filtered (150 cases)',
+        ('all 5 arms build, chair prompt filtered (every case)',
          t_every_strategy_builds_and_is_filtered),
         ('the 5 arms send genuinely different prompts', t_strategies_actually_differ),
         ('settling turn keeps the schema in every arm', t_settling_turn_keeps_schema),

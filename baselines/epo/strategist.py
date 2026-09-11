@@ -18,7 +18,8 @@ import os
 
 import torch
 
-import compat
+import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
+from csa_core import compat
 import config                                        # noqa: F401  (sys.path shim)
 import prompt_epo as pe
 
@@ -93,8 +94,17 @@ class EPOStrategist(object):
 
         if is_test:
             return decoded, None
-        tau, _sigma, _ok = pe.parse_strategy(decoded)
-        tag_len = max(1, len(self.tokenizer(tau + ':', add_special_tokens=False).input_ids))
+        tau, _sigma, ok = pe.parse_strategy(decoded)
+        # Upweight the tag ONLY where the model actually emitted one at the front.
+        # parse_strategy falls back to inferring an act from a bare word anywhere in the
+        # text, and on the 700-episode run that fallback fired for 44.8% of strategies --
+        # for those, weighting the first tag_len tokens boosts arbitrary content words
+        # instead of the tag. tag_len = 0 leaves the weights uniform.
+        tag_len = 0
+        if ok and decoded.lstrip().lower().startswith(tau.lower()):
+            lead = len(decoded) - len(decoded.lstrip())
+            tag_len = len(self.tokenizer(decoded[:lead + len(tau) + 1],
+                                         add_special_tokens=False).input_ids)
         return decoded, Sample(enc['input_ids'][0], comp, decoded, tag_len)
 
     # ------------------------------------------------------------- learning
@@ -119,7 +129,8 @@ class EPOStrategist(object):
             lp = lp[:, s.prompt_ids.shape[0] - 1:]
 
             w = torch.ones_like(lp)
-            w[:, :min(s.tag_len, w.shape[1])] = self.cfg.tag_weight
+            if s.tag_len:                    # 0 when the model emitted no explicit tag
+                w[:, :min(s.tag_len, w.shape[1])] = self.cfg.tag_weight
             logp = (lp * w).sum() / w.sum()
 
             loss = -(adv * logp) / T
