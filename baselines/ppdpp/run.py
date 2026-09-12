@@ -60,7 +60,8 @@ def train(args, config, dataset, filename, tokenizer):
         test_performance = [SR15_mean]
     if not args.do_train:
         return
-    for train_step in range(1, args.max_steps+1):
+    start_epoch = args.load_rl_epoch + 1
+    for train_step in range(start_epoch, args.max_steps+1):
         SR, AvgT, total_reward = 0., 0., 0.
         loss = torch.tensor(0, dtype=torch.float, device=args.device)
         for i_episode in tqdm(range(args.sample_times),desc='sampling'):
@@ -258,7 +259,7 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--model_path", type=str, default="/storage_fast/ydeng/llm/vicuna_hf/7B")
     parser.add_argument("--model_name", type=str, default="roberta")
-    parser.add_argument("--model_name_or_path", default='roberta-large', type=str, help="model name or path")
+    parser.add_argument("--model_name_or_path", default='/scratch/rohank__iitp/roberta-large', type=str, help="model name or path")
 
     parser.add_argument("--do_lower_case", action='store_false', help="Set this flag if you are using an uncased model.")
 
@@ -276,7 +277,7 @@ def main():
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval.")
 
     # local qwen backend
-    parser.add_argument('--qwen_path', default='Qwen/Qwen2.5-7B-Instruct')
+    parser.add_argument('--qwen_path', default='/scratch/rohank__iitp/qwen2_5_7b_instruct')
     parser.add_argument('--qwen_dtype', default='bfloat16',
                         choices=['bfloat16', 'float16', 'float32'])
     parser.add_argument('--qwen_device_map', default='cuda:0')
