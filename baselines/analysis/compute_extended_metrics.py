@@ -7,6 +7,10 @@ logs, so it is cheap and safe to re-run while training continues.
     python compute_extended_metrics.py
     python compute_extended_metrics.py --out extended.json
 
+The HEADLINE is eval.py's metric set (csa_core.headline): checks passed, checks_frac,
+success, reveals, settled, turns, leaks and the bottleneck decomposition, with eval.py's
+paired bootstrap against the baseline. dca and disclosure are reported beside it.
+
 WHAT IS DEDUCIBLE WITHOUT A MODEL, AND WHAT IS NOT
 --------------------------------------------------
 Computed here:
@@ -54,6 +58,7 @@ if HERE not in sys.path:
 from csa_core import data_csa                        # noqa: E402
 from csa_core.detectors import content_tokens, overlap   # noqa: E402
 
+from csa_core import headline as H                   # noqa: E402
 import metrics_ext as MX                             # noqa: E402
 
 CASES = data_csa.case_index()
@@ -117,12 +122,8 @@ def discover():
          lambda f: 'ToM ' + re.sub(r'^Record-tom-|-\w+\.txt$', '', os.path.basename(f))),
         ('OMEGA', 'sotopia_omega/logs/Record-*.txt',
          lambda f: 'OM ' + re.sub(r'^Record-|-\w+\.txt$', '', os.path.basename(f))),
-        # DAT writes one file per condition: unsteered / selfclone / dat. All three are
-        # arms in their own right -- the paper's Table 1 reports them as separate rows --
-        # so they are discovered separately rather than merged.
-        ('DAT', 'dat/logs/Record-dat-*.txt',
-         lambda f: 'DAT ' + re.sub(r'^Record-dat-|-\w+\.txt$', '',
-                                   os.path.basename(f))),
+        ('RT', 'roundtable/logs/Record-rt-*.txt',
+         lambda f: 'RT ' + '/'.join(os.path.basename(f)[:-4].split('-')[2:4])),
     ]
     for _fam, pat, namer in pats:
         hits = []
@@ -263,12 +264,7 @@ def training_health():
     out = {}
     for label, pat, keys in (
             ('EPO', 'epo/logs/*-history.jsonl', ('loss', 'grad_norm')),
-            ('SR', 'sotopia_rl/logs/*-history.jsonl', ('loss', 'grad_norm')),
-            # DAT logs two stages under one glob: the self-clone NLL and the TD3+BC
-            # critic. Both write `loss` and `grad_norm`; the RL file also carries the
-            # actor loss and the mean Q, which is where a diverged critic shows up.
-            ('DAT', 'dat/logs/dat-*-history.jsonl',
-             ('loss', 'grad_norm', 'actor_loss', 'q_mean'))):
+            ('SR', 'sotopia_rl/logs/*-history.jsonl', ('loss', 'grad_norm'))):
         for f in glob.glob(os.path.join(HERE, pat)):
             rows = load_jsonl(f)
             if not rows:
@@ -355,13 +351,16 @@ def main():
         raise SystemExit('no record files found under %s' % HERE)
 
     res = {}
+    rows_by_arm = {}
     for label, recs in arms.items():
+        rows_by_arm[label] = H.rows_from_records(recs, CASES)
         res[label] = {'n_episodes': len(recs),
                       'E': MX.section_E(recs, CASES),
                       'F': section_F(recs),
                       'G': section_G(recs),
                       'H': MX.section_H(recs),
-                      'headline': MX.headline(recs)}
+                      'headline': H.summary(rows_by_arm[label]),
+                      'dca_disclosure': MX.headline(recs)}
 
     print('=' * 108)
     print('F. LANGUAGE AND JUSTIFICATION QUALITY   (chair turns only)')
@@ -423,15 +422,43 @@ def main():
     res['_seed_spread'] = ss
     print('\nseed spread: %s' % ss)
 
+    base = next((k for k in sorted(arms) if k.startswith('PPDPP')), sorted(arms)[0])
+
     print()
     print('=' * 108)
-    print('HEADLINE   (bootstrap 95%% CI, 10k resamples; gain normalised per scenario)')
+    print("HEADLINE   eval.py's metrics (bootstrap 95% CI, 10k resamples)")
+    print('=' * 108)
+    print('%-14s %5s %22s %22s %8s %8s %9s %8s %9s %7s'
+          % ('arm', 'n', 'checks_frac [95% CI]', 'success [95% CI]', 'content', 'prov',
+             'decisive', 'settled', 't_settle', 'leaks'))
+    for label in sorted(arms):
+        rows, h = rows_by_arm[label], res[label]['headline']
+        cf = MX.bootstrap_ci([H.num(r['checks_frac']) for r in rows])
+        sc = MX.bootstrap_ci([H.num(r['success']) for r in rows])
+        h['checks_frac_ci'], h['success_ci'] = cf, sc
+        print('%-14s %5d %22s %22s %8s %8s %9s %8s %9s %7s'
+              % (label, h['n'],
+                 '%s [%s, %s]' % (fmt(h['checks_frac'], 3), fmt(cf[0], 3), fmt(cf[1], 3)),
+                 '%s [%s, %s]' % (fmt(h['success'], 3), fmt(sc[0], 3), fmt(sc[1], 3)),
+                 fmt(h['content_passed'], 2), fmt(h['prov_passed'], 2),
+                 fmt(h['decisive_revealed'], 2), fmt(h['settled'], 3),
+                 fmt(h['turns_to_settle'], 2), fmt(h['leaks'], 3)))
+    for label in sorted(arms):
+        for line in H.summary_lines(label, rows_by_arm[label]):
+            print(line)
+    for line in H.compare_lines({l: rows_by_arm[l] for l in sorted(arms)}, base):
+        print(line)
+
+    print()
+    print('=' * 108)
+    print('DCA AND DISCLOSURE   (bootstrap 95% CI, 10k resamples; gain normalised per '
+          'scenario)')
     print('=' * 108)
     print('%-14s %5s %22s %22s %7s %11s %10s'
           % ('arm', 'n', 'dca [95% CI]', 'disclosure [95% CI]', 'calls',
              'dca/100call', 'norm gain'))
     for label in sorted(arms):
-        h = res[label]['headline']
+        h = res[label]['dca_disclosure']
         print('%-14s %5d %22s %22s %7s %11s %10s'
               % (label, h['n'],
                  '%s [%s, %s]' % (fmt(h['dca'], 3), fmt(h['dca_ci'][0], 3),
@@ -441,7 +468,6 @@ def main():
                  fmt(h['calls'], 1), fmt(h['dca_per_100_calls'], 3),
                  fmt(h['normalised_gain'], 3)))
 
-    base = next((k for k in sorted(arms) if k.startswith('PPDPP')), sorted(arms)[0])
     print('\npaired vs %s  (sign test + Cliff\'s delta)' % base)
     print('%-14s %-16s %5s %5s %5s %9s %8s %-12s'
           % ('arm', 'metric', 'win', 'tie', 'loss', 'p', 'delta', 'effect'))

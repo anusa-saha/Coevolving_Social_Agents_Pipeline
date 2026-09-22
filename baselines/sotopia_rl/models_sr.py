@@ -1,8 +1,8 @@
 """One backbone, three roles.
 
 The frozen meeting agents, the trained chair policy and the reward model are all the same
-checkpoint. Loading three copies costs ~45 GB of weights in bf16, which does not fit on
-the hardware this runs on. Loading it ONCE and switching LoRA adapters costs ~15 GB plus
+checkpoint. Loading three copies costs ~54 GB of weights in bf16, which does not fit on
+the hardware this runs on. Loading it ONCE and switching LoRA adapters costs ~18 GB plus
 a few hundred MB:
 
     agent   base weights, adapters disabled   <- genuinely frozen, by construction
@@ -19,6 +19,7 @@ defeat the whole point.
 import contextlib
 import json
 import os
+import types
 
 import torch
 import torch.nn as nn
@@ -49,7 +50,10 @@ class SharedBackbone(object):
         self.tokenizer = compat.load_tokenizer(cfg.agent_model)
         base = compat.load_causal_lm(cfg.agent_model, cfg.agent_dtype,
                                      self.device_str, trainable=True)
-        self.hidden_size = base.config.hidden_size
+        # Qwen3.5 checkpoints are multimodal, so hidden_size lives on the text config.
+        cfg_text = (base.config.get_text_config()
+                    if hasattr(base.config, 'get_text_config') else base.config)
+        self.hidden_size = cfg_text.hidden_size
 
         from peft import get_peft_model
         names = list(adapters)
@@ -158,17 +162,25 @@ class SharedBackbone(object):
         for on-policy updates provided the step is taken before the policy moves.
         """
         ids = torch.cat([prompt_ids, comp_ids]).unsqueeze(0).to(self.device)
-        logits = self.model(ids).logits[:, :-1]
-        lp = torch.log_softmax(logits.float(), dim=-1) \
-                  .gather(-1, ids[:, 1:].unsqueeze(-1)).squeeze(-1)
         # logits[:, :-1] predicts ids[1:], so the first completion token sits at index
-        # len(prompt) - 1. Getting this wrong trains on the scenario description.
-        return lp[:, prompt_ids.shape[0] - 1:].mean()
+        # len(prompt) - 1. Getting this wrong trains on the scenario description. Only
+        # that tail is computed: the LM head over the prompt costs ~0.7 GiB per call at a
+        # 248k vocabulary and is never read.
+        start = prompt_ids.shape[0] - 1
+        logits = compat.logits_tail(self.model, ids, ids.shape[1] - start)[:, :-1]
+        lp = torch.log_softmax(logits.float(), dim=-1) \
+                  .gather(-1, ids[:, start + 1:].unsqueeze(-1)).squeeze(-1)
+        return lp.mean()
 
     def value(self, ids, head_name=REWARD):
         """Scalar score for a token sequence, from the last position's hidden state."""
         t = torch.tensor([ids], device=self.device)
-        out = self.model(input_ids=t, output_hidden_states=True)
+        # Only the hidden states are read, so the LM head runs on one position instead of
+        # the whole sequence (~0.7 GiB at 1536 tokens with a 248k vocabulary).
+        try:
+            out = self.model(input_ids=t, output_hidden_states=True, logits_to_keep=1)
+        except TypeError:
+            out = self.model(input_ids=t, output_hidden_states=True)
         h = out.hidden_states[-1][:, -1, :]
         head = self.heads[head_name]
         return head(h.to(head.weight.dtype)).squeeze(-1)
@@ -266,8 +278,10 @@ class PolicyView(object):
             return None
 
     def forward_lm(self, ids, labels):
+        """`.loss` is the completion NLL, computed from the completion's logits only."""
         with self.bb.as_adapter(self.name):
-            return self.bb.model(input_ids=ids, labels=labels)
+            return types.SimpleNamespace(loss=compat.completion_nll(self.bb.model, ids,
+                                                                    labels))
 
     def train(self):
         self.bb.model.train()

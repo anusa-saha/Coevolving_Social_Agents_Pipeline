@@ -83,6 +83,7 @@ class EPOEnv(object):
         self.leaks = []
         self.settlement = {}
         self.settle_turn = None
+        self.settled_by = None                   # 'chair' | 'extractor'
         self.last_act = None
         self.acts = []
         self.sigmas = []
@@ -148,6 +149,7 @@ class EPOEnv(object):
         if parsed:
             self.settlement = parsed
             self.settle_turn = self.cur_step
+            self.settled_by = 'chair'
 
         done = 0
         if parsed or last_turn:
@@ -155,6 +157,7 @@ class EPOEnv(object):
                 self.settlement = self._extract_settlement()
                 if self.settlement:
                     self.settle_turn = self.cur_step
+                    self.settled_by = 'extractor'
             s = self._finalise_score()
             invalid = bool(self.leaks) and self.cfg.leak_invalidates
             if s['schema_valid'] and not invalid and s['dca'] >= self.cfg.done_tau:
@@ -219,6 +222,7 @@ class EPOEnv(object):
             'num_agents': self.case.get('num_agents'),
             'scenario_type': self.case.get('scenario_type'),
             'settlement': self.settlement, 'score': self.last_score,
+            'settle_turn': self.settle_turn, 'settled_by': self.settled_by,
             'score_norm': self.last_score_norm, 'floor': floor_score(self.case),
             'revealed': sorted(self.revealed),
             'reveal_elicited': dict(self.reveal_elicited),

@@ -11,8 +11,11 @@ What lives here is only what MUST be identical across arms:
     verifier    deterministic scoring of a settlement against the dataset's checks
     paths       where the dataset is, and where each arm writes its own outputs
     compat      version shims for transformers / peft / accelerate
+    headline    eval.py's headline metrics and its paired comparison
+    runlog      conversation and rollout logs, one format for every arm
 
 Everything else -- prompts, environments, training loops -- is per-baseline and stays in
 that baseline's folder, because that is the part each method is entitled to change.
 """
-__all__ = ['compat', 'data_csa', 'detectors', 'paths', 'verifier']
+__all__ = ['compat', 'data_csa', 'detectors', 'headline', 'paths', 'runlog',
+           'verifier']

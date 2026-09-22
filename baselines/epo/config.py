@@ -108,7 +108,7 @@ class Defaults:
     """
     # --- dialogue agent (frozen). EPO uses Llama3-8B / GPT-4o; we hold this fixed to
     # the same backend the PPDPP runs used, so LLM_d is constant across the comparison.
-    agent_model = 'Qwen/Qwen2.5-7B-Instruct'
+    agent_model = 'Qwen/Qwen3.5-9B'
     agent_dtype = 'bfloat16'
     agent_device = 'cuda:0'
     agent_max_new_tokens = 96
@@ -116,12 +116,16 @@ class Defaults:
     agent_temperature = 0.7              # train; eval forces greedy
 
     # --- strategist (trained)
-    strategist_model = 'Qwen/Qwen2.5-7B-Instruct'
+    strategist_model = 'Qwen/Qwen3.5-9B'
     strategist_device = 'cuda:1'         # set to cuda:0 to co-reside; see README
     lora_r = 16                          # EPO full-FTs; 99 scenarios would memorise
     lora_alpha = 32
     lora_dropout = 0.05
+    # q/k/v/o exist only in Qwen3.5's full-attention layers (every 4th). The other 24 are
+    # Gated DeltaNet, projected by in_proj_qkv / in_proj_z / out_proj -- without those,
+    # three attention blocks in four would carry no adapter.
     lora_targets = ('q_proj', 'k_proj', 'v_proj', 'o_proj',
+                    'in_proj_qkv', 'in_proj_z', 'out_proj',
                     'gate_proj', 'up_proj', 'down_proj')
     strategy_max_tokens = 48             # ~20 words plus the act tag
     strategy_temperature = 0.7
@@ -133,6 +137,8 @@ class Defaults:
     gamma = 0.99
     episodes_per_update = 4              # 700 episodes -> ~175 optimizer steps
     grad_clip = 1.0
+    grad_checkpointing = False           # ~6x less activation memory, ~30% slower
+    max_prompt_tokens = 1536             # matches the other arms; 0 disables the cap
     kl_beta = 0.01                       # EPO reports none; insurance against collapse
     total_episodes = 700
     group_k = 4                          # rollouts per scenario, for the baseline

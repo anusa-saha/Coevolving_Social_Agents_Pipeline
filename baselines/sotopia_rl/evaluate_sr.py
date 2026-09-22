@@ -22,11 +22,12 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+from csa_core import compat as compat                                        # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import paths                                         # noqa: E402
 import prompts_sr as P                               # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_sr import SREnv                             # noqa: E402
 from models_sr import POLICY, PolicyView, SharedBackbone   # noqa: E402
 
@@ -109,22 +110,25 @@ def main():
 
     out_path = os.path.join(paths.LOGS, 'Record-%s-%s.txt' % (cli.tag, cli.split))
     recs, t0 = [], time.time()
+    conv = runlog.EvalLog(paths.LOGS, '%s-%s' % (cli.tag, cli.split), tag=cli.tag)
     with open(out_path, 'w', encoding='utf-8') as f:
         for i, case in enumerate(cases):
             rec, _s = run_episode(env, case, policy)
             recs.append(rec)
             f.write('%s\n\n' % str(rec))
+            conv.add(case, rec)
             if (i + 1) % 10 == 0:
                 print('  %d/%d  %.1f min' % (i + 1, len(cases), (time.time() - t0) / 60),
                       flush=True)
 
+    headline = conv.close()
     summ = summarise(recs)
     summ['tag'] = cli.tag
     summ['split'] = cli.split
     summ['adapter'] = cli.adapter or None
     with open(os.path.join(paths.LOGS, 'summary-%s-%s.json' % (cli.tag, cli.split)),
               'w', encoding='utf-8') as f:
-        json.dump({'summary': summ,
+        json.dump({'summary': summ, 'headline': headline,
                    'by_domain': _by(recs, 'domain'),
                    'by_num_agents': _by(recs, 'num_agents')}, f, indent=1)
     print('\nrecords -> %s' % out_path)

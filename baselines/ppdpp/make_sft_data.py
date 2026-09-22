@@ -1,4 +1,3 @@
-
 """Filtered behaviour cloning: manufacture supervised data for the planner.
 
 CSA ships no dialogues, so PPDPP's supervised stage has nothing to learn from. This
@@ -12,7 +11,6 @@ ground truth:
   3. rank WITHIN each scenario and keep the top few. Ranking within, not globally, so
      hard scenarios still contribute rather than the filter selecting only easy ones.
   4. emit (prefix, act) pairs from the survivors.
-
 
 The signal comes from the filter, not from a judge or a script. Rollouts cost nothing
 beyond the utterances themselves: no critic, and settlement extraction only if the
@@ -88,7 +86,7 @@ def rollout(env, rng, chair_turns, force_finalise=True):
     budget = min(chair_turns, env.max_turn)
     for t in range(budget):
         last = (t == budget - 1)
-        action = 'decide' if (last and force_finalise) else rng.choice(ACTS)
+        action = 'finalise' if (last and force_finalise) else rng.choice(ACTS)
         before = len(env.conversation)
         env.step(action)
         if len(env.conversation) <= before:
@@ -131,7 +129,7 @@ def main():
     p.add_argument('--out', default='data_sft')
     p.add_argument('--limit', type=int, default=0, help='0 = all scenarios')
     p.add_argument('--backend', default='qwen')
-    p.add_argument('--qwen_path', default='Qwen/Qwen2.5-7B-Instruct')
+    p.add_argument('--qwen_path', default='Qwen/Qwen3.5-9B')
     p.add_argument('--qwen_dtype', default='bfloat16')
     p.add_argument('--device_map', default='cuda:0')
     p.add_argument('--openai_model', default='gpt-3.5-turbo-0613')

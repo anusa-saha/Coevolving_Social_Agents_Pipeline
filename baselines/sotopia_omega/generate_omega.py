@@ -35,9 +35,10 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import experts                                       # noqa: E402
 import paths                                         # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_om import OmegaEnv                          # noqa: E402
 
 
@@ -64,7 +65,7 @@ def rank_key(ep):
 
 
 # ------------------------------------------------------------------ probe
-def probe(env, cases, n, rng):
+def probe(env, cases, n, rng, rollouts):
     """Force each scenario through BOTH modes and compare the chair turns.
 
     The whole method rests on one assumption: a 7B with the scaffold produces better
@@ -76,6 +77,9 @@ def probe(env, cases, n, rng):
     for i, case in enumerate(cases[:n]):
         fast = rollout(env, case, force_mode='fast')
         slow = rollout(env, case, force_mode='slow')
+        for mode, ep in (('fast', fast), ('slow', slow)):
+            rollouts.add(case, ep, step=i, candidate=mode, reward=ep['score']['dca'],
+                         force_mode=mode)
         rows.append((case['uid'], fast, slow))
         print('--- %s ---' % case['uid'])
         for lbl, ep in (('fast', fast), ('slow', slow)):
@@ -148,11 +152,13 @@ def main():
     print('expert: %s (%s)   scenarios: %d   opponent: %s'
           % (cfg.expert_model, cfg.expert, len(cases), cli.opponent))
 
-    if cli.probe:
-        probe(env, cases, cli.probe, rng)
-        return
-
     tag = 'B' if cfg.expert == 'local' else 'C'
+    if cli.probe:
+        rollouts = runlog.RolloutLog(paths.LOGS, 'probe-%s-%s' % (tag, cli.split),
+                                     algo='omega-probe')
+        probe(env, cases, cli.probe, rng, rollouts)
+        rollouts.close()
+        return
     out_path = cli.out or os.path.join(paths.DATA, 'corpus-%s-%s.jsonl' % (tag, cli.split))
     done_uids = set()
     if os.path.exists(out_path) and not cli.restart:
@@ -165,6 +171,8 @@ def main():
         if done_uids:
             print('resuming: %d scenarios already generated' % len(done_uids), flush=True)
 
+    rollouts = runlog.RolloutLog(paths.LOGS, 'corpus-%s-%s' % (tag, cli.split),
+                                 algo='omega-selfplay-%s' % tag, append=bool(done_uids))
     stats = collections.Counter()
     kept, t0 = [], time.time()
     with open(out_path, 'a' if done_uids else 'w', encoding='utf-8') as f:
@@ -176,13 +184,19 @@ def main():
             for _j in range(cli.k):
                 ep = rollout(env, case, opponent=opp)
                 ep['rank'] = rank_key(ep)
+                ep['_j'] = _j
                 cands.append(ep)
                 stats['stalled' if ep['stalled_at'] is not None else 'never_stalled'] += 1
             cands.sort(key=lambda e: e['rank'], reverse=True)
             spread = cands[0]['rank'][0] - cands[-1]['rank'][0]
             stats['flat' if spread == 0 else 'varied'] += 1
-            for c in cands[:cli.keep]:
+            # every rollout is logged, not only the kept ones
+            for pos, c in enumerate(cands):
                 c.pop('rank', None)
+                rollouts.add(case, c, step=i, candidate=c.pop('_j', None),
+                             reward=c['score']['dca'], rank=pos, kept=pos < cli.keep,
+                             opponent=opp, stalled_at=c['stalled_at'])
+            for c in cands[:cli.keep]:
                 f.write(json.dumps(c, ensure_ascii=False) + '\n')
                 kept.append(c)
             f.flush()
@@ -193,6 +207,7 @@ def main():
                          stats['stalled'], stats['stalled'] + stats['never_stalled'],
                          (time.time() - t0) / 60), flush=True)
 
+    rollouts.close()
     print('\nwrote %s  (%d episodes)' % (out_path, len(kept)))
     if kept:
         dca = [k['score']['dca'] for k in kept]

@@ -26,9 +26,9 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+from csa_core import compat as compat                                        # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import paths                                         # noqa: E402
 import prompts_om as P                               # noqa: E402
 from student import Student                          # noqa: E402

@@ -154,6 +154,50 @@ def download_raw(repo=None, repo_type=None, dest=None):
     return dest if got == len(DOMAINS) else None
 
 
+# The scenario set as ONE file: all eleven domains x 50, lowest scenario_id first. It is
+# the source of truth whenever it can be found, and data/raw/ is only the fallback.
+#
+# Same 550 uids as the head-50 of data/raw/, so the split does not move. Seven scenarios
+# differ in content (defense 3/8/45, education 4/6, workplace_interpersonal 12/17): each
+# gains model-facing guidance fields under interaction_config or an agent entry. No arm
+# reads those fields today, but they are why the two sources must not be mixed.
+SCENARIOS_FILENAME = 'first_50.json'
+
+# Internal `domain` spellings that differ from the filename stems in DOMAINS. The
+# combined file has no filename to fall back on, so the stem is restored from this.
+# Without it the uid, the bucket sort order and therefore the whole split change.
+DOMAIN_ALIASES = {'friends_family_informal': 'family_friends_informal'}
+
+
+def find_scenarios_file():
+    """The combined scenario file, or None when the per-domain files should be used.
+
+    CSA_SCENARIOS_FILE names it explicitly ('' turns it off). CSA_RAW_DIR, when set,
+    asks for the per-domain files and wins. Otherwise walk up the tree, the same way
+    find_raw() does, so the vendored copy in roundtable/ finds the repo-root file too.
+    """
+    env = os.environ.get('CSA_SCENARIOS_FILE')
+    if env is not None:
+        if not env.strip():
+            return None
+        if not os.path.isfile(env):
+            raise SystemExit('CSA_SCENARIOS_FILE=%r does not exist' % env)
+        return os.path.abspath(env)
+    if os.environ.get('CSA_RAW_DIR'):
+        return None
+
+    node = HERE
+    for _ in range(6):
+        cand = os.path.join(node, SCENARIOS_FILENAME)
+        if os.path.isfile(cand):
+            return os.path.abspath(cand)
+        parent = os.path.dirname(node)
+        if parent == node:
+            break
+        node = parent
+    return None
+
+
 def find_raw(allow_download=True):
     """Locate the directory holding <domain>_scenarios.json.
 

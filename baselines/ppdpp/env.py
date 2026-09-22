@@ -160,6 +160,8 @@ class Env(object):
         self.addressed = set()        # advisors the chair has directed a question at
         self.leaks = []               # agent stated a fact it never saw
         self.settlement = {}
+        self.settle_turn = None       # chair step the settlement came from
+        self.settled_by = None        # 'chair' | 'extractor'
         self.last_score = None
         self.last_score_norm = None
         self.prev_phi = {'disclosure': 0.0, 'elicitation': 0.0, 'coverage': 0.0}
@@ -312,7 +314,10 @@ class Env(object):
             print('--> On-going !')
             done = 0
 
-        # Measurement only; never enters `reward` in this arm.
+        # Measurement only; never enters `reward` in this arm. The settlement is taken
+        # exactly as the verifier arm takes it: before this the critic arm never recorded
+        # one, so every episode was scored against an empty settlement.
+        self._csa_take_settlement(final=bool(done))
         if done:
             self._csa_finalise_score()
         self.cur_conver_step += 1
@@ -326,13 +331,9 @@ class Env(object):
         lexical. Scoring is attempted on every chair turn that produced parseable JSON,
         so success is detectable at any turn rather than only on a settling turn.
         """
-        parsed = self._csa_parse_json(self.conversation[-1]['content'])
-        if parsed:
-            self.settlement = parsed
+        parsed = self._csa_take_settlement(final=last_turn)
         scored = bool(parsed) or last_turn
         if scored:
-            if not self.settlement and last_turn:
-                self.settlement = self._csa_extract_settlement()
             s = self._csa_finalise_score()
             terminal = self._csa_terminal_reward(s)
             # Success is a threshold on the decisive-check fraction, not a conjunction
@@ -355,6 +356,20 @@ class Env(object):
         print('--> On-going ! %s' % self._csa_potentials())
         self.cur_conver_step += 1
         return self.conversation, reward, 0
+
+    def _csa_take_settlement(self, final):
+        """Keep the chair's latest parseable settlement and, on the final turn with none,
+        fall back to the extractor. Both reward arms call this, so both are scored alike.
+        Returns what this turn's chair message parsed to ({} when nothing)."""
+        parsed = self._csa_parse_json(self.conversation[-1]['content'])
+        if parsed:
+            self.settlement = parsed
+            self.settle_turn, self.settled_by = self.cur_conver_step, 'chair'
+        if final and not self.settlement:
+            self.settlement = self._csa_extract_settlement()
+            if self.settlement:
+                self.settle_turn, self.settled_by = self.cur_conver_step, 'extractor'
+        return parsed
 
     def _csa_terminal_reward(self, s):
         """Multi-dimensional reward on PPDPP's [-1, 1] ordinal ladder.

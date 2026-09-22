@@ -21,10 +21,13 @@ What actually differs, and where:
                                Older releases TypeError on dtype=.
   device_map=                  needs accelerate installed. Without it, load on CPU and
                                .to(device) instead.
-  apply_chat_template          added in 4.34; Qwen2 architecture support landed in 4.37.
-                               That is the hard floor -- below it Qwen2.5 will not load
-                               at all, and no shim can help.
-  enable_thinking=             Qwen3 only. Qwen2.5 tokenizers TypeError on it.
+  qwen3_5 architecture         landed in 5.2. That is the hard floor -- below it
+                               Qwen3.5-9B will not load at all, and no shim can help.
+                               AutoModelForCausalLM maps its multimodal checkpoint to the
+                               text-only Qwen3_5ForCausalLM, dropping the vision tower and
+                               the MTP head.
+  enable_thinking=             Qwen3 / Qwen3.5 only; Qwen3.5 thinks unless told not to.
+                               Qwen2.5 tokenizers TypeError on it.
   get_linear_schedule_with_warmup   moved between transformers.optimization and the
                                top-level namespace.
   disable_adapter()            peft context manager for reference-model KL. Missing or
@@ -34,7 +37,7 @@ Run `python compat.py` to print what this box has and whether it will work.
 """
 import contextlib
 
-MIN_TRANSFORMERS = (4, 37)          # Qwen2 architecture support
+MIN_TRANSFORMERS = (5, 2)           # Qwen3.5 (qwen3_5) architecture support
 MIN_PEFT = (0, 6)                   # LoraConfig + PeftModel.from_pretrained(is_trainable)
 
 
@@ -64,12 +67,12 @@ def problems():
     if v['torch'] is None:
         out.append('torch is not installed:  pip install torch')
     if v['transformers'] is None:
-        out.append('transformers is not installed:  pip install "transformers>=4.37"')
+        out.append('transformers is not installed:  pip install "transformers>=5.2"')
     else:
         import transformers
         if _ver(transformers) < MIN_TRANSFORMERS:
-            out.append('transformers %s is too old for Qwen2.5 (need >= %d.%d):  '
-                       'pip install -U "transformers>=4.37"'
+            out.append('transformers %s is too old for Qwen3.5 (need >= %d.%d):  '
+                       'pip install -U "transformers>=5.2"'
                        % (v['transformers'], *MIN_TRANSFORMERS))
     if v['peft'] is None:
         out.append('peft is not installed (needed to train LLM_s):  pip install "peft>=0.6"')
@@ -108,8 +111,8 @@ def load_tokenizer(model_id):
     if getattr(tok, 'chat_template', None) is None:
         raise SystemExit(
             '%s has no chat template. This package builds every prompt through '
-            'apply_chat_template; a base (non-instruct) model will not work. Use an '
-            '-Instruct checkpoint.' % model_id)
+            'apply_chat_template; a base model will not work. Use a chat checkpoint '
+            '(Qwen/Qwen3.5-9B, not -Base).' % model_id)
     return tok
 
 
@@ -165,6 +168,63 @@ def render_chat(tokenizer, messages):
     except TypeError:
         return tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True)
+
+
+# ------------------------------------------------------------------ memory
+def logits_tail(model, input_ids, keep):
+    """Logits for the last `keep` positions only.
+
+    Qwen3.5's vocabulary is 248k tokens, so the LM head over a 1536-token sequence is
+    ~0.7 GiB in bf16 and ~1.4 GiB once a loss upcasts it, held again for the backward.
+    Every loss in this repo reads only the completion at the END of the sequence, so on a
+    24 GB card the rest is memory spent on nothing. `logits_to_keep` applies the head to
+    the tail alone; a release without it falls back to slicing the full logits, which
+    gives the same numbers at the old memory cost.
+    """
+    keep = max(1, min(int(keep), input_ids.shape[-1]))
+    try:
+        return model(input_ids=input_ids, logits_to_keep=keep).logits
+    except TypeError:
+        return model(input_ids=input_ids).logits[:, -keep:]
+
+
+def completion_nll(model, input_ids, labels, ignore_index=-100):
+    """`model(input_ids, labels=labels).loss`, computed from the completion's logits only.
+
+    The same number whenever the labelled positions are a suffix of the sequence, which
+    every SFT example here is: prompt masked, completion last. When they are not, this
+    falls back to the model's own loss rather than returning a different number.
+    parallel/preflight.py --probe checks the two agree on the real model.
+    """
+    import torch.nn.functional as F
+    mask = labels != ignore_index
+    if input_ids.shape[0] != 1 or not bool(mask.any()):
+        return model(input_ids=input_ids, labels=labels).loss
+    first = int(mask[0].nonzero()[0])
+    if first < 1 or not bool(mask[0, first:].all()):
+        return model(input_ids=input_ids, labels=labels).loss
+    logits = logits_tail(model, input_ids, input_ids.shape[-1] - first + 1)[:, :-1]
+    return F.cross_entropy(logits.float().reshape(-1, logits.shape[-1]),
+                           labels[:, first:].reshape(-1), ignore_index=ignore_index)
+
+
+@contextlib.contextmanager
+def cached_generation(model):
+    """Let a no-grad generate use its KV cache on a model that trains with checkpointing.
+
+    transformers switches the cache off whenever gradient checkpointing is on and the
+    model is in train mode, so every sampled token re-runs the whole prompt. Checkpointing
+    only matters for a backward pass, so it is lifted for the generate and restored after;
+    dropout and every other train-mode behaviour are left as they were.
+    """
+    on = bool(getattr(model, 'is_gradient_checkpointing', False))
+    if on:
+        model.gradient_checkpointing_disable()
+    try:
+        yield
+    finally:
+        if on:
+            model.gradient_checkpointing_enable()
 
 
 def linear_schedule(optimizer, warmup_steps, total_steps):

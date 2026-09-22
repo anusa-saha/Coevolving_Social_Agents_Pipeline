@@ -160,6 +160,17 @@ python run_epo.py --episodes 700 --adapter ckpt/sft --eval_every 175
 `../ppdpp/compute_all_metrics.py` consumes, plus `logs/<run>-history.jsonl`
 (per-group training trace) and `logs/<run>-summary.json`.
 
+### Memory
+
+The peak is the strategist's backward, not generation. The log-probs are taken over the
+completion's ~48 positions only (slicing the logits before the softmax, not after --
+doing it after built a 1.1 GB fp32 tensor per turn at L=2000 to read 48 rows out of it).
+Beyond that: `--grad_checkpointing`, then `--max_prompt_tokens`, then
+`--episodes_per_update 2`, then `--kl_beta 0`, which removes the second forward per turn.
+
+Two 7B models at bf16 are ~30 GB of weights. They belong on separate devices; `run_epo.py`
+warns if `--agent_device` and `--strategist_device` match.
+
 ### Knobs that matter
 
 | Flag | Default | Note |

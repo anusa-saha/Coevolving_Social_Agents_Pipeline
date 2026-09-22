@@ -9,7 +9,7 @@ deliberately different. See sotopia-rl-vs-vanilla.pdf for the full argument.
 class Defaults:
     # --- the meeting agents. Frozen throughout: only the chair policy is trained, and
     # advisors trained on the same reward collapse the hidden profile.
-    agent_model = 'Qwen/Qwen2.5-7B-Instruct'
+    agent_model = 'Qwen/Qwen3.5-9B'
     agent_dtype = 'bfloat16'
     agent_device = 'cuda:0'
     agent_max_new_tokens = 96
@@ -19,12 +19,16 @@ class Defaults:
     # --- the trained chair policy and the reward model
     # Both are the SAME checkpoint as the agent, so exactly one copy is resident and the
     # three roles are LoRA adapters over it (models_sr.SharedBackbone). Three separate
-    # bf16 7B models would be ~45 GB of weights; this is ~15 GB plus ~300 MB of adapters.
+    # bf16 9B models would be ~54 GB of weights; this is ~18 GB plus the adapters.
     # There is therefore ONE device setting -- agent_device -- and no policy/rm device.
     lora_r = 16                          # paper full-FTs; 99 scenarios would memorise
     lora_alpha = 32
     lora_dropout = 0.05
+    # q/k/v/o exist only in Qwen3.5's full-attention layers (every 4th). The other 24 are
+    # Gated DeltaNet, projected by in_proj_qkv / in_proj_z / out_proj -- without those,
+    # three attention blocks in four would carry no adapter.
     lora_targets = ('q_proj', 'k_proj', 'v_proj', 'o_proj',
+                    'in_proj_qkv', 'in_proj_z', 'out_proj',
                     'gate_proj', 'up_proj', 'down_proj')
     max_len = 1536
 

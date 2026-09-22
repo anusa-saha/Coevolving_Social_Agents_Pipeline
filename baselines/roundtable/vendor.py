@@ -46,6 +46,9 @@ PLAN = [
      [('from csa_core.detectors import', 'from _detectors import')]),
     ('data_csa.py', '_data_csa.py',
      [('from csa_core import paths', 'import _paths as paths')]),
+    ('headline.py', '_headline.py', []),
+    ('runlog.py', '_runlog.py',
+     [('from csa_core import headline as H', 'import _headline as H')]),
     ('paths.py', '_paths.py', [
         ("ROOT = os.path.dirname(HERE)                     # the repo root, one level up",
          "# Standalone: the cache sits inside this folder, not at a repo root that may\n"

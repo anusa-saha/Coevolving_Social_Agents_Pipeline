@@ -29,7 +29,7 @@ for _s in (sys.stdout, sys.stderr):
 
 import attribution                                   # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import paths                                         # noqa: E402
 import prompts_sr as P                               # noqa: E402
 

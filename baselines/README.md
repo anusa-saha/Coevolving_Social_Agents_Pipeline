@@ -1,595 +1,474 @@
 # CSA Baselines
 
-Six social-agent methods ported to **CSA** ([Coevolving Social
-Agents](https://huggingface.co/datasets/anusasaha/Coevolving_Social_Agents)), a
-hidden-profile benchmark of multi-party meetings. In each meeting one agent chairs, three
-to five advisors each hold a private fact, and the chair has to pool enough of those facts
-to reach a settlement that passes the scenario's executable checks.
+Five social-agent methods, plus a method-free floor, run on **CSA**
+([Coevolving Social Agents](https://huggingface.co/datasets/anusasaha/Coevolving_Social_Agents)):
+a hidden-profile benchmark where one agent chairs a meeting, three to five advisors each
+hold a private fact, and the chair must draw out enough of those facts to reach a
+settlement that passes the scenario's executable checks.
 
-The point of the repo is a *fair* comparison. All six arms use the same dialogue backend
-(Qwen2.5-7B-Instruct), the same scenario split, the same disclosure detector, the same
-verifier and the same annotator — so a difference between two rows is a difference between
-two methods and not between two measuring instruments.
+Every arm uses the same model (`Qwen/Qwen3.5-9B`, thinking off), the same scenario split,
+the same disclosure detector and the same verifier, so a difference between two rows is a
+difference between two methods.
 
-### Benchmark configuration
+| arm | folder | what it is | trains? |
+|---|---|---|---|
+| Round Table | `roundtable/` | agents talk, the chair settles: the floor | no |
+| Sotopia-ToM | `sotopia_tom/` | five prompting strategies for the chair | no |
+| PPDPP | `ppdpp/` | RoBERTa act planner + REINFORCE | yes |
+| EPO | `epo/` | LLM strategist + turn-level REINFORCE | yes |
+| Sotopia-RL | `sotopia_rl/` | attributed rewards, reward model, GRPO | yes |
+| SOTOPIA-Ω | `sotopia_omega/` | stall detection, slow-mode corpus, SFT | yes |
 
-**All 11 domains × 50 scenarios = 550**, split 363 / 33 / 154 (train / valid / test),
-scenario-disjoint and stratified on (domain, num_agents).
+**Contents:** [1 Requirements](#1-requirements) · [2 Setup](#2-setup-once) ·
+[3 Check the setup](#3-check-the-setup) · [4 Run everything](#4-run-everything-recommended) ·
+[5 Run one arm by hand](#5-run-one-arm-by-hand) · [6 Results](#6-results) ·
+[7 Troubleshooting](#7-troubleshooting) · [8 Reference](#8-reference)
 
-The Hub ships 100 per domain; 50 is the configured subset, taken lowest-`scenario_id`
-first. Head rather than sample, so raising the cap only ever *adds* scenarios instead of
-reshuffling the ones already in use — and the three original domains are bit-identical to
-the scenarios the earlier runs saw.
+---
+
+## 1. Requirements
+
+| | |
+|---|---|
+| GPUs | 4 × 24 GB (A5000) is what the scheduler is sized for. One card holds one 9B model; EPO's RL stage needs two cards. |
+| OS | Linux (the parallel runner uses process groups) |
+| Python | 3.10 or newer (transformers 5.x and peft require it) |
+| Disk | ~20 GB for the model in the Hugging Face cache, plus a few GB of logs and adapters |
+| Archive | `csa-artifacts/` next to this folder (or `CSA_ARTIFACTS_DIR`): PPDPP and EPO are supervised from its annotated chair turns |
+| API keys | none required. `OPENROUTER_API_KEY` is optional (EPO strategy writing) |
+
+---
+
+## 2. Setup (once)
+
+Run from this folder (`baselines/`).
 
 ```bash
-export CSA_SCENARIOS_PER_DOMAIN=100   # the full 1100
-export CSA_DOMAINS=published          # the original 3 domains x 50 -> exactly 99/9/42
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-> **This configuration replaces the earlier 3-domain / 150-scenario one, and invalidates
-> every result produced under it.** The split is rebuilt from scratch, so no arm is
-> evaluated on the scenarios its archived records used. Every arm needs re-running before
-> its numbers mean anything.
+Install PyTorch with CUDA first — pick the wheel for your driver on pytorch.org; for example:
 
-Two data notes, both handled at load time and neither written back to disk:
-
-* `family_friends_informal` and `manufacturing` each have one scenario whose
-  `settlement_schema` nests a level deeper under `settlement`. Normalised rather than
-  dropped — the contents are identical.
-* `family_friends_informal_scenarios.json` carries an internal `domain` field spelled
-  `friends_family_informal` (transposed). The filename stem wins, so domain names, uids
-  and filenames all agree.
-
-Two scenarios ship content checks that can never pass — `healthcare::scenario_47` C2 and
-`family_friends_informal::scenario_34` C6 both read a decision field absent from their own
-schema. They cap the achievable score on those two scenarios; `python ppdpp/export_csa.py`
-prints them.
-
----
-
-## Layout
-
-```
-csa_core/          the shared contract: split, detectors, verifier, paths, compat
-data/raw/          the three domain JSON files (fetched from the Hub on first use)
-
-ppdpp/             PPDPP        RoBERTa act classifier + REINFORCE
-epo/               EPO          LLM strategist emitting NL strategies, turn-level REINFORCE
-sotopia_rl/        Sotopia-RL   utterance-level attributed rewards, reward model, GRPO
-sotopia_tom/       Sotopia-ToM  four prompting strategies, no training
-sotopia_omega/     SOTOPIA-Ω    stall detection -> slow thinking -> SFT corpus
-dat/               DAT          frozen LM + 2-token continuous prefix, self-clone then TD3+BC
-
-analysis/          cross-arm metrics and the rerun runbook
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
-### `csa_core/` is the part that must not fork
-
-The split, the disclosure detector and the verifier are the *instrument*. If two arms
-score with different copies of them, their numbers are not comparable. There is exactly
-one copy, and every arm imports it:
-
-| module | what it fixes |
-|---|---|
-| `data_csa` | the split, re-derived from a fixed procedure rather than read from a file |
-| `detectors` | word-overlap disclosure rules, threshold frozen at **0.35** |
-| `verifier` | deterministic scoring of a settlement against the dataset's checks |
-| `paths` | the domain list and per-domain cap; the annotator model; where each arm writes its own outputs |
-| `compat` | version shims for transformers / peft / accelerate |
-
-Prompts, environments and training loops stay per-arm, because that is the part each
-method is entitled to change.
-
-One duplicate survives on purpose: `ppdpp/env.py` still carries its own inline copy of the
-overlap rule, because it is vendored upstream code the CSA port modified in place.
-`csa_core.detectors.assert_matches_ppdpp()` watches it, and EPO's selftest calls it.
-
----
-
-## Install
+Then the repo and every arm's extras:
 
 ```bash
 pip install -e .
+pip install -r ppdpp/requirements.txt -r epo/requirements.txt -r sotopia_rl/requirements.txt \
+            -r sotopia_tom/requirements.txt -r sotopia_omega/requirements.txt -r roundtable/requirements.txt
 ```
 
-That puts `csa_core` on the path, which is what the arms import. Each arm also ships its
-own `requirements.txt` for the extras it alone needs. Report generation and API-backed
-experts are optional:
+Fast kernels for Qwen3.5's linear-attention layers (without them generation still works, but
+much more slowly):
 
 ```bash
-pip install -e ".[reports]"     # reportlab + matplotlib, for the PDF builders
-pip install -e ".[api]"         # openai, for EPO stage 1 and Omega corpus C
+pip install flash-linear-attention causal-conv1d
 ```
 
-Running the scripts straight out of a clone works without installing — each arm's
-`paths.py` puts the repo root on `sys.path` as a fallback — but `pip install -e .` is the
-documented route.
-
-The dataset downloads itself on first use via `csa_core.paths.download_raw()`. To point at
-a local copy instead:
+Sentence-splitting data used by every arm:
 
 ```bash
-export CSA_RAW_DIR=/path/to/raw
+python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 ```
 
-The annotator that labels chair turns and writes EPO's strategy targets is also one
-setting, for the same reason the verifier is — both PPDPP and EPO are supervised from it,
-and letting them drift apart makes the arms incomparable:
-
-```bash
-export CSA_ANNOTATOR_MODEL=google/gemma-4-31b-it   # default: gemma-4-26b-a4b-it:free
-```
-
----
-
-## Check it works
-
-Every arm ships a selftest that runs on CPU in about a minute and needs no model. They
-assert the things that would otherwise fail silently: that the split is complete and
-scenario-disjoint, that the verifier reproduces published scores, that no prompt leaks a
-private fact into the wrong agent's view.
-
-```bash
-cd sotopia_rl && python selftest.py
-```
-
-| arm | checks |
-|---|---|
-| `epo` | 8 |
-| `sotopia_rl` | 9 |
-| `sotopia_tom` | 11 |
-| `sotopia_omega` | 9 |
-| `dat` | 23 |
-
-"Verifier matches published scores" needs the archived records; without them it skips and
-says so (see **Results**). "Matches the published split" only runs under
-`CSA_DOMAINS=published`, since the published split describes the old 3-domain dataset —
-and under that setting all four arms still reproduce 99/9/42 exactly.
-
----
-
-## Results are not in this repo
-
-Evaluation records, checkpoints and generated report PDFs are outputs. They are large
-(~4.5 GB, mostly model weights) and they are results, so they live outside the tree.
-Point the tooling at wherever they were archived:
+If the archive is not next to this folder:
 
 ```bash
 export CSA_ARTIFACTS_DIR=/path/to/csa-artifacts
 ```
 
-With that set, the selftests validate against the published run and the metrics scripts
-score every arm that has records. Without it, everything still runs — the checks that need
-records skip cleanly, and an arm you re-run is picked up from its own `logs/`.
-
----
-
-## Cross-arm metrics
+Optional — lets EPO write its strategy targets with the annotator model instead of templates:
 
 ```bash
-cd analysis && python compute_extended_metrics.py
+export OPENROUTER_API_KEY=...        # never put a key in a file
 ```
 
-Discovers every arm that has records and scores them all. Pure stdlib — no torch, no CUDA,
-no judge model. Seconds, not hours.
-
-| section | what it reports |
-|---|---|
-| Headline | dca and disclosure with bootstrap 95% CIs, cost-normalised by calls and tokens |
-| Paired | sign test, Cliff's delta, bootstrap CI on the paired difference, Holm correction, N×N win matrix |
-| E | gold recovered from content checks; exact-match accuracy; PE@10/20/30, MAE, RMSE, MAPE, R², correlations |
-| F | distinct-1/2/3, utterance length, role-adherence violations, private-view leakage |
-| G | act distribution and entropy, bigrams, return mean and variance |
-| H | breakdown by domain and table size, per-scenario spread, every verifier subscore with its own CI, difficulty tertiles |
-
-`make_rerun_runbook.py` builds a PDF that reads the current state off disk and says, per
-arm, whether it needs re-running and what the command is.
+The dataset needs no download: `first_50.json` (11 domains × 50 scenarios) is in this folder.
 
 ---
 
-## Running the baselines
+## 3. Check the setup
 
-Every arm follows the same shape: **manufacture training material → train → evaluate →
-report**. What differs is how many of those stages exist. Sotopia-ToM has none of the
-first three; SOTOPIA-Ω has all four.
-
-Before anything, confirm the environment:
+Library versions, and whether anything blocks a run:
 
 ```bash
 python csa_core/compat.py
 ```
 
-That prints which of torch / transformers / peft / accelerate / nltk / openai are present
-and whether the versions clear the floors. `transformers>=4.37` is the only hard floor —
-Qwen2 support landed there and no shim can work around its absence.
+Every arm's selftest (CPU, about a minute each, no model needed). Exit code 0 = all passed;
+2 = logic passed but the GPU stack is missing; 1 = a real failure:
 
-### Hardware
+```bash
+for a in epo sotopia_rl sotopia_tom sotopia_omega roundtable; do (cd $a && python selftest.py); done
+```
 
-Every arm runs Qwen2.5-7B-Instruct in bfloat16: **~15 GB of weights** plus activations.
-The reference setup is 2×A5000. One 24 GB card is enough for every arm if you pass
-`--grad_checkpointing` where it is offered (~6× less activation memory, ~30% slower).
+Every import in the repo resolves (the only expected failures are the five in `eval.py`,
+which belongs to the co-evolved system and is not run here):
 
-Two arms want a second card by default:
+```bash
+python analysis/check_imports.py
+```
 
-| arm | why |
-|---|---|
-| EPO | `strategist_device = 'cuda:1'` — the strategist is a second 7B beside the dialogue agent. Set `--strategist_device cuda:0` to co-reside. |
-| Sotopia-RL | policy, reward model and reference share **one backbone with three adapters**, so it fits one card; `--agent_device` splits it if you have two. |
+Versions, kernels, GPUs, data, and the model downloads:
 
-DAT wants neither, but its stage 1 is the only place in the repo where a backward runs
-**through** the frozen 7B (to reach a two-token prefix), so activation memory rather than
-parameter memory is the limit there. Gradient checkpointing is on by default.
+```bash
+python parallel/preflight.py --prefetch
+```
+
+On one GPU, the real model: generation speed, a LoRA training step at 2,560 tokens, and that
+the training loss is computed correctly. **Fails if a training step will not fit on the card.**
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python parallel/preflight.py --probe
+```
+
+`parallel/run_all.py` runs both preflight steps for you as its first jobs.
 
 ---
 
-### 1. PPDPP
+## 4. Run everything (recommended)
 
-RoBERTa-large act classifier + REINFORCE. Two stages: supervised warm start, then RL.
+`parallel/run_all.py` runs every stage of every arm across the GPUs: one job per card, EPO's RL
+stage on two, the longest chains of work first, idle cards filled with short jobs. Finished jobs
+are remembered, so re-running the same command resumes.
+
+See the plan and an estimated timeline (about 63 h on 4 GPUs; the estimates are rough):
+
+```bash
+python parallel/run_all.py --dry_run
+```
+
+Start it (use `tmux` or `nohup` — it runs for days):
+
+```bash
+nohup python parallel/run_all.py > run_all.out 2>&1 &
+```
+
+Watch it:
+
+```bash
+python parallel/run_all.py --status
+tail -f runs/run_all.log
+tail -f runs/logs/sr.collect_train.log
+```
+
+Other useful forms:
+
+```bash
+python parallel/run_all.py --list                 # every job, its GPUs, estimate and dependencies
+python parallel/run_all.py --only sr om           # some arms (their prerequisites come along)
+python parallel/run_all.py --gpus 0,1             # use only these cards
+python parallel/run_all.py --reset sr.grpo        # forget that a job finished, so it runs again
+python parallel/run_all.py --force_gates          # start Ω's corpus even if its probe said STOP
+```
+
+Stop with `Ctrl-C` (or `kill` the runner): running jobs are stopped and will re-run next time.
+
+Arm names for `--only`: `setup ppdpp epo sr tom om rt analysis`.
+
+**Choices the runner makes for you:**
+
+- EPO's strategies use the annotator API only if `OPENROUTER_API_KEY` is set; otherwise templates (`--fallback_only`).
+- Sotopia-RL's GRPO uses the reward model only if its pair-ranking accuracy is ≥ 0.60; otherwise `lookahead`.
+- SOTOPIA-Ω's corpus does not start if its probe printed `STOP`.
+- Jobs run offline after the first job downloads the model (`HF_HUB_OFFLINE=1`).
+
+State and logs: `runs/state/<job>.done`, `runs/logs/<job>.log`, `runs/status.json`.
+
+---
+
+## 5. Run one arm by hand
+
+Every command runs from the arm's folder. `CUDA_VISIBLE_DEVICES` picks the card; inside the
+job it is always `cuda:0` (and `cuda:1` for EPO's RL stage). Training commands keep
+`--grad_checkpointing` — without it a 9B training step does not fit on 24 GB.
+
+### 5.1 Round Table — 1 GPU, ~1 h
+
+```bash
+cd roundtable
+CUDA_VISIBLE_DEVICES=0 python run_rt.py --backend local --decide chair --split test
+```
+
+### 5.2 Sotopia-ToM — 1 GPU per strategy, ~2–2.5 h each
+
+```bash
+cd sotopia_tom
+CUDA_VISIBLE_DEVICES=0 python run_tom.py --strategies stripped   --split test --out logs/summary-stripped.json
+CUDA_VISIBLE_DEVICES=1 python run_tom.py --strategies basic      --split test --out logs/summary-basic.json
+CUDA_VISIBLE_DEVICES=2 python run_tom.py --strategies cot        --split test --out logs/summary-cot.json
+CUDA_VISIBLE_DEVICES=3 python run_tom.py --strategies tom_coach  --split test --out logs/summary-tom_coach.json
+CUDA_VISIBLE_DEVICES=0 python run_tom.py --strategies tom_belief --split test --out logs/summary-tom_belief.json
+```
+
+When all five have finished, compare them (CPU):
+
+```bash
+python run_tom.py --compare --split test
+```
+
+### 5.3 PPDPP — planner SFT, then two RL runs (1 GPU each)
 
 ```bash
 cd ppdpp
 ```
 
-**Stage 1 — planner warm start.** Needs the annotated chair turns (archived; see
-*Results*). Skip if `sft/csa/roberta/best_checkpoint` already exists.
+1. Write the scenario split in PPDPP's format, and copy the planner SFT data keeping only
+   train-split scenarios (both CPU):
 
-```bash
-python sft.py --data_name csa --model_name roberta --model_name_or_path roberta-large --output_dir sft --do_train --do_eval  --num_train_epochs 10 --max_seq_length 512
-```
+   ```bash
+   python export_csa.py --out_dir ./data
+   python filter_sft_split.py
+   ```
 
-**Stage 2 — RL.** `--csa_reward` is the flag that matters:
+2. Train the planner (~0.5 h):
 
-```bash
-# PPDPP's own dense per-turn critic reward. This is the paper's configuration
-# and the default -- and it has never actually been run on CSA.
-python run.py --data_name csa --system qwen --user qwen --critic qwen --csa_reward critic --seed 1 --epochs 6 --max_turn 8 --do_train --do_eval
-```
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python sft.py --data_name csa --model_nam roberta --model_name_or_path /scratch/rohank__iitp/roberta-large --data_dir data_sft --output_dir sft --do_train --do_eval --overwrite_output_dir \
+       --num_train_epochs 10 --max_seq_length 512 --gpu 0 --cache_dir ~/.cache/huggingface/hub
+   ```
 
-```bash
-# the sparse shared episode reward the other four arms use
-python run.py --data_name csa --system qwen --user qwen --critic qwen --csa_reward verifier --seed 1 --epochs 6 --do_train --do_eval
-```
+3. RL, one run per reward, in parallel (~34 h and ~44 h; each evaluates on the test split after every step):
 
-Records land in `tmp/csa/eval_result/Record-epoch-*-<reward>-seed<n>.txt`. The reward name
-is in the filename, which is how you tell the two arms apart later.
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python run.py --data_name csa --system qwen --user qwen --critic qwen \
+       --csa_reward verifier --seed 1 --epochs 6 --max_turn 8 --do_train --do_eval \
+       --qwen_device_map cuda:0 --cache_dir ~/.cache/huggingface/hub
+   CUDA_VISIBLE_DEVICES=1 python run.py --data_name csa --system qwen --user qwen --critic qwen \
+       --csa_reward critic --seed 1 --epochs 6 --max_turn 8 --do_train --do_eval \
+       --qwen_device_map cuda:0 --cache_dir ~/.cache/huggingface/hub
+   ```
 
-**Watch:** the run prints `zero-gradient updates: X%` beside every learning curve. Under a
-sparse constant reward that fraction is high — a constant raw reward carries no
-cross-episode signal, and the flat curve is measuring the reward config rather than the
-algorithm. Under `critic` it should drop sharply. If it does not, that is a result about
-PPDPP on this task, not a bug to chase.
+### 5.4 EPO — strategy targets, SFT (1 GPU), RL (2 GPUs)
 
-~6 GPU-hours for the full 6 epochs.
-
----
-
-### 2. EPO
-
-An LLM strategist emits a natural-language strategy each chair turn; the frozen dialogue
-agent renders it. Three stages.
+Needs `ppdpp/data_sft/` from step 5.3.1.
 
 ```bash
 cd epo
 ```
 
-**Stage 1 — manufacture the SFT targets.** An annotator model writes one strategy per
-labelled chair turn. Needs an API key:
+1. Strategy targets (CPU). Drop `--fallback_only` to use the annotator API (`OPENROUTER_API_KEY`):
 
-```bash
-export OPENROUTER_API_KEY=...          # never put the key in a file
+   ```bash
+   python make_strategies.py --split train --fallback_only
+   python make_strategies.py --split valid --fallback_only
+   ```
 
-python make_strategies.py --split train --model google/gemma-3-27b-it
-python make_strategies.py --split valid --model google/gemma-3-27b-it
-```
+2. SFT warm start (~1 h):
 
-No key, or no budget? `--fallback_only` derives the targets from the act labels
-deterministically instead. Quality drops; the pipeline still runs:
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python sft_epo.py --epochs 3 --lr 1e-5 --accum 8 --class_balance sqrt_inverse \
+       --strategist_device cuda:0 --grad_checkpointing
+   ```
 
-```bash
-python make_strategies.py --split train --fallback_only
-```
+3. A 3-episode plumbing check, then RL (~22 h on two cards):
 
-Produces `data/strategies-{train,valid}.jsonl`.
+   ```bash
+   CUDA_VISIBLE_DEVICES=0,1 python run_epo.py --dry_run 3 --agent_device cuda:0 --strategist_device cuda:1 --grad_checkpointing
+   CUDA_VISIBLE_DEVICES=0,1 python run_epo.py --episodes 700 --seed 1 --prm verifier --prm_mode binary \
+       --advantage group --eval_every 175 --eval_split test \
+       --agent_device cuda:0 --strategist_device cuda:1 --grad_checkpointing
+   ```
 
-**Stage 2 — SFT warm start.** LoRA (r=16), not the full fine-tune the paper uses — 99
-scenarios would memorise:
-
-```bash
-python sft_epo.py --epochs 3 --lr 1e-5 --accum 8 --class_balance sqrt_inverse
-```
-
-Produces `ckpt/sft`. **This checkpoint is the one to beat.** In the archived run it was
-the best checkpoint, and 700 episodes of RL degraded it from there.
-
-**Stage 3 — RL.**
-
-```bash
-python run_epo.py --episodes 700 --seed 1 --prm verifier --prm_mode binary --advantage group --eval_every 175 --eval_split test --agent_device cuda:0 --strategist_device cuda:1
-```
-
-| flag | default | what it does |
-|---|---|---|
-| `--prm` | `verifier` | `verifier` is deterministic; `judge` calls an API model per turn |
-| `--prm_mode` | `binary` | `binary` is EPO-faithful; `graded` uses the continuous score |
-| `--advantage` | `group` | `group` baselines within a scenario's k rollouts; `maxabs` is the paper's max-abs rule |
-| `--group_k` | 4 | rollouts per scenario for the baseline |
-| `--kl_beta` | 0.01 | EPO reports none; this is insurance against collapse |
-
-Single card: `--strategist_device cuda:0`. Sanity check first with `--dry_run 5`.
-
-**Watch:** unique-strategy rate and act entropy, both printed each eval. In the archived
-run they went 96.5% → 37.0% and 1.110 → 0.000 bits by ep700, with 89 tag misses and 20
-empty strategy strings — the policy collapsed onto one act. `--kl_beta` is the knob;
-raising it is the first thing to try.
-
-~5 GPU-hours for 700 episodes.
-
----
-
-### 3. Sotopia-RL
-
-Utterance-level attributed rewards, a learned reward model, then GRPO. Four stages, and a
-**gate** between stages 3 and 4 that is worth respecting.
+### 5.5 Sotopia-RL — collect, reward model, GRPO, evaluate
 
 ```bash
 cd sotopia_rl
 ```
 
-**Stage 1 — collect episodes.** k=6 rollouts per scenario, keep the best 2 ranked *within*
-the scenario so hard scenarios still contribute:
+1. Self-play episodes (~27 h and ~2.5 h; re-running the same command resumes):
 
-```bash
-python collect_episodes.py --split train --k 6 --keep 2 --restart
-```
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python collect_episodes.py --split train --k 6 --keep 2
+   CUDA_VISIBLE_DEVICES=1 python collect_episodes.py --split valid --k 6 --keep 2
+   ```
 
-`--restart` resumes an interrupted collection instead of starting over. Produces
-`data/episodes-train.jsonl`.
+2. Reward labels (CPU), then behaviour cloning and the reward model in parallel (~3 h and ~6 h):
 
-**Stage 2 — attribute.** Turn the episode return into per-utterance rewards
-`r_t = G · A(a_t, τ)` over three dimensions (pool / use / cover):
+   ```bash
+   python make_rm_data.py --episodes data/episodes-train.jsonl
+   CUDA_VISIBLE_DEVICES=0 python train_sft.py --epochs 3 --lr 1e-4 --accum 8 --grad_checkpointing
+   CUDA_VISIBLE_DEVICES=1 python train_rm.py --epochs 8 --lr 5e-6 --holdout 0.15 --grad_checkpointing
+   ```
 
-```bash
-python make_rm_data.py --episodes data/episodes-train.jsonl
-```
+3. **Gate.** Read the reward model's pair-ranking accuracy (chance is 0.50):
 
-Produces `data/rm-train.jsonl` and `data/normaliser.json`.
+   ```bash
+   python -c "import json; m=json.load(open('ckpt/rm/rm_meta.json')); print(m['best_pair_rank'], m['best_epoch'])"
+   ```
 
-**Stage 3 — behaviour cloning, then the reward model.**
+4. GRPO (~17 h). If the number above is **≥ 0.60**:
 
-```bash
-python train_sft.py --epochs 3 --lr 1e-4 --accum 8 --grad_checkpointing
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft --rm ckpt/rm --reward_source rm \
+       --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
+   ```
 
-python train_rm.py --epochs 8 --lr 5e-6 --holdout 0.15 --grad_checkpointing
-```
+   Otherwise:
 
-> **Gate — read `ckpt/rm/rm_meta.json` before spending GPU time on GRPO.**
-> ```bash
-> python -c "import json;m=json.load(open('ckpt/rm/rm_meta.json'));print(m['best_pair_rank'], m['best_epoch'])"
-> ```
-> `best_pair_rank` is pairwise ranking accuracy against a **0.500 chance floor**. The
-> archived run reached **0.547 with `best_epoch=0`** — the first epoch was the best, which
-> is what a model that never learned looks like. GRPO against a reward model at chance
-> optimises its error: in that run the exact-scored signal fell 0.340 → 0.149 across
-> quartiles while invalid schemas climbed 0 → 13, even as the RM-scored signal rose.
->
-> Below ~0.60, skip stage 4's `--reward_source rm` and use `lookahead` instead: it commits
-> the candidate, lets one advisor answer, and reads the disclosure detector — deterministic,
-> API-free, and it drops the reward-model adapter and the whole `train_rm` stage. A reward
-> model that will not rank is a finding worth reporting, not an obstacle to push past.
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft --reward_source lookahead \
+       --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
+   ```
 
-**Stage 4 — GRPO.**
+5. Evaluate the untrained floor, the SFT model and the GRPO model (~2 h each). Use
+   `grpo-rm-seed1` or `grpo-lookahead-seed1` to match step 4:
 
-```bash
-python train_grpo.py --adapter ckpt/sft --rm ckpt/rm --reward_source rm --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
-```
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python evaluate_sr.py --adapter "" --split test --tag base
+   CUDA_VISIBLE_DEVICES=1 python evaluate_sr.py --adapter ckpt/sft --split test --tag sft
+   CUDA_VISIBLE_DEVICES=2 python evaluate_sr.py --adapter ckpt/grpo/grpo-lookahead-seed1/final --split test --tag grpo
+   ```
 
-```bash
-# the honest fallback when the RM never ranks
-python train_grpo.py --adapter ckpt/sft --reward_source lookahead \
-                     --groups 175 --group 8 --seed 1 --grad_checkpointing
-```
-
-175 groups × 8 candidates = 1400 chair generations.
-
-**Stage 5 — evaluate.** This is the step the archived run never reached, which is why the
-arm contributes no rows to any comparison table:
-
-```bash
-python evaluate_sr.py --adapter ""            --split test --tag base   # untrained floor
-python evaluate_sr.py --adapter ckpt/sft      --split test --tag sft    # SFT only
-python evaluate_sr.py --adapter ckpt/grpo/final --split test --tag grpo # trained
-```
-
-Run all three. Without the floor and the SFT mid-point, a GRPO number means nothing.
-
-~5 GPU-hours end to end.
-
----
-
-### 4. Sotopia-ToM
-
-Prompting only — no training, no gradient step, no checkpoint. The cheapest arm per
-GPU-hour in the repo, and the fastest way to get a full row of results.
-
-```bash
-cd sotopia_tom
-python selftest.py                    # ~1 min, catches prompt regressions
-
-python run_tom.py --strategies stripped basic cot tom_coach tom_belief \
-                  --split test --compare
-```
-
-The five arms, in ascending order of scaffolding:
-
-| arm | what the chair is given |
-|---|---|
-| `stripped` | the meeting, nothing else — the floor |
-| `basic` | a role and the task |
-| `cot` | emit `THINKING` before `TURN` |
-| `tom_coach` | an analyst table: who plausibly holds what |
-| `tom_belief` | an explicit belief-state JSON, maintained across turns |
-
-`--compare` runs them against identical scenarios and prints the paired comparison.
-
-**Watch:** `tom_coach` and `tom_belief` were identical prompts at one point, which made
-their difference zero by construction. They now carry distinct headers and `selftest.py`
-asserts it — but if the five arms come back suspiciously close, diff the rendered prompts
-before concluding that theory-of-mind prompting does not help.
-
-**Reading InfoMgmt.** The arm's headline is a geometric mean:
-
-```
-InfoMgmt = [DA · IA · (1 − CPV) · EFF]^(1/4)
-```
-
-Any single component at zero zeroes the whole score. If an arm reports 0.000, read the
-four components before concluding it failed.
-
-~3 GPU-hours for all five arms (210 episodes, ~18 calls each).
-
----
-
-### 5. SOTOPIA-Ω
-
-Detect that the dialogue has stalled, switch the expert into a slow four-stage mode,
-fine-tune the student on what results. The only arm whose stages strictly depend on each
-other — nothing here can be partially skipped.
+### 5.6 SOTOPIA-Ω — probe, corpus, SFT, evaluate
 
 ```bash
 cd sotopia_omega
-python selftest.py
 ```
 
-**Stage 0 — probe. Do not launch the full generation blind.**
+1. Probe (~0.3 h). **If it prints `STOP`, do not build the corpus** — slow mode is not helping:
 
-```bash
-python generate_omega.py --split train --probe 5 --expert local
-```
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python generate_omega.py --split train --probe 5 --expert local
+   ```
 
-`--probe` runs a handful of scenarios and prints the stall decisions. If stalls never
-fire, the fast/slow switch never engages and the corpus is plain rollouts with extra
-steps. Stall detection here is deterministic — `step ≥ stall_after` **and** decisive-fact
-pooling flat for `stall_patience` chair turns — so if it never triggers, tune
-`--stall_after` / `--stall_patience` rather than shipping a corpus that has no slow mode
-in it.
+2. Corpus (~36 h and ~3.5 h; re-running resumes):
 
-**Stage 1 — corpus.**
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python generate_omega.py --split train --expert local --k 6 --keep 2 \
+       --stall_after 1 --stall_patience 1 --seed 1
+   CUDA_VISIBLE_DEVICES=1 python generate_omega.py --split valid --expert local --seed 1
+   ```
 
-```bash
-python generate_omega.py --split train --expert local \
-                         --k 6 --keep 2 --stall_after 1 --stall_patience 1 \
-                         --seed 1 --restart
-python generate_omega.py --split valid --expert local --seed 1
-```
+3. Train the student (~3 h):
 
-Three corpora are worth having, and they answer different questions:
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python train_sft_om.py --mode_filter all --grad_checkpointing
+   ```
 
-| corpus | expert | isolates |
-|---|---|---|
-| **A** | plain self-play (the other arms already have this) | baseline |
-| **B** | `--expert local` — Qwen2.5-7B, strategy-injected | **strategy injection alone** |
-| **C** | `--expert api --expert_model <frontier>` | injection **+** teacher strength |
+4. Evaluate: the floor, the student, the student with the slow scaffold on, and the leakage
+   control (~2–3 h each). Report `omega-withhold` next to any Ω number:
 
-B vs A is Ω's actual mechanism. C vs B is the distillation gradient. C vs A is the paper's
-headline and confounds both. **Run C alongside B, never instead of it** — a win for C
-partly means "the frontier model is better than Qwen2.5-7B", which is not a finding.
-
-**Stage 2 — SFT the student.** Only the utterance the chair actually spoke becomes a
-label; the three reasoning stages are scaffolding and never enter the corpus. That is
-where the distillation happens.
-
-```bash
-python train_sft_om.py --mode_filter all --grad_checkpointing
-```
-
-`--mode_filter slow` trains only on stalled turns; `--min_dca 0.3` keeps only episodes
-above a score floor.
-
-**Stage 3 — evaluate.**
-
-```bash
-python evaluate_om.py --adapter ""       --split test --tag base    # untrained floor
-python evaluate_om.py --adapter ckpt/sft/student --split test --tag omega
-python evaluate_om.py --adapter ckpt/sft/student --split test --eval_mode adaptive --tag omega-adaptive
-```
-
-`--eval_mode adaptive` lets the student pick fast vs slow at inference; run it as a second
-arm, not instead of the fast one.
-
-**The leakage control.** The single-opponent adaptation selects one agent and has the rest
-negotiate against it — and that agent sees the others' disclosures, so a corpus built from
-its trajectories can encode private facts the student should not have:
-
-```bash
-python evaluate_om.py --adapter ckpt/sft --split test --opponent withhold --tag omega-withhold
-```
-
-If the trained student loses most of its advantage when the opponent view is withheld, the
-gain was leakage. Run this before reporting any Ω number.
-
-~9 GPU-hours for corpus B + SFT + evaluation.
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 python evaluate_om.py --adapter "" --split test --tag base
+   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter ckpt/sft --split test --tag omega
+   CUDA_VISIBLE_DEVICES=2 python evaluate_om.py --adapter ckpt/sft --split test --eval_mode adaptive --tag omega-adaptive
+   CUDA_VISIBLE_DEVICES=3 python evaluate_om.py --adapter ckpt/sft --split test --opponent withhold --tag omega-withhold
+   ```
 
 ---
 
-### 6. DAT
+## 6. Results
 
-Freeze the model, freeze the prompt, and steer generation with **two continuous prefix
-embeddings** predicted by a 2.5 M-parameter MLP. The only arm that changes nothing a human
-could read.
+### Compare every arm
 
 ```bash
-cd dat
-python selftest.py                       # 23 checks, ~1 min, no GPU
-
-python selfclone.py --episodes 120       # stage 1: clone the unsteered chair
-python collect_buffer.py --episodes 400  # stage 2a: offline buffer, N(0, 0.25) in R^64
-python train_dat.py --steps 4000         # stage 2b: TD3+BC. Loads no model at all
-python run_dat.py --arms unsteered selfclone dat --split test
+cd analysis
+python compute_extended_metrics.py --out results.json
 ```
 
-Three conditions, matching the paper's Table 1, from **one** checkpoint -- `selfclone` is
-`dat` with the RL head forced to zero, so the two differ by nothing else:
+CPU only, seconds. It finds every arm's records and prints the headline table, each arm's
+summary, and the paired bootstrap against the baseline, followed by dca/disclosure and the
+detailed sections.
 
-| arm | prefix | reads as |
-|---|---|---|
-| `unsteered` | none | the control |
-| `selfclone` | `pi_phi(s) W` | stage 1 preserved behaviour, or it did not |
-| `dat` | `(pi_phi(s) + pi_phi_rl(s)) W` | the trained arm |
+> **Old results are picked up too.** If `csa-artifacts/` sits next to this folder (or
+> `CSA_ARTIFACTS_DIR` is set), the archived PPDPP and EPO records from the earlier
+> 3-domain, Qwen2.5 runs are loaded alongside the new ones. Move or rename the archive while
+> building tables from new runs.
 
-**Watch:** `action_cos` near 1.0 in the steering table means the planner emits the same
-vector at every turn -- a constant prefix, not a policy -- and the outcome metrics cannot
-see it. `policy_shift.mean_action_norm` at zero after `train_dat.py` means the RL head
-never left its initialisation, usually because the buffer holds almost no reward;
-`collect_buffer.py` warns when under 5% of transitions carry any.
+### Headline metrics
 
-The reward is EPO's verifier PRM, and `selftest.py` asserts the two are identical on 400
-random traces -- two RL arms supervised by different rewards would not be comparable.
+The same set `eval.py` reports for the co-evolved system, defined once in `csa_core/headline.py`:
 
-The buffer is the under-resourced number: 400 episodes against the paper's 10,000. Raise
-it first. ~4 GPU-hours for all three stages plus evaluation.
+| block | metrics |
+|---|---|
+| Checks | content, provenance and all checks passed; `checks_frac`; `success` (every check passes) |
+| Behaviour | facts revealed; decisive facts revealed; settled rate (`settled_by`: chair or extractor); turns to settle; chair turns used |
+| Addressing | of the advisors the chair named, the share holding a decisive fact, and vice versa (stands in for eval.py's routing) |
+| Guardrail | `leaks`: a speaker stating a private fact it was never shown |
+| Bottleneck | unsettled / settled with some decisive facts missing / settled with all of them |
+| Comparison | paired table and paired bootstrap (2,000 resamples, 95% CI) against the baseline |
+
+### Where each arm writes
+
+Every arm writes logs under its own folder:
+
+```
+<arm>/logs/eval/<run>/       conversations.log  episodes.jsonl  scenarios.csv  turns.csv  summary.log  summary.json
+<arm>/logs/rollouts/<run>/   conversations.log  rollouts.jsonl  rollouts.csv              summary.log  summary.json
+```
+
+`conversations.log` is the readable transcript, with the headline metrics above each episode.
+
+| arm | evaluation records | training rollouts | checkpoints |
+|---|---|---|---|
+| Round Table | `logs/Record-rt-*.txt` | — | — |
+| Sotopia-ToM | `logs/Record-tom-<strategy>-test.txt` | — | — |
+| PPDPP | `tmp/csa/eval_result/Record-epoch-*.txt` | every REINFORCE episode | `sft/`, `tmp/csa/RL-agent/` |
+| EPO | `logs/Record-epo-*-ep*.txt` | every group rollout, with advantages | `ckpt/sft`, `ckpt/rl/` |
+| Sotopia-RL | `logs/Record-<tag>-test.txt` | all k self-play rollouts; every GRPO candidate | `ckpt/sft`, `ckpt/rm`, `ckpt/grpo/` |
+| SOTOPIA-Ω | `logs/Record-<tag>-test.txt` | all k corpus rollouts; the probe | `ckpt/sft` |
 
 ---
 
-### After any run
+## 7. Troubleshooting
 
-```bash
-cd analysis && python compute_extended_metrics.py
-```
-
-It discovers whatever has records — the arm you just re-ran is picked up from its own
-`logs/` automatically, and arms you did not touch keep their existing numbers. No GPU, a
-few seconds.
-
-`python make_rerun_runbook.py` builds a PDF that reads the current state off disk and
-says, per arm, whether it needs re-running and why. **Read it before spending GPU time**:
-of the six arms, PPDPP has never been run in its own configuration, Sotopia-RL's reward
-model is at chance and its evaluation was never run at all, and Sotopia-ToM, Ω and DAT
-have never been executed. (The runbook itself still enumerates five arms; DAT is scored by
-`compute_extended_metrics.py` but is not yet a row in that PDF.)
+| symptom | what to do |
+|---|---|
+| `setup.probe` fails with "does not fit" | another process is on the card (`nvidia-smi`); otherwise keep `--grad_checkpointing` on and lower `--max_len` in the SFT scripts |
+| generation is very slow | `python parallel/preflight.py --prefetch` shows whether `flash-linear-attention` / `causal-conv1d` import; the probe prints tokens per second |
+| a job failed | read `runs/logs/<job>.log`, fix, run the same `run_all.py` command again — only unfinished jobs run |
+| `ppdpp.sft_data` fails: no archived data_sft | set `CSA_ARTIFACTS_DIR` to the archive (PPDPP and EPO both need it) |
+| Ω corpus is `gated` | the probe printed STOP; read `runs/logs/om.probe.log`. `--force_gates` overrides |
+| a selftest exits 2 | logic is fine; torch/transformers/peft are missing or too old (`python csa_core/compat.py`) |
+| out of disk | PPDPP keeps only its newest RL checkpoint; LoRA adapters are small; the model cache is ~20 GB |
 
 ---
 
-## Sources
+## 8. Reference
+
+### Benchmark configuration
+
+- **550 scenarios**: 11 domains × 50, from `first_50.json`; split **363 / 33 / 154** (train / valid / test), scenario-disjoint, stratified on domain and table size.
+- Results from the earlier 3-domain / 150-scenario configuration are **not comparable** and must be re-run.
+- PPDPP's and EPO's planner SFT data keeps only train-split scenarios (`ppdpp/filter_sft_split.py`): it was annotated under the old split, and 11 of its 75 training scenarios are test scenarios now. It covers the 3 original domains only.
+
+### Environment variables
+
+| variable | effect |
+|---|---|
+| `CSA_ARTIFACTS_DIR` | the archive: planner SFT data and published records for the selftests |
+| `OPENROUTER_API_KEY` | EPO strategy targets from the annotator model (optional) |
+| `OPENAI_API_KEY` | only for `run_rt.py --backend api` and Ω `--expert api` (optional, not comparable with the Qwen arms) |
+| `CSA_ANNOTATOR_MODEL` | annotator model id (default `google/gemma-4-26b-a4b-it:free`) |
+| `CSA_SCENARIOS_FILE` | a different combined scenario file (`''` = use `data/raw/`) |
+| `CSA_RAW_DIR`, `CSA_SCENARIOS_PER_DOMAIN` | per-domain files, e.g. `100` scenarios per domain (needs the raw files) |
+| `CSA_DOMAINS=published` | the original 3 domains (99 / 9 / 42) |
+
+### Layout
+
+```
+csa_core/        shared instrument: split, detectors, verifier, headline metrics, logs, version shims
+first_50.json    the scenario set
+parallel/        run_all.py (scheduler), jobs.py (every stage), preflight.py (checks + GPU probe)
+roundtable/      Round Table (standalone: vendors csa_core as _*.py; python vendor.py refreshes it)
+sotopia_tom/     Sotopia-ToM
+ppdpp/           PPDPP
+epo/             EPO
+sotopia_rl/      Sotopia-RL
+sotopia_omega/   SOTOPIA-Ω
+analysis/        cross-arm metrics, import checker
+docs/            DESIGN_NOTES.md: the reasoning behind each choice and what the archived runs showed
+eval.py          the co-evolved system's evaluation (reference for the headline metrics; not run here)
+```
+
+Each arm's own `README.md` explains its method and flags in depth.
+
+### Sources
 
 | arm | paper |
 |---|---|
@@ -598,4 +477,3 @@ have never been executed. (The runbook itself still enumerates five arms; DAT is
 | Sotopia-RL | [arXiv:2508.03905](https://arxiv.org/abs/2508.03905) |
 | Sotopia-ToM | [arXiv:2605.02307](https://arxiv.org/abs/2605.02307) |
 | SOTOPIA-Ω | [ACL 2025](https://aclanthology.org/2025.acl-long.1203/) · [arXiv:2502.15538](https://arxiv.org/abs/2502.15538) |
-| DAT | *Dialogue Action Tokens*, ICLR 2025 submission 8922 (double-blind at the time of writing) |

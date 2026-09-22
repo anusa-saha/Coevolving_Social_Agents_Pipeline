@@ -12,6 +12,10 @@ The procedure, which must not be "improved":
   * bucket by (domain, num_agents), iterate buckets in sorted key order
   * ONE random.Random(0) shared across every bucket, so RNG state carries between them
   * within a bucket, sort by uid, shuffle, then take 70% / max(1, 10%) / remainder
+
+The scenarios come from the combined file paths.SCENARIOS_FILENAME when it can be found,
+and from the per-domain files under data/raw/ otherwise. Both hold the same uids, so the
+split is identical either way; see paths.py for the seven scenarios whose content differs.
 """
 import collections
 import json
@@ -54,11 +58,29 @@ def _num(scenario_id):
     return int(tail) if tail.isdigit() else 0
 
 
+def source(raw_dir=None):
+    """Where load_raw() reads from: the combined file, or the per-domain directory."""
+    if raw_dir:
+        return raw_dir
+    return paths.find_scenarios_file() or paths.find_raw()
+
+
+def _read_combined(path):
+    """{filename-stem domain: [rows]} from the single-file scenario set."""
+    with open(path, encoding='utf-8') as f:
+        got = json.load(f)
+    by_domain = collections.defaultdict(list)
+    for r in got:
+        by_domain[paths.DOMAIN_ALIASES.get(r['domain'], r['domain'])].append(r)
+    return by_domain
+
+
 def load_raw(raw_dir=None, per_domain=None):
     """Every configured scenario, with the composite uid attached.
 
-    Two normalisations happen here, both load-time only -- the files on disk are never
-    rewritten:
+    An explicit raw_dir reads the per-domain files; otherwise the combined file is used
+    when paths.find_scenarios_file() finds one. Two normalisations happen here, both
+    load-time only -- the files on disk are never rewritten:
 
       * `domain` is forced to the FILENAME STEM. family_friends_informal_scenarios.json
         carries an internal domain of `friends_family_informal`, transposed, and letting
@@ -67,13 +89,26 @@ def load_raw(raw_dir=None, per_domain=None):
         scenario_ids. Head rather than sample, so raising the cap only ever adds
         scenarios and never reshuffles the ones already in use.
     """
-    raw_dir = raw_dir or paths.find_raw()
     cap = paths.SCENARIOS_PER_DOMAIN if per_domain is None else per_domain
+    combined = None if raw_dir else paths.find_scenarios_file()
+    by_domain = _read_combined(combined) if combined else None
+    if not combined:
+        raw_dir = raw_dir or paths.find_raw()
+
     rows = []
     for domain in paths.DOMAINS:
-        with open(os.path.join(raw_dir, '%s_scenarios.json' % domain),
-                  encoding='utf-8') as f:
-            got = json.load(f)
+        if combined:
+            got = list(by_domain.get(domain, ()))
+            if len(got) < (cap or 1):
+                # A silent short domain would change the benchmark, not just its size.
+                raise SystemExit(
+                    '%s holds %d scenarios for %s, but %d are configured. Use the '
+                    'per-domain files instead: export CSA_RAW_DIR=/path/to/raw'
+                    % (combined, len(got), domain, cap))
+        else:
+            with open(os.path.join(raw_dir, '%s_scenarios.json' % domain),
+                      encoding='utf-8') as f:
+                got = json.load(f)
         got.sort(key=lambda r: _num(r['scenario_id']))
         if cap:
             got = got[:cap]
@@ -148,7 +183,7 @@ def check_invariants(rows):
 
 if __name__ == '__main__':
     d = load()
-    print('raw dir: %s' % paths.find_raw())
+    print('scenarios: %s' % source())
     print({k: len(v) for k, v in d.items()})
     bad = check_invariants(load_raw())
     print('invariant violations: %d' % len(bad))

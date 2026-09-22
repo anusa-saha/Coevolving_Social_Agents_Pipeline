@@ -58,7 +58,7 @@ class ToMEnv(object):
         self.revealed, self.reveal_turn, self.reveal_elicited = set(), {}, {}
         self.addressed, self.pending, self.cover_credit = set(), {}, {}
         self.leaks = []
-        self.settlement, self.settle_turn = {}, None
+        self.settlement, self.settle_turn, self.settled_by = {}, None, None
         self.n_calls, self.calls_by_role, self.prompt_chars = 0, {}, 0
         self.last_score = None
         self.belief = {}                             # tom_belief only
@@ -114,6 +114,7 @@ class ToMEnv(object):
         if parsed:
             self.settlement = parsed
             self.settle_turn = self.step_i
+            self.settled_by = 'chair'
 
         while self.utterances < self.cap:
             speaker = self.order[self.ptr]
@@ -134,6 +135,7 @@ class ToMEnv(object):
                 self.settlement = self._extract_settlement()
                 if self.settlement:
                     self.settle_turn = self.step_i - 1
+                    self.settled_by = 'extractor'
             self._finalise()
             return self.conversation, -1
         return self.conversation, 0
@@ -198,6 +200,7 @@ class ToMEnv(object):
                 'scenario_type': self.case.get('scenario_type'),
                 'strategy': self.strategy,
                 'settlement': self.settlement, 'score': pub,
+                'settle_turn': self.settle_turn, 'settled_by': self.settled_by,
                 'floor': {k: v for k, v in floor_score(self.case).items()
                           if k != 'settlement_resolved'},
                 'revealed': sorted(self.revealed),

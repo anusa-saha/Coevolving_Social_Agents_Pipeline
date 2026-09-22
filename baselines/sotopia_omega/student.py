@@ -10,6 +10,7 @@ Also doubles as a local expert during generation: `as_base()` is exactly the pla
 """
 import contextlib
 import os
+import types
 
 import torch
 
@@ -71,7 +72,8 @@ class Student(object):
             yield self.model
 
     def forward_lm(self, ids, labels):
-        return self.model(input_ids=ids, labels=labels)
+        """`.loss` is the completion NLL, computed from the completion's logits only."""
+        return types.SimpleNamespace(loss=compat.completion_nll(self.model, ids, labels))
 
     @torch.no_grad()
     def generate(self, prompt_text, max_new_tokens=96, temperature=None):
@@ -116,7 +118,7 @@ class StudentExpert(object):
         self.n_calls = 0
 
     def __call__(self, messages, speaker, max_new_tokens, temperature=None):
-        import compat as _c
+        from csa_core import compat as _c
         import prompts_om as P
         self.n_calls += 1
         text = _c.render_chat(self.student.tokenizer, P.to_chat(messages, speaker))

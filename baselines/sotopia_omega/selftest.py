@@ -47,16 +47,29 @@ def t_split():
 
 
 def t_split_matches_published():
-    for name in ('train', 'valid', 'test'):
-        if not paths.is_published_config():
-            print('        (skipped: benchmark reconfigured to %d domains x %d; '
-                  'the published split describes a different dataset)'
-                  % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
-            return
-        ref = paths.find_reference('data/csa-%s.txt' % name)
+    if not paths.is_published_config():
+        print('        (skipped: benchmark reconfigured to %d domains x %d; '
+              'the published split describes a different dataset)'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
+        return
+    refs = {}
+    for name, want in zip(('train', 'valid', 'test'), paths.PUBLISHED_SPLIT):
+        # An archived copy under its own name wins. ppdpp/data/csa-<split>.txt is whatever
+        # export_csa.py last wrote, so it is only the published split if the size agrees.
+        ref = (paths.find_reference('data/csa-published-%s.txt' % name)
+               or paths.find_reference('data/csa-%s.txt' % name))
         if not ref:
             print('        (skipped: no published split to compare)')
             return
+        n = sum(1 for l in open(ref, encoding='utf-8') if l.strip())
+        if n != want:
+            print('        (skipped: %s holds %d scenarios, not the published %d, so it was\n'
+                  '         exported under another configuration. Archive the 99/9/42 split as\n'
+                  '         ppdpp/data/csa-published-<split>.txt under CSA_ARTIFACTS_DIR to '
+                  're-enable this check)' % (ref, n, want))
+            return
+        refs[name] = ref
+    for name, ref in refs.items():
         theirs = [eval(l) for l in open(ref, encoding='utf-8') if l.strip()]
         assert [r['uid'] for r in data_csa.load(name)] == [r['uid'] for r in theirs], name
 
@@ -192,10 +205,55 @@ def t_evasion_margin():
     assert a > b, 'evasion scores at least as high as disclosure'
 
 
+def t_headline_and_rollout_logs():
+    """A whole scripted episode through the real environment, then into a rollout log:
+    the record must carry what the headline metrics read, and every file must appear."""
+    import os
+    import tempfile
+    from csa_core import headline as H
+    from csa_core import runlog
+    from env_om import OmegaEnv
+    cfg = config.Defaults
+    case = data_csa.load('test')[0]
+    field = list(case['settlement_schema']['decisions'])[0]
+    settle = json.dumps({'decisions': {field: 'x'}})
+
+    def expert(messages, speaker, max_new_tokens, temperature=None):
+        return settle if max_new_tokens == cfg.settlement_tokens else 'Noted.'
+
+    env = OmegaEnv(cfg, expert)
+    env.reset(case, force_mode='fast')
+    done = 0
+    while not done:
+        _c, done = env.step()
+    ep = env.episode()
+    m = H.episode_metrics(case, ep)
+    assert ep['settled_by'] == 'chair' and m['settled'] == 1, (ep['settled_by'], m)
+    assert m['turns_to_settle'] == env.max_turn == m['turns_used'], m
+    assert m['checks_total'] == (len(case['content_checks'])
+                                 + len(case.get('provenance_checks') or {}))
+    with tempfile.TemporaryDirectory() as tmp:
+        log = runlog.RolloutLog(tmp, 'selftest', algo='selftest')
+        log.add(case, ep, step=0, candidate=0, reward=ep['score']['dca'], kept=True)
+        summ = log.close(log=None)
+        d = os.path.join(tmp, 'rollouts', 'selftest')
+        for name in ('rollouts.jsonl', 'rollouts.csv', 'conversations.log',
+                     'summary.json', 'summary.log'):
+            assert os.path.isfile(os.path.join(d, name)), name
+        with open(os.path.join(d, 'rollouts.jsonl'), encoding='utf-8') as f:
+            row = json.loads(f.readline())
+        assert row['headline']['checks_total'] == m['checks_total']
+        assert row['rollout']['algo'] == 'selftest' and row['rollout']['kept'] is True
+        with open(os.path.join(d, 'conversations.log'), encoding='utf-8') as f:
+            text = f.read()
+        assert '[CHAIR]' in text and case['uid'] in text
+        assert summ['n'] == 1
+
+
 if __name__ == '__main__':
     print('sotopia_omega selftest\n')
     blocking = compat.report()
-    print('\nraw scenarios : %s' % paths.find_raw())
+    print('\nscenarios     : %s' % data_csa.source())
     print('expert        : %s (%s)' % (config.Defaults.expert_model,
                                        config.Defaults.expert))
     print('student       : %s\n' % config.Defaults.student_model)
@@ -210,6 +268,7 @@ if __name__ == '__main__':
         ('ceiling math, every advisor costs something', t_ceiling_math),
         ('stall trigger fires only on flat pooling', t_stall_rule),
         ('evasion scores below disclosure', t_evasion_margin),
+        ('headline metrics and rollout logs', t_headline_and_rollout_logs),
     ]:
         check(name, fn)
 

@@ -1,18 +1,18 @@
 """The generator model. Local weights or an API endpoint, behind one interface.
 
 Omega's expert is GPT-4 in the paper and Qwen2.5-72B in the released code -- either way
-much larger than the 7B student. That gradient is where a large part of their headline
+much larger than the 9B student. That gradient is where a large part of their headline
 ("the student beats the teacher") comes from.
 
 Both options are supported here because they answer different questions:
 
-  LocalExpert   Qwen2.5-7B, same as the student. Gives up the distillation gradient and
+  LocalExpert   Qwen3.5-9B, same as the student. Gives up the distillation gradient and
                 isolates the STRATEGY-INJECTION effect on its own. This is a cleaner
                 ablation than the paper's, which confounds injection with teacher size.
 
   ApiExpert     a frontier model. Restores Omega's actual design, but the resulting
                 corpus has a data advantage no other arm in this project has -- so a win
-                would partly mean "the frontier model is better than Qwen2.5-7B", which
+                would partly mean "the frontier model is better than Qwen3.5-9B", which
                 is not a finding. Run it ALONGSIDE the local corpus, never instead.
 
 The key is read from the environment. Never put one in a file.
@@ -25,7 +25,7 @@ class LocalExpert(object):
     """Qwen-family weights via transformers, loaded once and reused."""
 
     def __init__(self, cfg, model=None, tokenizer=None):
-        import compat
+        from csa_core import compat
         self.cfg = cfg
         self.name = cfg.expert_model
         if model is not None:
@@ -36,7 +36,7 @@ class LocalExpert(object):
         self.n_calls = 0
 
     def __call__(self, messages, speaker, max_new_tokens, temperature=None):
-        import compat
+        from csa_core import compat
         import torch
         import prompts_om as P
         self.n_calls += 1

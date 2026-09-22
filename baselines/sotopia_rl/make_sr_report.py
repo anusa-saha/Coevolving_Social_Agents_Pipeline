@@ -95,7 +95,7 @@ HAVE_EVAL = bool(EVAL)
 # what make_rm_data.py already does, so the numbers agree with the labels by
 # construction rather than by coincidence.
 def enrich(eps):
-    from verifier_sr import score as _score
+    from csa_core.verifier import score as _score
     out = []
     for e in eps:
         case = CASES.get(e['uid'])

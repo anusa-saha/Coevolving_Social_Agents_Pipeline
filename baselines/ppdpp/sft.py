@@ -237,7 +237,7 @@ def main():
                         type=str, help="model name or path")
     parser.add_argument("--output_dir", default='sft', type=str,
                         help="The output directory where the model predictions and checkpoints will be written.")
-    parser.add_argument("--data_dir", default='data_sft', type=str,
+    parser.add_argument("--data_dir", default='../data', type=str,
                         help="The data directory.")
     parser.add_argument("--cache_dir", default='/storage_fast/ydeng/plm', type=str,
                         help="The cache directory.")

@@ -12,6 +12,10 @@ _CSA_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _CSA_ROOT not in sys.path:
     sys.path.insert(0, _CSA_ROOT)
 from csa_core.verifier import floor_score
+from csa_core import runlog
+
+# Conversation and rollout logs (csa only), beside the scripts like every other arm's.
+LOGS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
 try:
     from fastchat.model import add_model_args
 except ImportError:
@@ -39,6 +43,39 @@ for _stream in (sys.stdout, sys.stderr):
 
 
 
+def _csa_record(env, epi_reward, done, turns):
+    """Everything the metric catalogue needs, so any number can be recomputed offline
+    without re-running a model. One definition for evaluation records and training
+    rollouts, so the two logs cannot disagree about what an episode was."""
+    return {
+        'dialog': list(env.conversation), 'reward': epi_reward,
+        'uid': env.case.get('uid'),
+        'domain': env.case.get('domain'),
+        'num_agents': env.case.get('num_agents'),
+        'scenario_type': env.case.get('scenario_type'),
+        'settlement': env.settlement,
+        'settle_turn': env.settle_turn,
+        'settled_by': env.settled_by,
+        'score': env.last_score,
+        'score_norm': env.last_score_norm,
+        'floor': floor_score(env.case),
+        'revealed': sorted(env.revealed),
+        'reveal_elicited': dict(env.reveal_elicited),
+        'addressed': sorted(env.addressed),
+        'leaks': list(env.leaks),
+        'done': done,
+        # --- efficiency and cost (catalogue section C) ---
+        'turns': turns,
+        'max_turn': env.max_turn,
+        'n_calls': getattr(env, 'n_calls', 0),
+        'calls_by_role': dict(getattr(env, 'calls_by_role', {})),
+        'prompt_chars': getattr(env, 'prompt_chars', 0),
+        # --- policy diagnostics (catalogue section G) ---
+        'act_history': list(getattr(env, 'act_history', [])),
+        'reveal_turn': dict(getattr(env, 'reveal_turn', {})),
+    }
+
+
 def train(args, config, dataset, filename, tokenizer):
     env = Env(args, dataset, mode='train') # env init
     set_random_seed(args.seed)
@@ -60,8 +97,11 @@ def train(args, config, dataset, filename, tokenizer):
         test_performance = [SR15_mean]
     if not args.do_train:
         return
-    start_epoch = args.load_rl_epoch + 1
-    for train_step in range(start_epoch, args.max_steps+1):
+    rollouts = None
+    if args.data_name == 'csa':
+        rollouts = runlog.RolloutLog(LOGS, filename,
+                                     algo='ppdpp-reinforce-%s' % args.csa_reward)
+    for train_step in range(1, args.max_steps+1):
         SR, AvgT, total_reward = 0., 0., 0.
         loss = torch.tensor(0, dtype=torch.float, device=args.device)
         for i_episode in tqdm(range(args.sample_times),desc='sampling'):
@@ -70,11 +110,13 @@ def train(args, config, dataset, filename, tokenizer):
             state = env.reset()
 
             epi_reward = 0
+            step_rewards = []
             done = False
             for t in count():   # user  dialog
                 action = policy.select_action(state)
                 state, reward, done = env.step(action)
                 epi_reward += reward
+                step_rewards.append(reward)
                 reward = torch.tensor([reward], device=args.device, dtype=torch.float)
                 policy.rewards.append(reward)
 
@@ -88,6 +130,11 @@ def train(args, config, dataset, filename, tokenizer):
             newloss = policy.optimize_model()
             if newloss is not None:
                 loss += newloss
+            if rollouts is not None:
+                rollouts.add(env.case, _csa_record(env, epi_reward, done, t + 1),
+                             step=train_step, candidate=i_episode, reward=epi_reward,
+                             step_rewards=step_rewards,
+                             loss=None if newloss is None else float(newloss))
             
         enablePrint() # Enable print function
         print('loss : {} in epoch_uesr {}'.format(loss.item()/args.sample_times, args.sample_times))
@@ -113,7 +160,10 @@ def train(args, config, dataset, filename, tokenizer):
             # taking the whole run with it. Keep the newest `keep_ckpt` only.
             try:
                 ck_root = os.path.join(TMP_DIR[args.data_name], 'RL-agent')
-                dirs = [os.path.join(ck_root, d) for d in os.listdir(ck_root)]
+                # This run's checkpoints only. Parallel runs share RL-agent/, and pruning
+                # across runs deletes the other run's checkpoints.
+                dirs = [os.path.join(ck_root, d) for d in os.listdir(ck_root)
+                        if d.startswith(filename + '-epoch-')]
                 dirs = sorted([d for d in dirs if os.path.isdir(d)],
                               key=os.path.getmtime, reverse=True)
                 for old in dirs[max(1, args.keep_ckpt):]:
@@ -121,6 +171,8 @@ def train(args, config, dataset, filename, tokenizer):
                     print('[janitor] removed old checkpoint %s' % os.path.basename(old))
             except Exception as e:
                 print('[janitor] skipped: %s' % e)
+    if rollouts is not None:
+        rollouts.close()
     print(test_performance)
 
 def evaluate(args, dataset, policy, filename, i_episode, train_env):
@@ -148,6 +200,7 @@ def evaluate(args, dataset, policy, filename, i_episode, train_env):
     # Explicit utf-8: the default locale encoding writes unrepresentable characters as
     # mojibake, which then makes the record file undecodable when scoring it.
     rec_file = open(REC_PATH, 'w', encoding='utf-8')
+    elog = runlog.EvalLog(LOGS, 'eval-' + record_filename) if args.data_name == 'csa' else None
     for test_num in tqdm(range(test_size)):  #test_size
         #blockPrint()
         print('\n================test tuple:{}===================='.format(test_num))
@@ -171,38 +224,16 @@ def evaluate(args, dataset, policy, filename, i_episode, train_env):
 
                 record = {'dialog':state, 'reward':epi_reward}
                 if args.data_name == 'csa':
-                    # Everything the metric catalogue needs, so any number can be
-                    # recomputed offline without re-running a model.
-                    record.update({
-                        'uid': test_env.case.get('uid'),
-                        'domain': test_env.case.get('domain'),
-                        'num_agents': test_env.case.get('num_agents'),
-                        'scenario_type': test_env.case.get('scenario_type'),
-                        'settlement': test_env.settlement,
-                        'score': test_env.last_score,
-                        'score_norm': test_env.last_score_norm,
-                        'floor': floor_score(test_env.case),
-                        'revealed': sorted(test_env.revealed),
-                        'reveal_elicited': dict(test_env.reveal_elicited),
-                        'addressed': sorted(test_env.addressed),
-                        'leaks': list(test_env.leaks),
-                        'done': done,
-                        # --- efficiency and cost (catalogue section C) ---
-                        'turns': t + 1,
-                        'max_turn': test_env.max_turn,
-                        'n_calls': getattr(test_env, 'n_calls', 0),
-                        'calls_by_role': dict(getattr(test_env, 'calls_by_role', {})),
-                        'prompt_chars': getattr(test_env, 'prompt_chars', 0),
-                        # --- policy diagnostics (catalogue section G) ---
-                        'act_history': list(getattr(test_env, 'act_history', [])),
-                        'reveal_turn': dict(getattr(test_env, 'reveal_turn', {})),
-                    })
+                    record.update(_csa_record(test_env, epi_reward, done, t + 1))
+                    elog.add(test_env.case, record)
                 rec_file.write('%s\n\n' % str(record))
                 break
 
         enablePrint()
             
     
+    if elog is not None:
+        elog.close()
     SR_mean = float(SR)/test_size
     AvgT_mean = float(AvgT)/test_size
     reward_mean = total_reward/test_size
@@ -259,7 +290,7 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--model_path", type=str, default="/storage_fast/ydeng/llm/vicuna_hf/7B")
     parser.add_argument("--model_name", type=str, default="roberta")
-    parser.add_argument("--model_name_or_path", default='/scratch/rohank__iitp/roberta-large', type=str, help="model name or path")
+    parser.add_argument("--model_name_or_path", default='roberta-large', type=str, help="model name or path")
 
     parser.add_argument("--do_lower_case", action='store_false', help="Set this flag if you are using an uncased model.")
 
@@ -277,7 +308,7 @@ def main():
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval.")
 
     # local qwen backend
-    parser.add_argument('--qwen_path', default='/scratch/rohank__iitp/qwen2_5_7b_instruct')
+    parser.add_argument('--qwen_path', default='Qwen/Qwen3.5-9B')
     parser.add_argument('--qwen_dtype', default='bfloat16',
                         choices=['bfloat16', 'float16', 'float32'])
     parser.add_argument('--qwen_device_map', default='cuda:0')

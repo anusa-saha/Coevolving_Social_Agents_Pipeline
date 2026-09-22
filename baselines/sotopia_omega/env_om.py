@@ -67,7 +67,7 @@ class OmegaEnv(object):
         self.revealed, self.reveal_turn, self.reveal_elicited = set(), {}, {}
         self.addressed, self.pending, self.cover_credit = set(), {}, {}
         self.leaks, self.opponent_leaks = [], []
-        self.settlement, self.settle_turn = {}, None
+        self.settlement, self.settle_turn, self.settled_by = {}, None, None
         self.n_calls, self.calls_by_role, self.prompt_chars = 0, {}, 0
         self.last_score = None
 
@@ -146,6 +146,7 @@ class OmegaEnv(object):
         parsed = self._parse_json(text)
         if parsed:
             self.settlement, self.settle_turn = parsed, self.step_i
+            self.settled_by = 'chair'
 
         while self.utterances < self.cap:
             speaker = self.order[self.ptr]
@@ -168,6 +169,7 @@ class OmegaEnv(object):
                 self.settlement = self._extract_settlement()
                 if self.settlement:
                     self.settle_turn = self.step_i - 1
+                    self.settled_by = 'extractor'
             self._finalise()
             return self.conversation, -1
         return self.conversation, 0
@@ -229,6 +231,7 @@ class OmegaEnv(object):
             'num_agents': self.case.get('num_agents'),
             'scenario_type': self.case.get('scenario_type'),
             'dialog': self.dialog(), 'settlement': self.settlement,
+            'settle_turn': self.settle_turn, 'settled_by': self.settled_by,
             'score': pub, 'reward': s['dca'],
             'floor': {k: v for k, v in floor_score(self.case).items()
                       if k != 'settlement_resolved'},

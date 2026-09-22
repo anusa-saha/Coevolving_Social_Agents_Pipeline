@@ -31,7 +31,10 @@ checked against the published artefacts *as data*:
 | `is_eliciting` vs 650 annotated act labels | acc 0.817, P 0.845, R 0.803 |
 
 Those comparisons need the archived records (`CSA_ARTIFACTS_DIR`); without them the
-checks skip cleanly and say so. Nothing in the training path reads them.
+checks skip cleanly and say so. Nothing in the training path reads them. The split row
+also needs the 99/9/42 split files themselves (`ppdpp/data/csa-published-<split>.txt`):
+the `ppdpp/data/csa-<split>.txt` in the repo are the 11-domain re-export, so the check
+skips rather than comparing against a different dataset.
 
 ## Layout
 

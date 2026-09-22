@@ -19,6 +19,7 @@ for _s in (sys.stdout, sys.stderr):
 
 import _compat as compat
 import _data_csa as data_csa
+import _runlog as runlog
 import paths
 
 import config
@@ -88,11 +89,13 @@ def main():
 
     out = record_path(cfg.decide, cfg.backend, cli.split)
     recs = []
+    conv = runlog.EvalLog(paths.LOGS, 'rt-%s-%s-%s' % (cfg.decide, cfg.backend, cli.split))
     with open(out, 'w', encoding='utf-8') as f:
         for i, case in enumerate(cases, 1):
             rec = env.run(case)
             recs.append(rec)
             f.write(repr(rec) + '\n\n')
+            conv.add(case, rec)
             f.flush()                    # a long run should survive being interrupted
             s = rec['score']
             print('  [%3d/%3d] %-42s dca %.3f  disc %.3f  calls %3d'
@@ -106,6 +109,7 @@ def main():
               'leaks', 'n_calls', 'turns'):
         v = summ.get(k)
         print('%-18s %s' % (k, ('%.4f' % v) if isinstance(v, float) else v))
+    conv.close()
     if getattr(backend, 'n_failed', 0):
         print('\nNOTE %d generation call(s) failed and were recorded as empty turns.'
               % backend.n_failed)

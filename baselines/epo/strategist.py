@@ -63,6 +63,20 @@ class EPOStrategist(object):
                 target_modules=list(cfg.lora_targets)))
             self.policy.print_trainable_parameters()
 
+        if getattr(cfg, 'grad_checkpointing', False):
+            # LoRA + checkpointing needs input grads enabled, or the checkpointed
+            # segments have nothing to differentiate and the adapters get no gradient.
+            try:
+                self.policy.gradient_checkpointing_enable()
+                if hasattr(self.policy, 'enable_input_require_grads'):
+                    self.policy.enable_input_require_grads()
+                if hasattr(self.policy, 'config'):
+                    self.policy.config.use_cache = False
+                print('[strategist] gradient checkpointing ON '
+                      '(~6x less activation memory, ~30%% slower)')
+            except Exception as e:                   # noqa: BLE001
+                print('[strategist] could not enable gradient checkpointing: %s' % e)
+
         self.params = [p for p in self.policy.parameters() if p.requires_grad]
         self.optimizer = torch.optim.AdamW(self.params, lr=cfg.lr, eps=1e-6,
                                            weight_decay=0.0)
@@ -72,7 +86,23 @@ class EPOStrategist(object):
     # ------------------------------------------------------------- rollout
     def build_prompt(self, case, conversation, prior_acts=()):
         msgs = pe.strategist_messages(case, conversation, prior_acts)
-        return compat.render_chat(self.tokenizer, msgs)
+        text = compat.render_chat(self.tokenizer, msgs)
+        cap = getattr(self.cfg, 'max_prompt_tokens', 0)
+        if not cap or len(self.tokenizer(text, add_special_tokens=False).input_ids) <= cap:
+            return text
+
+        # Over budget. Shrink the CONVERSATION WINDOW and re-render, rather than
+        # truncating the rendered string: the system message carries the case, the
+        # schema and the view filtering that prompt_epo asserts on, so cutting tokens
+        # off the front would silently drop exactly the part that must not be lost.
+        for turns in (8, 6, 4, 2, 1):
+            msgs = pe.strategist_messages(case, conversation, prior_acts,
+                                          max_turns=turns)
+            text = compat.render_chat(self.tokenizer, msgs)
+            if len(self.tokenizer(text, add_special_tokens=False).input_ids) <= cap:
+                break
+        self._truncated = getattr(self, '_truncated', 0) + 1
+        return text
 
     @torch.no_grad()
     def act(self, case, conversation, prior_acts=(), is_test=False):
@@ -85,7 +115,10 @@ class EPOStrategist(object):
             kw.update(do_sample=False)
         else:
             kw.update(do_sample=True, temperature=self.cfg.strategy_temperature)
-        out = self.policy.generate(**enc, **kw)
+        # The policy trains with checkpointing and sits in train mode during RL, which
+        # would sample without a KV cache; see compat.cached_generation.
+        with compat.cached_generation(self.policy):
+            out = self.policy.generate(**enc, use_cache=True, **kw)
         comp = out[0][enc['input_ids'].shape[1]:]
         # drop trailing pad/eos so they do not dominate a 15-token mean
         keep = (comp != self.tokenizer.pad_token_id).nonzero()
@@ -121,12 +154,17 @@ class EPOStrategist(object):
             if s is None or adv == 0.0:
                 continue
             ids = torch.cat([s.prompt_ids, s.comp_ids]).unsqueeze(0).to(self.policy.device)
-            logits = self.policy(ids).logits[:, :-1]
-            lp = torch.log_softmax(logits.float(), dim=-1) \
-                      .gather(-1, ids[:, 1:].unsqueeze(-1)).squeeze(-1)
             # logits[:, :-1] predicts ids[1:], so the first completion token sits at
             # index len(prompt) - 1. Getting this wrong trains on the scenario text.
-            lp = lp[:, s.prompt_ids.shape[0] - 1:]
+            start = s.prompt_ids.shape[0] - 1
+            # Only the completion's ~48 positions are ever read, so only their logits
+            # are computed. The head over all L positions costs L x 248320 x 4 bytes
+            # once upcast -- ~1.9 GB at L=2000, retained by autograd for the backward.
+            # Same numbers, a fraction of the memory.
+            logits = compat.logits_tail(self.policy, ids, ids.shape[1] - start)[:, :-1]
+            tgt = ids[:, 1:][:, start:]
+            lp = torch.log_softmax(logits.float(), dim=-1) \
+                      .gather(-1, tgt.unsqueeze(-1)).squeeze(-1)
 
             w = torch.ones_like(lp)
             if s.tag_len:                    # 0 when the model emitted no explicit tag
@@ -135,7 +173,7 @@ class EPOStrategist(object):
 
             loss = -(adv * logp) / T
             if self.cfg.kl_beta:
-                kl = self._kl_to_ref(ids, s, lp)
+                kl = self._kl_to_ref(ids, start, lp)
                 if kl is not None:
                     loss = loss + self.cfg.kl_beta * kl / T
             loss.backward()
@@ -143,7 +181,7 @@ class EPOStrategist(object):
         self._pending += 1
         return total
 
-    def _kl_to_ref(self, ids, s, lp):
+    def _kl_to_ref(self, ids, start, lp):
         """KL against the frozen base. PEFT gives the reference model for free by
         disabling the adapters -- no second copy in memory.
 
@@ -163,10 +201,11 @@ class EPOStrategist(object):
                               'Upgrade peft or pass --kl_beta 0 to silence this.')
                         self._kl_warned = True
                     return None
-                ref = self.policy(ids).logits[:, :-1]
+                ref = compat.logits_tail(self.policy, ids, ids.shape[1] - start)[:, :-1]
+                tgt = ids[:, 1:][:, start:]
                 ref_lp = torch.log_softmax(ref.float(), dim=-1) \
-                              .gather(-1, ids[:, 1:].unsqueeze(-1)).squeeze(-1)
-                ref_lp = ref_lp[:, s.prompt_ids.shape[0] - 1:]
+                              .gather(-1, tgt.unsqueeze(-1)).squeeze(-1)
+                del ref
         return (lp - ref_lp).mean()
 
     def maybe_step(self, force=False):

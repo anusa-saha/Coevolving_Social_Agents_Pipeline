@@ -69,7 +69,7 @@ class SREnv(object):
         self.revealed, self.reveal_turn, self.reveal_elicited = set(), {}, {}
         self.addressed, self.pending = set(), {}
         self.cover_credit, self.leaks = {}, []
-        self.settlement, self.settle_turn = {}, None
+        self.settlement, self.settle_turn, self.settled_by = {}, None, None
         self.n_calls, self.calls_by_role, self.prompt_chars = 0, {}, 0
         self.last_score = None
 
@@ -81,8 +81,8 @@ class SREnv(object):
     def snapshot(self):
         keys = ('ptr', 'utterances', 'step_i', 'revealed', 'reveal_turn',
                 'reveal_elicited', 'addressed', 'pending', 'cover_credit', 'leaks',
-                'settlement', 'settle_turn', 'conversation', 'n_calls', 'calls_by_role',
-                'prompt_chars', 'last_score')
+                'settlement', 'settle_turn', 'settled_by', 'conversation', 'n_calls',
+                'calls_by_role', 'prompt_chars', 'last_score')
         return {k: copy.deepcopy(getattr(self, k)) for k in keys}
 
     def restore(self, snap):
@@ -128,6 +128,7 @@ class SREnv(object):
         if parsed:
             self.settlement = parsed
             self.settle_turn = self.step_i
+            self.settled_by = 'chair'
 
         # advisors speak until it is the chair's turn again, or the cap is hit
         while self.utterances < self.cap:
@@ -149,6 +150,7 @@ class SREnv(object):
                 self.settlement = self._extract_settlement()
                 if self.settlement:
                     self.settle_turn = self.step_i - 1
+                    self.settled_by = 'extractor'
             self._finalise()
             return self.conversation, -1
         return self.conversation, 0
@@ -217,6 +219,7 @@ class SREnv(object):
                 'num_agents': self.case.get('num_agents'),
                 'scenario_type': self.case.get('scenario_type'),
                 'settlement': self.settlement, 'score': pub,
+                'settle_turn': self.settle_turn, 'settled_by': self.settled_by,
                 'floor': {k: v for k, v in floor_score(self.case).items()
                           if k != 'settlement_resolved'},
                 'revealed': sorted(self.revealed),

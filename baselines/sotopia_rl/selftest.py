@@ -9,7 +9,8 @@ The two that matter most:
     episodes, so "we reimplemented it" is a claim with evidence behind it.
 
 Both compare against files from another baseline as DATA. Nothing in the training path
-reads them, and both checks skip cleanly if those files are absent.
+reads them, and both checks skip cleanly if those files are absent -- or, for the split,
+if the only split files found were exported under a different configuration.
 """
 import json
 import sys
@@ -57,16 +58,29 @@ def t_split():
 
 
 def t_split_matches_published():
-    for name in ('train', 'valid', 'test'):
-        if not paths.is_published_config():
-            print('        (skipped: benchmark reconfigured to %d domains x %d; '
-                  'the published split describes a different dataset)'
-                  % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
-            return
-        ref = paths.find_reference('data/csa-%s.txt' % name)
+    if not paths.is_published_config():
+        print('        (skipped: benchmark reconfigured to %d domains x %d; '
+              'the published split describes a different dataset)'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
+        return
+    refs = {}
+    for name, want in zip(('train', 'valid', 'test'), paths.PUBLISHED_SPLIT):
+        # An archived copy under its own name wins. ppdpp/data/csa-<split>.txt is whatever
+        # export_csa.py last wrote, so it is only the published split if the size agrees.
+        ref = (paths.find_reference('data/csa-published-%s.txt' % name)
+               or paths.find_reference('data/csa-%s.txt' % name))
         if not ref:
             print('        (skipped: no published split to compare)')
             return
+        n = sum(1 for l in open(ref, encoding='utf-8') if l.strip())
+        if n != want:
+            print('        (skipped: %s holds %d scenarios, not the published %d, so it was\n'
+                  '         exported under another configuration. Archive the 99/9/42 split as\n'
+                  '         ppdpp/data/csa-published-<split>.txt under CSA_ARTIFACTS_DIR to '
+                  're-enable this check)' % (ref, n, want))
+            return
+        refs[name] = ref
+    for name, ref in refs.items():
         theirs = [eval(l) for l in open(ref, encoding='utf-8') if l.strip()]
         mine = [r['uid'] for r in data_csa.load(name)]
         assert mine == [r['uid'] for r in theirs], \
@@ -210,10 +224,43 @@ def t_normaliser_roundtrip():
     assert a.apply(x) == a.apply(y), 'within-episode norm should be scale-invariant'
 
 
+def t_headline_metrics():
+    """eval.py's headline metrics must agree with the verifier they are read from, and the
+    paired bootstrap must behave at its two edges."""
+    from csa_core import headline as H
+    case = next(c for c in data_csa.load('test') if c.get('provenance_checks'))
+    decisive = [d['fact_id'] for d in case['decisive_facts']]
+    holder = case['private_facts'][decisive[0]]['owner']
+    rec = {'uid': case['uid'], 'settlement': {'decisions': {}}, 'revealed': decisive,
+           'addressed': [holder], 'settle_turn': 2, 'settled_by': 'chair',
+           'leaks': [{'fact': decisive[0], 'by': case['decision_maker'], 'turn': 0}],
+           'dialog': [{'role': 'Meeting', 'content': 'x'},
+                      {'role': H.chair_name(case), 'content': 'hello'}],
+           'score': V.score(case, {'decisions': {}}, set(decisive))}
+    m = H.episode_metrics(case, rec)
+    s = rec['score']
+    assert m['content_total'] == len(case['content_checks'])
+    assert m['prov_total'] == len(case['provenance_checks'])
+    assert m['content_passed'] == sum(bool(v) for v in s['content'].values())
+    assert m['checks_passed'] == m['content_passed'] + m['prov_passed']
+    assert m['success'] == int(m['checks_passed'] == m['checks_total'])
+    assert m['decisive_revealed'] == m['decisive_total'] == len(set(decisive))
+    assert m['settled'] == 1 and m['turns_to_settle'] == 3 and m['turns_used'] == 1, m
+    assert m['address_precision'] == 1.0 and m['chair_leaks'] == 1, m
+    m0 = H.episode_metrics(case, dict(rec, settlement={}, settle_turn=None))
+    assert m0['settled'] == 0 and m0['turns_to_settle'] is None and m0['settled_by'] == ''
+    b = H.summary([m, m0])['bottleneck']
+    assert sum(b[k]['n'] for k in b) == 2, 'the bottleneck must partition every episode'
+    obs, lo, hi, p = H.paired_bootstrap([0.2, 0.4, 0.6], [0.2, 0.4, 0.6], 200)
+    assert obs == lo == hi == 0.0 and p == 1.0
+    obs, lo, hi, p = H.paired_bootstrap([0.1] * 30, [0.3] * 30, 200)
+    assert abs(obs - 0.2) < 1e-9 and lo > 0 and p < 0.05
+
+
 if __name__ == '__main__':
     print('sotopia_rl selftest\n')
     blocking = compat.report()
-    print('\nraw scenarios: %s\n' % paths.find_raw())
+    print('\nscenarios: %s\n' % data_csa.source())
 
     for name, fn in [
         ('split is complete and invariants hold', t_split),
@@ -225,6 +272,7 @@ if __name__ == '__main__':
         ('is_eliciting vs annotated acts', t_eliciting_detector),
         ('attribution stays in [0,1] and is dense enough', t_attribution),
         ('normaliser round-trips', t_normaliser_roundtrip),
+        ("headline metrics agree with the verifier", t_headline_metrics),
     ]:
         check(name, fn)
 

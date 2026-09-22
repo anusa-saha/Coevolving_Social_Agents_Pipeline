@@ -39,11 +39,12 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+from csa_core import compat as compat                                        # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import paths                                         # noqa: E402
 import prompts_sr as P                               # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_sr import SREnv                             # noqa: E402
 from models_sr import POLICY, REWARD, PolicyView, RewardView, SharedBackbone  # noqa: E402
 from csa_core.verifier import flipped_checks, score        # noqa: E402
@@ -156,10 +157,9 @@ def main():
 
     tag = 'grpo-%s-seed%d' % (cli.reward_source, cli.seed)
     hist = open(os.path.join(paths.LOGS, '%s-history.jsonl' % tag), 'a', encoding='utf-8')
-    rollout_f = None
+    rollouts = None
     if cli.save_rollouts:
-        rollout_path = os.path.join(paths.LOGS, '%s-rollouts.jsonl' % tag)
-        rollout_f = open(rollout_path, 'a', encoding='utf-8')
+        rollouts = runlog.RolloutLog(paths.LOGS, tag, algo='grpo-%s' % cli.reward_source)
     collapsed = total = n_rollouts = 0
     t0 = time.time()
 
@@ -196,6 +196,11 @@ def main():
 
         loss_val = 0.0
         opt.zero_grad(set_to_none=True)
+        # Train mode for the gradient pass only. Gradient checkpointing engages only in
+        # train mode, so without this --grad_checkpointing did nothing and the backward
+        # did not fit a 24 GB card. Sampling above and the rollouts below stay in eval
+        # mode; EPO's policy is likewise in train mode when it scores its samples.
+        policy.train()
         for comp, a in zip(comps, adv):
             if a == 0.0:
                 continue
@@ -207,6 +212,7 @@ def main():
                     loss = loss + cli.kl_beta * (lp - ref) / len(comps)
             loss.backward()
             loss_val += float(loss.detach())
+        policy.eval()
         gn = None
         if loss_val:
             gn = float(torch.nn.utils.clip_grad_norm_(policy.params,
@@ -221,32 +227,25 @@ def main():
             'collapsed': all(a == 0.0 for a in adv),
             'elapsed_s': round(time.time() - t0, 1)}, ensure_ascii=False) + '\n')
         hist.flush()
-        # ---- complete and save full episode rollouts ----
-        if rollout_f is not None:
+        # ---- complete and log every candidate as a full episode ----
+        # The candidate is committed, then the dialogue runs to its end with the frozen
+        # chair, so each rollout is a whole conversation that can be read and scored.
+        if rollouts is not None:
             snap_rl = env.snapshot()
             with torch.no_grad():
                 for ci, cand_text in enumerate(texts):
                     env.restore(snap_rl)
                     _conv, done = env.step(cand_text)
                     while not done:
-                        utt = env.chair_say(
-                            temperature=cli.temperature)
+                        utt = env.chair_say(temperature=cli.temperature)
                         _conv, done = env.step(utt)
-                    ep = env.episode()
-                    ep['group'] = g
-                    ep['candidate'] = ci
-                    ep['fork_turn'] = snap_rl['step_i']
-                    ep['grpo_score'] = round(scores[ci], 4)
-                    ep['grpo_advantage'] = round(adv[ci], 3)
-                    if env.last_score:
-                        ep['score'] = {
-                            k: v for k, v in env.last_score.items()
-                            if k not in ('content', 'provenance',
-                                         'settlement_resolved')}
-                    rollout_f.write(
-                        json.dumps(ep, ensure_ascii=False) + '\n')
+                    rollouts.add(env.case, env.record(scores[ci], done, env.step_i),
+                                 step=g, group=g, candidate=ci,
+                                 reward=round(scores[ci], 4),
+                                 advantage=round(adv[ci], 3),
+                                 fork_turn=snap_rl['step_i'],
+                                 continuation='frozen chair after the candidate')
                     n_rollouts += 1
-                rollout_f.flush()
             env.restore(snap_rl)
         if (g + 1) % 10 == 0:
             print('group %3d/%d  loss %.4f  score mean %.3f sd %.3f  collapsed %d/%d '
@@ -260,8 +259,8 @@ def main():
 
     policy.save(os.path.join(cli.out, tag, 'final'))
     hist.close()
-    if rollout_f is not None:
-        rollout_f.close()
+    if rollouts is not None:
+        rollouts.close()
     summary = {'groups': cli.groups, 'group_size': cli.group,
                'reward_source': cli.reward_source,
                'collapsed_groups': collapsed, 'total_groups': total,

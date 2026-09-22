@@ -37,6 +37,7 @@ import prm as prm_mod                                # noqa: E402
 import prompt_epo as pe                              # noqa: E402
 import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
 from csa_core.detectors import assert_matches_ppdpp  # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_epo import EPOEnv                           # noqa: E402
 from strategist import EPOStrategist                 # noqa: E402
 
@@ -84,19 +85,22 @@ def advantages(group_returns, mode):
     return [[(x - mu) / sd for x in rets] for rets in group_returns]
 
 
-def evaluate(env, strat, cases, out_path, tag):
+def evaluate(env, strat, cases, out_path, tag, run):
     env.mode = 'test'
     strat.policy.eval()
     recs = []
+    conv = runlog.EvalLog(config.LOGS, '%s-%s' % (run, tag), tag=tag)
     with open(out_path, 'w', encoding='utf-8') as f:
         for i, case in enumerate(cases):
             _s, _tr, terminal, done, turns, rec = rollout(env, strat, case, is_test=True)
             recs.append(rec)
             f.write('%s\n\n' % str(rec))
+            conv.add(env.case, rec)
             if (i + 1) % 10 == 0:
                 print('  eval %d/%d' % (i + 1, len(cases)), flush=True)
     env.mode = 'train'
     strat.policy.train()
+    headline = conv.close()
 
     def avg(fn):
         v = [fn(r) for r in recs if fn(r) is not None]
@@ -118,10 +122,12 @@ def evaluate(env, strat, cases, out_path, tag):
         'n_calls': avg(lambda r: r['n_calls']),
         'tag_misses': sum(r.get('tag_misses', 0) for r in recs),
         'act_dist': dict(collections.Counter(a for r in recs for a in r['act_history'])),
+        'headline': headline,
     }
     print('[eval %s] %s' % (tag, json.dumps(
         {k: (round(v, 4) if isinstance(v, float) else v)
-         for k, v in summary.items() if k != 'act_dist'})), flush=True)
+         for k, v in summary.items() if k not in ('act_dist', 'headline')})),
+          flush=True)
     return summary
 
 
@@ -146,6 +152,11 @@ def main():
     p.add_argument('--eval_split', default='test', choices=['test', 'valid'])
     p.add_argument('--agent_device', default=config.Defaults.agent_device)
     p.add_argument('--strategist_device', default=config.Defaults.strategist_device)
+    p.add_argument('--grad_checkpointing', action='store_true',
+                   help='~6x less activation memory on the strategist, ~30%% slower')
+    p.add_argument('--max_prompt_tokens', type=int,
+                   default=config.Defaults.max_prompt_tokens,
+                   help='left-truncate the strategist prompt; 0 disables')
     p.add_argument('--seed', type=int, default=config.Defaults.seed)
     p.add_argument('--dry_run', type=int, default=0,
                    help='run N episodes with no gradient, to check the plumbing')
@@ -158,6 +169,13 @@ def main():
     cfg.lr, cfg.kl_beta, cfg.tag_weight = cli.lr, cli.kl_beta, cli.tag_weight
     cfg.episodes_per_update, cfg.prm_mode = cli.episodes_per_update, cli.prm_mode
     cfg.agent_device, cfg.strategist_device = cli.agent_device, cli.strategist_device
+    cfg.grad_checkpointing = cli.grad_checkpointing
+    cfg.max_prompt_tokens = cli.max_prompt_tokens
+
+    if cfg.agent_device == cfg.strategist_device:
+        print('[run_epo] NOTE both 9B models are on %s. That is ~36 GB of weights before '
+              'a single activation; on a 40 GB card it will OOM. Put them on separate '
+              'devices, or pass --grad_checkpointing.' % cfg.agent_device)
 
     # Preflight, before anything slow: an unusable environment should fail in seconds,
     # not after a 15GB checkpoint download.
@@ -189,14 +207,18 @@ def main():
                      scorer(tr), term), flush=True)
         return
 
+    rollouts = runlog.RolloutLog(config.LOGS, run_tag,
+                                 algo='epo-reinforce-%s' % cli.advantage)
     summaries = [evaluate(env, strat, eval_cases,
-                          os.path.join(config.LOGS, 'Record-%s-ep0.txt' % run_tag), 'ep0')]
+                          os.path.join(config.LOGS, 'Record-%s-ep0.txt' % run_tag),
+                          'ep0', run_tag)]
 
     episodes = 0
     t0 = time.time()
     for g in range(n_groups):
         case = random.choice(train_cases)
         group_returns, group_samples, group_meta = [], [], []
+        group_recs = []
         for _k in range(cli.group_k):
             samples, tr, terminal, done, turns, rec = rollout(env, strat, case)
             r = scorer(tr)
@@ -212,9 +234,14 @@ def main():
                                'elicited': sum(1 for v in tr.reveal_elicited.values() if v),
                                'leaks': len(tr.leaks), 'r': r, 'terminal': terminal,
                                'acts': tr.acts, 'tag_misses': env.tag_misses})
+            group_recs.append(rec)
             episodes += 1
 
         advs = advantages(group_returns, cli.advantage)
+        for k, (rec_k, meta, adv) in enumerate(zip(group_recs, group_meta, advs)):
+            rollouts.add(case, rec_k, step=episodes, group=g, candidate=k,
+                         reward=meta['terminal'], advantage=[round(a, 4) for a in adv],
+                         process_rewards=meta['r'], prm=cli.prm)
         loss = 0.0
         for samples, adv in zip(group_samples, advs):
             loss += strat.accumulate(samples, adv)
@@ -237,19 +264,21 @@ def main():
             tag = 'ep%d' % episodes
             summaries.append(evaluate(
                 env, strat, eval_cases,
-                os.path.join(config.LOGS, 'Record-%s-%s.txt' % (run_tag, tag)), tag))
+                os.path.join(config.LOGS, 'Record-%s-%s.txt' % (run_tag, tag)),
+                tag, run_tag))
             strat.save(os.path.join(cli.out, run_tag, tag))
 
     strat.maybe_step(force=True)
     summaries.append(evaluate(
         env, strat, eval_cases,
-        os.path.join(config.LOGS, 'Record-%s-final.txt' % run_tag), 'final'))
+        os.path.join(config.LOGS, 'Record-%s-final.txt' % run_tag), 'final', run_tag))
     strat.save(os.path.join(cli.out, run_tag, 'final'))
 
     with open(os.path.join(config.LOGS, '%s-summary.json' % run_tag), 'w',
               encoding='utf-8') as f:
         json.dump({'run': run_tag, 'args': vars(cli), 'summaries': summaries}, f, indent=1)
     hist.close()
+    rollouts.close()
     print('\ndone: %d episodes in %.1f min' % (episodes, (time.time() - t0) / 60))
 
 

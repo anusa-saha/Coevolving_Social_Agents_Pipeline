@@ -4,7 +4,7 @@
 class Defaults:
     # --- expert / generator
     expert = 'local'                 # 'local' | 'api'
-    expert_model = 'Qwen/Qwen2.5-7B-Instruct'
+    expert_model = 'Qwen/Qwen3.5-9B'
     api_base = ''                    # e.g. an OpenAI-compatible gateway; '' = default
     dtype = 'bfloat16'
     device = 'cuda:0'
@@ -28,11 +28,15 @@ class Defaults:
     opponent = 'none'                # 'none' | 'withhold'
 
     # --- student (SFT). Same model family as every other arm, so the comparison holds.
-    student_model = 'Qwen/Qwen2.5-7B-Instruct'
+    student_model = 'Qwen/Qwen3.5-9B'
     lora_r = 16
     lora_alpha = 32
     lora_dropout = 0.05
+    # q/k/v/o exist only in Qwen3.5's full-attention layers (every 4th). The other 24 are
+    # Gated DeltaNet, projected by in_proj_qkv / in_proj_z / out_proj -- without those,
+    # three attention blocks in four would carry no adapter.
     lora_targets = ('q_proj', 'k_proj', 'v_proj', 'o_proj',
+                    'in_proj_qkv', 'in_proj_z', 'out_proj',
                     'gate_proj', 'up_proj', 'down_proj')
     max_len = 1536
     sft_lr = 1e-4

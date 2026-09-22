@@ -72,6 +72,10 @@ def main():
     p.add_argument('--class_balance', default='sqrt_inverse',
                    choices=['none', 'sqrt_inverse', 'inverse'],
                    help='the 7:1 ask:followup ratio drove PPDPP followup F1 to 0.000')
+    p.add_argument('--strategist_device', default=None,
+                   help='override the config; a job pinned to one GPU sees it as cuda:0')
+    p.add_argument('--grad_checkpointing', action='store_true',
+                   help='~6x less activation memory, ~30%% slower; needed on 24 GB')
     p.add_argument('--seed', type=int, default=0)
     cli = p.parse_args()
 
@@ -80,6 +84,10 @@ def main():
 
     cfg = config.Defaults
     cfg.lr = cli.lr
+    if cli.strategist_device:
+        cfg.strategist_device = cli.strategist_device
+    if cli.grad_checkpointing:
+        cfg.grad_checkpointing = True
     strat = EPOStrategist(cfg)
     tok = strat.tokenizer
     cases = config.case_index()
@@ -126,9 +134,11 @@ def main():
             ids, labels = build_example(tok, cases[row['uid']], row, cli.max_len)
             t_ids = torch.tensor([ids], device=dev)
             t_lab = torch.tensor([labels], device=dev)
-            out = strat.policy(input_ids=t_ids, labels=t_lab)
-            (out.loss / cli.accum).backward()
-            run_loss += float(out.loss); n += 1; seen += 1
+            # completion NLL from the completion's logits only: the full-vocabulary
+            # logits over the prompt do not fit beside a 9B model on a 24 GB card
+            loss = compat.completion_nll(strat.policy, t_ids, t_lab)
+            (loss / cli.accum).backward()
+            run_loss += float(loss); n += 1; seen += 1
             if (j + 1) % cli.accum == 0:
                 torch.nn.utils.clip_grad_norm_(strat.params, 1.0)
                 strat.optimizer.step()
@@ -146,9 +156,10 @@ def main():
             with torch.no_grad():
                 for row in valid_rows:
                     ids, labels = build_example(tok, cases[row['uid']], row, cli.max_len)
-                    out = strat.policy(input_ids=torch.tensor([ids], device=dev),
-                                       labels=torch.tensor([labels], device=dev))
-                    tot += float(out.loss); cnt += 1
+                    loss = compat.completion_nll(strat.policy,
+                                                 torch.tensor([ids], device=dev),
+                                                 torch.tensor([labels], device=dev))
+                    tot += float(loss); cnt += 1
                 # cheap behavioural check: does it emit a parseable tag at all?
                 for row in valid_rows[:40]:
                     text, _ = strat.act(cases[row['uid']], row['prefix'], is_test=True)

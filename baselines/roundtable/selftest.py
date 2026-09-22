@@ -217,6 +217,34 @@ def t_record_schema_matches_the_other_arms():
         'dialog turns need a speaker tag or section F mis-attributes chair turns'
 
 
+def t_headline_and_eval_logs():
+    """A scripted table through the real loop and into an eval log: settled_by and
+    settle_turn reach the record, and every log file is written."""
+    import tempfile
+    import _headline as H
+    import _runlog as runlog
+    case = data_csa.load('test')[0]
+    field = list((case['settlement_schema'].get('decisions') or {}))[0]
+    speakers = case['interaction_config']['turn_order'][:len(case['agents'])]
+    cfg = _cfg(decide='chair', rounds=1, backend='local')
+    env = RoundTableEnv(cfg, _Scripted(['hello'] * len(speakers)
+                                       + [json.dumps({'decisions': {field: 'v'}})]))
+    rec = env.run(case)
+    assert rec['settled_by'] == 'chair', rec['settled_by']
+    m = H.episode_metrics(case, rec)
+    assert m['settled'] == 1 and m['turns_to_settle'] is not None, m
+    with tempfile.TemporaryDirectory() as tmp:
+        log = runlog.EvalLog(tmp, 'rt-selftest')
+        log.add(case, rec)
+        log.close(log=None)
+        d = os.path.join(tmp, 'eval', 'rt-selftest')
+        for name in ('episodes.jsonl', 'scenarios.csv', 'turns.csv', 'conversations.log',
+                     'summary.json', 'summary.log'):
+            assert os.path.isfile(os.path.join(d, name)), name
+        with open(os.path.join(d, 'conversations.log'), encoding='utf-8') as f:
+            assert '[CHAIR]' in f.read()
+
+
 def t_vendored_copies_match_core():
     """The vendored copies must still render identically from csa_core.
 
@@ -246,7 +274,7 @@ def t_vendored_copies_match_core():
 
 def main():
     print()
-    print('raw scenarios : %s' % core_paths.find_raw())
+    print('scenarios     : %s' % data_csa.source())
     print('backend       : %s / %s' % (config.Defaults.model, config.Defaults.api_model))
     print()
     bad = 0
@@ -264,6 +292,7 @@ def main():
             ('converge keeps the last correction', t_converge_last_correction_wins),
             ('record schema matches the other arms',
              t_record_schema_matches_the_other_arms),
+            ('headline metrics and eval logs', t_headline_and_eval_logs),
             ('vendored copies match csa_core', t_vendored_copies_match_core)):
         bad += run(name, fn)
 

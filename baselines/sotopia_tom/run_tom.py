@@ -1,6 +1,6 @@
 """Run one or more prompting arms over the held-out scenarios.
 
-No training. Every arm loads the same frozen Qwen2.5-7B-Instruct once and differs only in
+No training. Every arm loads the same frozen Qwen3.5-9B once and differs only in
 how the chair's turn is prompted, so a difference in the numbers is attributable to the
 strategy and nothing else.
 
@@ -25,12 +25,14 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:                                # noqa: BLE001
         pass
 
-import compat                                        # noqa: E402
+from csa_core import compat as compat                                        # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import metrics_tom as M                              # noqa: E402
 import paths                                         # noqa: E402
 import prompts_tom as P                              # noqa: E402
+from csa_core import headline as H                   # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_tom import ToMEnv                           # noqa: E402
 
 
@@ -57,6 +59,7 @@ def run_arm(env, cases, strategy, split, limit=0):
     out_path = record_path(strategy, split)
     recs, t0 = [], time.time()
     todo = cases[:limit] if limit else cases
+    conv = runlog.EvalLog(paths.LOGS, 'tom-%s-%s' % (strategy, split), tag=strategy)
     with open(out_path, 'w', encoding='utf-8') as f:
         for i, case in enumerate(todo):
             env.reset(case, strategy=strategy)
@@ -68,15 +71,17 @@ def run_arm(env, cases, strategy, split, limit=0):
             recs.append(rec)
             f.write('%s\n\n' % str(rec))
             f.flush()
+            conv.add(case, rec)
             if (i + 1) % 5 == 0:
                 s = M.summarise(recs)
                 print('  [%s] %d/%d  DA %.3f IA %.3f EFF %.3f InfoMgmt3 %.3f  %.1f min'
                       % (strategy, i + 1, len(todo), s['DA'], s['IA'], s['EFF'],
                          s['InfoMgmt3'], (time.time() - t0) / 60), flush=True)
+    conv.close(log=None)                 # report() prints every arm's summary together
     return recs, out_path
 
 
-def report(by_arm):
+def report(by_arm, cases):
     order = [s for s in P.STRATEGIES if s in by_arm]
     print('\n' + '=' * 96)
     print('%-12s %5s %6s %6s %6s %10s %6s %6s %8s %7s %6s'
@@ -107,6 +112,15 @@ def report(by_arm):
             pf = '<0.001' if r['p'] < 0.001 else ('%.3f' % r['p'])
             print('%-12s %-11s %5d %5d %5d %9s'
                   % (arm, key, r['win'], r['tie'], r['loss'], pf))
+
+    # eval.py's headline metrics and its paired bootstrap, the block every arm prints
+    rows = {arm: H.rows_from_records(by_arm[arm], cases) for arm in order}
+    for arm in order:
+        summ[arm]['headline'] = H.summary(rows[arm])
+        for line in H.summary_lines(arm, rows[arm]):
+            print(line)
+    for line in H.compare_lines(rows, base):
+        print(line)
     return summ
 
 
@@ -149,7 +163,7 @@ def main():
             by_arm[arm] = recs
             print('  wrote %s' % path)
 
-    summ = report(by_arm)
+    summ = report(by_arm, data_csa.case_index())
     with open(cli.out, 'w', encoding='utf-8') as f:
         json.dump({'split': cli.split, 'model': cfg.model, 'summary': summ}, f, indent=1)
     print('summary -> %s' % cli.out)

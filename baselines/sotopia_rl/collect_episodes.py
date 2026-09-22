@@ -28,8 +28,9 @@ for _s in (sys.stdout, sys.stderr):
 
 import attribution                                   # noqa: E402
 import config                                        # noqa: E402
-import data_csa                                      # noqa: E402
+from csa_core import data_csa as data_csa                                      # noqa: E402
 import paths                                         # noqa: E402
+from csa_core import runlog                          # noqa: E402
 from env_sr import SREnv                             # noqa: E402
 
 
@@ -39,7 +40,7 @@ def rollout(env, case):
     while not done:
         utt = env.chair_say(temperature=env.cfg.rollout_temperature)
         _c, done = env.step(utt)
-    return env.episode(), env.last_score
+    return env.episode(), env.last_score, env.record(env.last_score['dca'], done, env.step_i)
 
 
 def rank_key(s):
@@ -84,6 +85,8 @@ def main():
             print('resuming: %d scenarios already collected' % len(done_uids), flush=True)
 
     env = SREnv(cfg)
+    rollouts = runlog.RolloutLog(paths.LOGS, 'collect-%s' % cli.split, algo='selfplay-bc',
+                                 append=bool(done_uids))
     stats = collections.Counter()
     kept_scores, t0 = [], time.time()
 
@@ -91,14 +94,22 @@ def main():
         for i, case in enumerate(rows):
             if case['uid'] in done_uids:
                 continue
-            cands = []
+            cands, recs = [], {}
             for _j in range(cli.k):
-                ep, s = rollout(env, case)
+                ep, s, rec = rollout(env, case)
                 ep['score'] = {k: v for k, v in s.items()
                                if k not in ('content', 'provenance', 'settlement_resolved')}
                 ep['rank'] = rank_key(s)
+                recs[id(ep)] = (rec, _j)
                 cands.append(ep)
             cands.sort(key=lambda e: e['rank'], reverse=True)
+            # every rollout is logged, not only the kept ones: the discarded ones are
+            # what the ranking filter decided against
+            for pos, c in enumerate(cands):
+                rec, j = recs[id(c)]
+                rollouts.add(case, rec, step=i, candidate=j, reward=c['score']['dca'],
+                             rank=pos, kept=pos < cli.keep,
+                             temperature=cfg.rollout_temperature)
             spread = max(c['rank'][0] for c in cands) - min(c['rank'][0] for c in cands)
             stats['flat' if spread == 0 else 'varied'] += 1
             for c in cands[:cli.keep]:
@@ -111,6 +122,7 @@ def main():
                       % (i + 1, len(rows), sum(kept_scores) / max(1, len(kept_scores)),
                          (time.time() - t0) / 60), flush=True)
 
+    rollouts.close()
     print('\nwrote %s' % out_path)
     if kept_scores:
         print('  kept episodes: %d   dca mean %.3f median %.3f max %.3f'

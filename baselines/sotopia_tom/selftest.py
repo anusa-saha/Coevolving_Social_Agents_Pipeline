@@ -47,16 +47,29 @@ def t_split():
 
 
 def t_split_matches_published():
-    for name in ('train', 'valid', 'test'):
-        if not paths.is_published_config():
-            print('        (skipped: benchmark reconfigured to %d domains x %d; '
-                  'the published split describes a different dataset)'
-                  % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
-            return
-        ref = paths.find_reference('data/csa-%s.txt' % name)
+    if not paths.is_published_config():
+        print('        (skipped: benchmark reconfigured to %d domains x %d; '
+              'the published split describes a different dataset)'
+              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN))
+        return
+    refs = {}
+    for name, want in zip(('train', 'valid', 'test'), paths.PUBLISHED_SPLIT):
+        # An archived copy under its own name wins. ppdpp/data/csa-<split>.txt is whatever
+        # export_csa.py last wrote, so it is only the published split if the size agrees.
+        ref = (paths.find_reference('data/csa-published-%s.txt' % name)
+               or paths.find_reference('data/csa-%s.txt' % name))
         if not ref:
             print('        (skipped: no published split to compare)')
             return
+        n = sum(1 for l in open(ref, encoding='utf-8') if l.strip())
+        if n != want:
+            print('        (skipped: %s holds %d scenarios, not the published %d, so it was\n'
+                  '         exported under another configuration. Archive the 99/9/42 split as\n'
+                  '         ppdpp/data/csa-published-<split>.txt under CSA_ARTIFACTS_DIR to '
+                  're-enable this check)' % (ref, n, want))
+            return
+        refs[name] = ref
+    for name, ref in refs.items():
         theirs = [eval(l) for l in open(ref, encoding='utf-8') if l.strip()]
         assert [r['uid'] for r in data_csa.load(name)] == [r['uid'] for r in theirs], name
 
@@ -195,7 +208,7 @@ def t_paired():
 if __name__ == '__main__':
     print('sotopia_tom selftest\n')
     blocking = compat.report()
-    print('\nraw scenarios: %s' % paths.find_raw())
+    print('\nscenarios    : %s' % data_csa.source())
     print('model        : %s\n' % config.Defaults.model)
 
     for name, fn in [

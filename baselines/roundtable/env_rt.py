@@ -55,6 +55,8 @@ class RoundTableEnv(object):
         self.leaks = []
         self.settlement = None
         self.settle_turn = -1
+        self.settled_by = None
+        self._extracted = False                  # the extraction fallback ran
         self.proposals = {}
         self.agreed = {}
         self.last_score = None
@@ -113,6 +115,8 @@ class RoundTableEnv(object):
 
         self.settlement = self._converge()
         self.settle_turn = self.step_i
+        if self.settlement:
+            self.settled_by = 'extractor' if self._extracted else self.cfg.decide
         self._finalise()
         return self.record()
 
@@ -229,6 +233,7 @@ class RoundTableEnv(object):
 
     def _extract(self):
         """Fallback when nobody emitted parseable JSON."""
+        self._extracted = True
         msgs = P.settlement_messages(self.case, self.conversation)
         self.prompt_chars += sum(len(m.get('content') or '') for m in msgs)
         self.calls_by_role['extract'] = self.calls_by_role.get('extract', 0) + 1
@@ -253,6 +258,7 @@ class RoundTableEnv(object):
                 'scenario_type': self.case.get('scenario_type'),
                 'decide': self.cfg.decide, 'backend': self.cfg.backend,
                 'settlement': self.settlement, 'score': pub,
+                'settle_turn': self.settle_turn, 'settled_by': self.settled_by,
                 'floor': {k: v for k, v in floor_score(self.case).items()
                           if k != 'settlement_resolved'},
                 'revealed': sorted(self.revealed),

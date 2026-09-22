@@ -123,14 +123,11 @@ def sign_test(a_recs, b_recs, metric):
 # uneven, because EPO's records DO have resolution applied.
 #
 # The verifier and detectors are imported from sotopia_rl: they are byte-identical to
-# ppdpp_csa's apart from one import line, and unlike ppdpp_csa's they do not drag in torch.
-# This is a reporting script, so a path shim here costs nothing.
-_SR = os.path.abspath(os.path.join(HERE, '..', 'sotopia_rl'))
-if os.path.isdir(_SR) and _SR not in sys.path:
-    sys.path.insert(0, _SR)
+# csa_core's loader and verifier are torch-free, so a reporting script can use them
+# directly.
 try:
-    import data_csa as _dc
-    import verifier_sr as _V
+    from csa_core import data_csa as _dc
+    from csa_core import verifier as _V
     _CASES = _dc.case_index()
 except Exception as _e:                              # noqa: BLE001
     _CASES, _V = {}, None

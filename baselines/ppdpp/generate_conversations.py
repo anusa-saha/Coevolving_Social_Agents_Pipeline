@@ -108,7 +108,7 @@ def main():
     p.add_argument('--out', default='conversations')
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--backend', default='qwen')
-    p.add_argument('--qwen_path', default='Qwen/Qwen2.5-7B-Instruct')
+    p.add_argument('--qwen_path', default='Qwen/Qwen3.5-9B')
     p.add_argument('--qwen_dtype', default='bfloat16')
     p.add_argument('--device_map', default='cuda:0')
     p.add_argument('--openai_model', default='gpt-3.5-turbo-0613')
