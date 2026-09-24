@@ -87,7 +87,7 @@ Optional — lets EPO write its strategy targets with the annotator model instea
 export OPENROUTER_API_KEY=...        # never put a key in a file
 ```
 
-The dataset needs no download: `first_50.json` (11 domains × 50 scenarios) is in this folder.
+The dataset needs no download. `data/splits/` holds the prescribed split (1100 scenario rows, 945 distinct) and is used whenever it is present; `first_50.json` (11 domains × 50) is the older, derived-split configuration and is used when `data/splits/` is absent or `CSA_SPLITS_DIR=""` turns it off.
 
 ---
 
@@ -228,19 +228,14 @@ cd ppdpp
 2. Train the planner (~0.5 h):
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python sft.py --data_name csa --model_nam roberta --model_name_or_path /scratch/rohank__iitp/roberta-large --data_dir data_sft --output_dir sft --do_train --do_eval --overwrite_output_dir \
-       --num_train_epochs 10 --max_seq_length 512 --gpu 0 --cache_dir ~/.cache/huggingface/hub
+   CUDA_VISIBLE_DEVICES=0 python sft.py --data_name csa --model_name roberta --model_name_or_path /scratch/rohank__iitp/roberta-large --data_dir data_sft --output_dir sft --do_train --do_eval --overwrite_output_dir --num_train_epochs 10 --max_seq_length 512 --gpu 0 
    ```
 
 3. RL, one run per reward, in parallel (~34 h and ~44 h; each evaluates on the test split after every step):
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python run.py --data_name csa --system qwen --user qwen --critic qwen \
-       --csa_reward verifier --seed 1 --epochs 6 --max_turn 8 --do_train --do_eval \
-       --qwen_device_map cuda:0 --cache_dir ~/.cache/huggingface/hub
-   CUDA_VISIBLE_DEVICES=1 python run.py --data_name csa --system qwen --user qwen --critic qwen \
-       --csa_reward critic --seed 1 --epochs 6 --max_turn 8 --do_train --do_eval \
-       --qwen_device_map cuda:0 --cache_dir ~/.cache/huggingface/hub
+   CUDA_VISIBLE_DEVICES=0 python run.py --data_name csa --system qwen --user qwen --critic qwen --csa_reward verifier --seed 1 --max_steps 6 --max_turn 8 --do_train --do_eval --qwen_device_map cuda:0 
+   CUDA_VISIBLE_DEVICES=0 python run.py --data_name csa --system qwen --user qwen --critic qwen --csa_reward critic --seed 1 --max_steps 6 --max_turn 8 --do_train --do_eval --qwen_device_map cuda:0 
    ```
 
 ### 5.4 EPO — strategy targets, SFT (1 GPU), RL (2 GPUs)
@@ -261,17 +256,14 @@ cd epo
 2. SFT warm start (~1 h):
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python sft_epo.py --epochs 3 --lr 1e-5 --accum 8 --class_balance sqrt_inverse \
-       --strategist_device cuda:0 --grad_checkpointing
+   CUDA_VISIBLE_DEVICES=0 python sft_epo.py --epochs 3 --lr 1e-5 --accum 8 --class_balance sqrt_inverse --strategist_device cuda:0 --grad_checkpointing
    ```
 
 3. A 3-episode plumbing check, then RL (~22 h on two cards):
 
    ```bash
    CUDA_VISIBLE_DEVICES=0,1 python run_epo.py --dry_run 3 --agent_device cuda:0 --strategist_device cuda:1 --grad_checkpointing
-   CUDA_VISIBLE_DEVICES=0,1 python run_epo.py --episodes 700 --seed 1 --prm verifier --prm_mode binary \
-       --advantage group --eval_every 175 --eval_split test \
-       --agent_device cuda:0 --strategist_device cuda:1 --grad_checkpointing
+   CUDA_VISIBLE_DEVICES=0,1 python run_epo.py --episodes 700 --seed 1 --prm verifier --prm_mode binary --advantage group --eval_every 175 --eval_split test --agent_device cuda:0 --strategist_device cuda:1 --grad_checkpointing
    ```
 
 ### 5.5 Sotopia-RL — collect, reward model, GRPO, evaluate
@@ -304,14 +296,13 @@ cd sotopia_rl
 4. GRPO (~17 h). If the number above is **≥ 0.60**:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft --rm ckpt/rm --reward_source rm \
-       --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
+   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft --rm ckpt/rm --reward_source rm --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
    ```
 
    Otherwise:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft --reward_source lookahead \
+   CUDA_VISIBLE_DEVICES=0 python train_grpo.py --adapter ckpt/sft/policy --reward_source lookahead \
        --groups 175 --group 8 --kl_beta 0.02 --seed 1 --grad_checkpointing
    ```
 
@@ -319,9 +310,9 @@ cd sotopia_rl
    `grpo-rm-seed1` or `grpo-lookahead-seed1` to match step 4:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python evaluate_sr.py --adapter "" --split test --tag base
-   CUDA_VISIBLE_DEVICES=1 python evaluate_sr.py --adapter ckpt/sft --split test --tag sft
-   CUDA_VISIBLE_DEVICES=2 python evaluate_sr.py --adapter ckpt/grpo/grpo-lookahead-seed1/final --split test --tag grpo
+   CUDA_VISIBLE_DEVICES=1 python evaluate_sr.py --adapter "" --split test --tag base
+   CUDA_VISIBLE_DEVICES=1 python evaluate_sr.py --adapter ckpt/sft/policy --split test --tag sft
+   CUDA_VISIBLE_DEVICES=0 python evaluate_sr.py --adapter ckpt/grpo/grpo-rm-seed1/final/policy --split test --tag grpo
    ```
 
 ### 5.6 SOTOPIA-Ω — probe, corpus, SFT, evaluate
@@ -339,9 +330,8 @@ cd sotopia_omega
 2. Corpus (~36 h and ~3.5 h; re-running resumes):
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python generate_omega.py --split train --expert local --k 6 --keep 2 \
-       --stall_after 1 --stall_patience 1 --seed 1
-   CUDA_VISIBLE_DEVICES=1 python generate_omega.py --split valid --expert local --seed 1
+   CUDA_VISIBLE_DEVICES=0 python generate_omega.py --split train --expert local --k 6 --keep 2 --stall_after 1 --stall_patience 1 --seed 1
+   CUDA_VISIBLE_DEVICES=0 python generate_omega.py --split valid --expert local --seed 1
    ```
 
 3. Train the student (~3 h):
@@ -354,10 +344,10 @@ cd sotopia_omega
    control (~2–3 h each). Report `omega-withhold` next to any Ω number:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python evaluate_om.py --adapter "" --split test --tag base
-   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter ckpt/sft --split test --tag omega
-   CUDA_VISIBLE_DEVICES=2 python evaluate_om.py --adapter ckpt/sft --split test --eval_mode adaptive --tag omega-adaptive
-   CUDA_VISIBLE_DEVICES=3 python evaluate_om.py --adapter ckpt/sft --split test --opponent withhold --tag omega-withhold
+   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter "" --split test --tag base
+   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter ckpt/sft/student --split test --tag omega
+   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter ckpt/sft/student --split test --eval_mode adaptive --tag omega-adaptive
+   CUDA_VISIBLE_DEVICES=1 python evaluate_om.py --adapter ckpt/sft/student --split test --opponent withhold --tag omega-withhold
    ```
 
 ---
@@ -433,8 +423,11 @@ Every arm writes logs under its own folder:
 
 ### Benchmark configuration
 
-- **550 scenarios**: 11 domains × 50, from `first_50.json`; split **363 / 33 / 154** (train / valid / test), scenario-disjoint, stratified on domain and table size.
-- Results from the earlier 3-domain / 150-scenario configuration are **not comparable** and must be re-run.
+- **945 distinct scenarios**, read from `data/splits/` rather than derived: **664 / 56** train / valid (carved out of `train.json` by the same seeded bucket procedure, stratified on domain and table size) and **380 test** = **180 `test_seen`** + **200 `test_unseen`**.
+- `test_seen` covers the nine domains training also covers. `test_unseen` is `family_friends_informal` + `informal_commerce_bargaining`, absent from training entirely — it is the clean generalisation measurement.
+- **155 of the 380 test scenarios also appear in `train.json`, byte-identical.** That overlap ships with the split files, so the loader keeps it and warns once per process instead of failing. Seen-domain test numbers are optimistic because of it; quote `test_unseen` when the question is generalisation.
+- `--split` accepts `test_seen` and `test_unseen` everywhere it accepts `test`. `CSA_TEST_FILE=test_unseen.json` makes them the default `test`.
+- Results from the earlier 550-scenario (`first_50.json`) and 3-domain / 150-scenario configurations are **not comparable** and must be re-run. Archived records are matched to scenarios by uid, and uid numbering differs between datasets, so a stale record can match a *different* scenario — the selftests detect this and skip rather than compare.
 - PPDPP's and EPO's planner SFT data keeps only train-split scenarios (`ppdpp/filter_sft_split.py`): it was annotated under the old split, and 11 of its 75 training scenarios are test scenarios now. It covers the 3 original domains only.
 
 ### Environment variables
@@ -448,12 +441,15 @@ Every arm writes logs under its own folder:
 | `CSA_SCENARIOS_FILE` | a different combined scenario file (`''` = use `data/raw/`) |
 | `CSA_RAW_DIR`, `CSA_SCENARIOS_PER_DOMAIN` | per-domain files, e.g. `100` scenarios per domain (needs the raw files) |
 | `CSA_DOMAINS=published` | the original 3 domains (99 / 9 / 42) |
+| `CSA_SPLITS_DIR` | the directory holding `train.json` and the three test files; `""` falls back to the derived split |
+| `CSA_TEST_FILE` | which file `test` resolves to (default `test_all.json`; `test_unseen.json` to evaluate generalisation by default) |
 
 ### Layout
 
 ```
 csa_core/        shared instrument: split, detectors, verifier, headline metrics, logs, version shims
-first_50.json    the scenario set
+data/splits/     the prescribed split: train.json, test_all.json, test_seen.json, test_unseen.json
+first_50.json    the older scenario set, used only when data/splits/ is absent
 parallel/        run_all.py (scheduler), jobs.py (every stage), preflight.py (checks + GPU probe)
 roundtable/      Round Table (standalone: vendors csa_core as _*.py; python vendor.py refreshes it)
 sotopia_tom/     Sotopia-ToM

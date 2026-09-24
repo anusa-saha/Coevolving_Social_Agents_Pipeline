@@ -16,6 +16,22 @@ The procedure, which must not be "improved":
 The scenarios come from the combined file paths.SCENARIOS_FILENAME when it can be found,
 and from the per-domain files under data/raw/ otherwise. Both hold the same uids, so the
 split is identical either way; see paths.py for the seven scenarios whose content differs.
+
+EXPLICIT SPLITS OVERRIDE ALL OF THAT. When data/splits/ is present (see
+paths.find_splits_dir) the split is READ, not derived: train.json is train, test_all.json
+is test, and the two eval_group files are available as the extra splits `test_seen` and
+`test_unseen`. Nothing is shuffled and nothing is capped -- the files decide, so every
+arm evaluates on exactly the scenarios the benchmark prescribes.
+
+Two consequences of reading rather than deriving, both deliberate:
+
+  * there is no validation file, so `valid` is carved out of the TRAIN rows by the same
+    deterministic bucket procedure described above (10% per (domain, num_agents) bucket,
+    random.Random(0)). Test is never touched by it.
+  * 155 scenarios appear in BOTH train.json and test_seen.json, byte-identical. That is
+    train/test overlap, and the seen-domain numbers are optimistic because of it. The
+    files are authoritative, so the loader keeps them and says so loudly once per process
+    instead of failing; test_unseen is the clean generalisation measurement.
 """
 import collections
 import json
@@ -59,10 +75,12 @@ def _num(scenario_id):
 
 
 def source(raw_dir=None):
-    """Where load_raw() reads from: the combined file, or the per-domain directory."""
+    """Where the scenarios read from: the split directory, the combined file, or the
+    per-domain directory."""
     if raw_dir:
         return raw_dir
-    return paths.find_scenarios_file() or paths.find_raw()
+    return (paths.find_splits_dir() or paths.find_scenarios_file()
+            or paths.find_raw())
 
 
 def _read_combined(path):
@@ -89,6 +107,19 @@ def load_raw(raw_dir=None, per_domain=None):
         scenario_ids. Head rather than sample, so raising the cap only ever adds
         scenarios and never reshuffles the ones already in use.
     """
+    if per_domain is None and is_explicit(raw_dir):
+        # The split files ARE the scenario set; there is no separate corpus to re-read.
+        # Deduplicated by uid, because the 155 overlapping scenarios are one scenario
+        # each -- case_index and the invariant checks want every scenario exactly once.
+        d = load(raw_dir=raw_dir)
+        rows, seen = [], set()
+        for name in ('train', 'valid', 'test') + EVAL_GROUPS:
+            for r in d[name]:
+                if r['uid'] not in seen:
+                    seen.add(r['uid'])
+                    rows.append(r)
+        return rows
+
     cap = paths.SCENARIOS_PER_DOMAIN if per_domain is None else per_domain
     combined = None if raw_dir else paths.find_scenarios_file()
     by_domain = _read_combined(combined) if combined else None
@@ -120,6 +151,107 @@ def load_raw(raw_dir=None, per_domain=None):
     return rows
 
 
+# ------------------------------------------------------------- explicit splits
+# Extra splits beyond train/valid/test. They are views on the evaluation set rather than
+# a further partition of it: test == test_seen + test_unseen.
+EVAL_GROUPS = ('test_seen', 'test_unseen')
+
+_WARNED = set()
+
+
+def _prepare(row, seen_uids):
+    """Attach the uid and normalise, exactly as load_raw does for the derived split."""
+    row['domain'] = paths.DOMAIN_ALIASES.get(row['domain'], row['domain'])
+    row['uid'] = '%s::%s' % (row['domain'], row['scenario_id'])
+    _unwrap_schema(row)
+    if row['uid'] in seen_uids:
+        # Within ONE file a repeated uid is corruption, not a documented overlap: the two
+        # rows would be indistinguishable to case_index and one would silently win.
+        raise SystemExit('duplicate uid %s within a single split file' % row['uid'])
+    seen_uids.add(row['uid'])
+    return row
+
+
+def _read_split_file(path):
+    with open(path, encoding='utf-8') as f:
+        got = json.load(f)
+    seen = set()
+    return [_prepare(r, seen) for r in got]
+
+
+def _carve_valid(rows, seed=SEED, valid_frac=VALID_FRAC):
+    """Hold a validation slice out of the train rows.
+
+    The split files ship no validation set, but SFT early-stopping and `--split valid`
+    both need one. Rather than invent a second procedure, this reuses the one in
+    split_rows: bucket by (domain, num_agents), walk buckets in sorted key order with ONE
+    random.Random(seed) so RNG state carries between them, sort each bucket by uid and
+    shuffle. The tail of each bucket becomes valid, so every bucket contributes and the
+    result is identical on every machine. Train order from the file is not preserved --
+    the split has to be reproducible, and file order is not a property anything relies on.
+    """
+    buckets = collections.defaultdict(list)
+    for r in rows:
+        buckets[(r['domain'], r['num_agents'])].append(r)
+    rng = random.Random(seed)
+    train, valid = [], []
+    for key in sorted(buckets):
+        b = sorted(buckets[key], key=lambda r: r['uid'])
+        rng.shuffle(b)
+        n_va = max(1, int(valid_frac * len(b)))
+        train += b[:len(b) - n_va]
+        valid += b[len(b) - n_va:]
+    return train, valid
+
+
+def _warn_once(key, msg):
+    if key not in _WARNED:
+        _WARNED.add(key)
+        print(msg)
+
+
+def load_explicit(splits_dir):
+    """The prescribed split, read verbatim from splits_dir.
+
+    Returns train/valid/test plus the two eval_group views. `valid` comes out of train;
+    the test files are passed through untouched.
+    """
+    out = {}
+    for name in ('train',) + EVAL_GROUPS:
+        out[name] = _read_split_file(os.path.join(splits_dir, paths.SPLIT_FILES[name]))
+    out['test'] = _read_split_file(os.path.join(splits_dir, paths.SPLIT_FILES['test']))
+
+    group = {r['uid'] for r in out['test_seen']} | {r['uid'] for r in out['test_unseen']}
+    if {r['uid'] for r in out['test']} - group:
+        raise SystemExit('%s holds scenarios that are in neither eval_group file'
+                         % paths.SPLIT_FILES['test'])
+
+    out['train'], out['valid'] = _carve_valid(out['train'])
+
+    # The documented overlap. Reported, not repaired: the files are the benchmark, and a
+    # loader that quietly dropped 155 scenarios would make the arms incomparable to
+    # anyone else running the same files.
+    tr = {r['uid'] for r in out['train']} | {r['uid'] for r in out['valid']}
+    leaked = sorted(tr & {r['uid'] for r in out['test']})
+    if leaked:
+        _warn_once('leak', (
+            '[data_csa] WARNING: %d of the %d test scenarios also appear in '
+            'train.json, byte-identical.\n'
+            '           Seen-domain test numbers are therefore optimistic; '
+            'test_unseen (%d scenarios,\n'
+            '           two domains absent from training) is the clean '
+            'generalisation measurement.\n'
+            '           First five: %s'
+            % (len(leaked), len(out['test']), len(out['test_unseen']),
+               leaked[:5])))
+    return out
+
+
+def is_explicit(raw_dir=None):
+    """True when the split is being read from files rather than derived."""
+    return raw_dir is None and paths.find_splits_dir() is not None
+
+
 def split_rows(rows, seed=SEED, train_frac=TRAIN_FRAC, valid_frac=VALID_FRAC):
     buckets = collections.defaultdict(list)
     for r in rows:
@@ -138,19 +270,72 @@ def split_rows(rows, seed=SEED, train_frac=TRAIN_FRAC, valid_frac=VALID_FRAC):
 
 
 def load(split=None, raw_dir=None):
+    """The split. 'train', 'valid', 'test', or -- with explicit splits -- 'test_seen'
+    and 'test_unseen'. No argument returns the whole dict."""
     key = raw_dir or '_default'
     if key not in _CACHE:
-        d = split_rows(load_raw(raw_dir))
-        seen = set()
-        for name in ('train', 'valid', 'test'):
-            uids = {r['uid'] for r in d[name]}
-            if seen & uids:
-                raise SystemExit('scenario leaked across splits: %s'
-                                 % sorted(seen & uids)[:5])
-            seen |= uids
+        if is_explicit(raw_dir):
+            d = load_explicit(paths.find_splits_dir())
+        else:
+            d = split_rows(load_raw(raw_dir))
+            seen = set()
+            for name in ('train', 'valid', 'test'):
+                uids = {r['uid'] for r in d[name]}
+                if seen & uids:
+                    raise SystemExit('scenario leaked across splits: %s'
+                                     % sorted(seen & uids)[:5])
+                seen |= uids
         _CACHE[key] = d
     d = _CACHE[key]
+    if split and split not in d:
+        raise SystemExit('unknown split %r; this configuration has %s'
+                         % (split, ', '.join(sorted(d))))
     return d[split] if split else d
+
+
+def expected_total():
+    """How many DISTINCT scenarios the configured benchmark holds.
+
+    Not sum(len(split)): with explicit splits the overlapping 155 are counted once here
+    and twice there.
+    """
+    if is_explicit():
+        return len(load_raw())
+    return len(paths.DOMAINS) * paths.SCENARIOS_PER_DOMAIN
+
+
+def audit_splits(d=None):
+    """Check the properties that must hold under ANY configuration, and describe it.
+
+    Returns a one-line summary for selftests to print; raises AssertionError on a real
+    problem. The train/test overlap that ships with the explicit split files is reported,
+    not failed -- load_explicit already warns about it.
+    """
+    d = d if d is not None else load()
+    got = {k: len(v) for k, v in d.items()}
+    total = expected_total()
+
+    if not is_explicit():
+        assert sum(got.values()) == total, (got, total)
+        uids = [r['uid'] for k in ('train', 'valid', 'test') for r in d[k]]
+        assert len(set(uids)) == total, 'split overlaps or drops scenarios'
+        return ('%d domains x %d = %d -> %d/%d/%d'
+                % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN, total,
+                   got['train'], got['valid'], got['test']))
+
+    tr = {r['uid'] for r in d['train']}
+    va = {r['uid'] for r in d['valid']}
+    assert not (tr & va), 'valid was carved out of train but they overlap'
+    seen = {r['uid'] for r in d['test_seen']}
+    unseen = {r['uid'] for r in d['test_unseen']}
+    assert not (seen & unseen), 'test_seen and test_unseen overlap'
+    assert {r['uid'] for r in d['test']} <= (seen | unseen),         'test holds scenarios in neither eval_group'
+    assert len(tr | va | seen | unseen) == total, 'scenarios lost between splits'
+    return ('explicit split from %s: %d/%d train/valid, %d test (%d seen, %d unseen), '
+            '%d distinct scenarios, %d shared by train and test'
+            % (source(), got['train'], got['valid'], got['test'],
+               got['test_seen'], got['test_unseen'], total,
+               len((tr | va) & {r['uid'] for r in d['test']})))
 
 
 def case_index(raw_dir=None):
@@ -185,6 +370,10 @@ if __name__ == '__main__':
     d = load()
     print('scenarios: %s' % source())
     print({k: len(v) for k, v in d.items()})
+    print(audit_splits(d))
+    print('domains: %s' % ', '.join(
+        '%s=%d' % kv for kv in sorted(collections.Counter(
+            r['domain'] for r in load_raw()).items())))
     bad = check_invariants(load_raw())
     print('invariant violations: %d' % len(bad))
     for b in bad[:5]:

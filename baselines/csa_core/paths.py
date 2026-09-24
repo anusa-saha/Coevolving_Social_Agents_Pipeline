@@ -56,8 +56,14 @@ if os.environ.get('CSA_DOMAINS', '').strip().lower() == 'published':
 
 
 def is_published_config():
-    """True when the loader is set up exactly as the archived runs were."""
-    return (tuple(sorted(DOMAINS)) == tuple(sorted(PUBLISHED_DOMAINS))
+    """True when the loader is set up exactly as the archived runs were.
+
+    The explicit split files describe a different dataset, so they rule this out however
+    DOMAINS is configured -- otherwise selftests would check the 1100-scenario split
+    against the published 99/9/42 shape and fail for the wrong reason.
+    """
+    return (find_splits_dir() is None
+            and tuple(sorted(DOMAINS)) == tuple(sorted(PUBLISHED_DOMAINS))
             and SCENARIOS_PER_DOMAIN == 50)
 
 
@@ -176,6 +182,71 @@ def find_scenarios_file():
     for _ in range(6):
         cand = os.path.join(node, SCENARIOS_FILENAME)
         if os.path.isfile(cand):
+            return os.path.abspath(cand)
+        parent = os.path.dirname(node)
+        if parent == node:
+            break
+        node = parent
+    return None
+
+
+# ------------------------------------------------------------------ explicit splits
+# The 1100-scenario benchmark ships its split as FILES rather than as a procedure: one
+# train file and three test files, prepared upstream. When they are present they are the
+# source of truth and nothing is re-derived -- data_csa reads them verbatim.
+#
+# This supersedes the from-scratch split over first_50.json. The two describe different
+# datasets (945 distinct scenarios across 11 domains here, 550 there), so results from
+# one configuration say nothing about the other.
+#
+#   train.json        720  the training pool; data_csa carves `valid` out of it
+#   test_all.json     380  the evaluation set == test_seen + test_unseen
+#   test_seen.json    180  the nine domains train also covers
+#   test_unseen.json  200  family_friends_informal + informal_commerce_bargaining,
+#                          held out of training entirely
+SPLITS_DIRNAME = os.path.join('data', 'splits')
+
+# Which file `test` resolves to. test_all is the whole evaluation set; point this at
+# test_unseen.json to make every arm's headline number a generalisation number.
+TEST_SPLIT_FILE = os.environ.get('CSA_TEST_FILE', 'test_all.json')
+
+SPLIT_FILES = {'train': 'train.json',
+               'test': TEST_SPLIT_FILE,
+               'test_seen': 'test_seen.json',
+               'test_unseen': 'test_unseen.json'}
+
+# Every file that must exist for a directory to count as a split directory. `test` is
+# excluded because it is an alias for one of these.
+SPLIT_REQUIRED = ('train.json', 'test_all.json', 'test_seen.json', 'test_unseen.json')
+
+
+def _has_splits(d):
+    return bool(d) and all(os.path.isfile(os.path.join(d, x)) for x in SPLIT_REQUIRED)
+
+
+def find_splits_dir():
+    """The directory holding train.json and the three test files, or None.
+
+    None means "fall back to the derived split", so the older configuration still runs.
+    CSA_SPLITS_DIR names the directory explicitly and '' turns the files off. Asking for
+    the derived split by pointing at raw scenarios (CSA_RAW_DIR / CSA_SCENARIOS_FILE)
+    also wins, so the two never fight over which dataset is in play.
+    """
+    env = os.environ.get('CSA_SPLITS_DIR')
+    if env is not None:
+        if not env.strip():
+            return None
+        if not _has_splits(os.path.abspath(env)):
+            raise SystemExit('CSA_SPLITS_DIR=%r is missing one of %s'
+                             % (env, ', '.join(SPLIT_REQUIRED)))
+        return os.path.abspath(env)
+    if os.environ.get('CSA_RAW_DIR') or os.environ.get('CSA_SCENARIOS_FILE'):
+        return None
+
+    node = HERE
+    for _ in range(6):
+        cand = os.path.join(node, SPLITS_DIRNAME)
+        if _has_splits(cand):
             return os.path.abspath(cand)
         parent = os.path.dirname(node)
         if parent == node:

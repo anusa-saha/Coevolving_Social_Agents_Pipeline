@@ -85,7 +85,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--adapter', default='', help='"" evaluates the untrained chair')
     p.add_argument('--split', default=config.Defaults.eval_split,
-                   choices=['test', 'valid', 'train'])
+                   choices=['test', 'test_seen', 'test_unseen', 'valid', 'train'])
     p.add_argument('--tag', default='eval')
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--agent_device', default=None)

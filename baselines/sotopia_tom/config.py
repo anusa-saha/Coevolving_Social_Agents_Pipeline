@@ -5,7 +5,7 @@ class Defaults:
     # Qwen3.5-9B throughout, thinking off, matching the other baselines exactly. It
     # plays the chair AND the advisors, so the environment half of the comparison is
     # identical and any difference is attributable to the prompting strategy.
-    model = 'Qwen/Qwen3.5-9B'
+    model = '/scratch/rohank__iitp/Qwen3-8B'
     dtype = 'bfloat16'
     device = 'cuda:0'
 

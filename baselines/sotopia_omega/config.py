@@ -4,7 +4,7 @@
 class Defaults:
     # --- expert / generator
     expert = 'local'                 # 'local' | 'api'
-    expert_model = 'Qwen/Qwen3.5-9B'
+    expert_model = '/scratch/rohank__iitp/Qwen3-8B'
     api_base = ''                    # e.g. an OpenAI-compatible gateway; '' = default
     dtype = 'bfloat16'
     device = 'cuda:0'
@@ -28,7 +28,7 @@ class Defaults:
     opponent = 'none'                # 'none' | 'withhold'
 
     # --- student (SFT). Same model family as every other arm, so the comparison holds.
-    student_model = 'Qwen/Qwen3.5-9B'
+    student_model = '/scratch/rohank__iitp/Qwen3-8B'
     lora_r = 16
     lora_alpha = 32
     lora_dropout = 0.05

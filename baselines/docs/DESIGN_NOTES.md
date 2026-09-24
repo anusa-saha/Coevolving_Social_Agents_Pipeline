@@ -17,6 +17,32 @@ two methods and not between two measuring instruments.
 
 ### Benchmark configuration
 
+**The split is READ, not derived.** `data/splits/` holds it as four files — `train.json`
+(720), `test_all.json` (380), and the two `eval_group` views `test_seen.json` (180) and
+`test_unseen.json` (200) — covering **945 distinct scenarios across 11 domains**. When
+that directory is present (`paths.find_splits_dir`, overridable with `CSA_SPLITS_DIR`,
+disabled with `CSA_SPLITS_DIR=""`) nothing is shuffled and nothing is capped: every arm
+evaluates exactly the scenarios the benchmark prescribes.
+
+`valid` is the one thing not in the files. It is carved out of the *train* rows by the
+same deterministic procedure the derived split uses — bucket by (domain, num_agents),
+walk buckets in sorted key order under one `random.Random(0)`, sort by uid, shuffle, take
+each bucket's tail — giving **664 / 56** train / valid. Test is never touched by it.
+
+`test_seen` is the nine domains training also covers; `test_unseen` is
+`family_friends_informal` + `informal_commerce_bargaining`, held out of training
+entirely. `--split` accepts both names wherever it accepts `test`, and `CSA_TEST_FILE`
+chooses which file plain `test` resolves to.
+
+> **155 of the 380 test scenarios also appear in `train.json`, byte-identical.** That is
+> train/test overlap and it ships with the split files, so the loader keeps it — dropping
+> 155 scenarios would silently make these arms incomparable to anyone else running the
+> same benchmark — and warns once per process instead. Seen-domain numbers are optimistic
+> because of it; `test_unseen` is the clean generalisation measurement.
+
+Everything below describes the **derived** split, which still runs and is what you get
+with `CSA_SPLITS_DIR=""`.
+
 **All 11 domains × 50 scenarios = 550**, split 363 / 33 / 154 (train / valid / test),
 scenario-disjoint and stratified on (domain, num_agents).
 
@@ -62,7 +88,8 @@ prints them.
 
 ```
 csa_core/          the shared contract: split, detectors, verifier, paths, compat
-first_50.json      the scenario set: 11 domains x 50 (see Benchmark configuration)
+data/splits/       the prescribed split (see Benchmark configuration)
+first_50.json      the derived-split scenario set: 11 domains x 50
 data/raw/          per-domain JSON from the Hub, the fallback (fetched on first use)
 
 ppdpp/             PPDPP        RoBERTa act classifier + REINFORCE
@@ -85,7 +112,7 @@ one copy, and every arm imports it:
 
 | module | what it fixes |
 |---|---|
-| `data_csa` | the split, re-derived from a fixed procedure rather than read from a file |
+| `data_csa` | the split: read from `data/splits/` when present, otherwise re-derived from a fixed procedure |
 | `detectors` | word-overlap disclosure rules, threshold frozen at **0.35** |
 | `verifier` | deterministic scoring of a settlement against the dataset's checks |
 | `paths` | the domain list and per-domain cap; the annotator model; where each arm writes its own outputs |

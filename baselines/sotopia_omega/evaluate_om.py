@@ -13,6 +13,7 @@ adaptive` exists to quantify exactly that gap, and must be reported separately i
     python evaluate_om.py --adapter "" --tag base          # untrained, the floor
 """
 import argparse
+import ast
 import collections
 import json
 import os
@@ -75,6 +76,40 @@ def _by(recs, key):
     return {str(k): summarise(v) for k, v in sorted(g.items(), key=lambda x: str(x[0]))}
 
 
+def _load_existing_records(out_path):
+    """Parse Record-<tag>-<split>.txt's existing episode dicts back out, so a
+    --resume run can skip the cases they came from instead of re-evaluating them.
+
+    Written as `'%s\\n\\n' % str(rec)` -- one Python dict repr per case, blank-line
+    separated (see main()) -- so parsing is ast.literal_eval per chunk. Every case
+    dict env_om.OmegaEnv.episode() returns carries `case['uid']` directly (a required
+    key, not optional), so unlike a generic record file there is no ambiguity about
+    how to match a record back to its case.
+
+    An interrupted run can leave its last chunk mid-write; that one is dropped (not
+    counted as done) rather than crashing the resume.
+    """
+    if not os.path.isfile(out_path):
+        return []
+    with open(out_path, 'r', encoding='utf-8') as f:
+        blob = f.read()
+    recs = []
+    chunks = [c.strip() for c in blob.split('\n\n') if c.strip()]
+    for n, chunk in enumerate(chunks):
+        try:
+            recs.append(ast.literal_eval(chunk))
+        except (ValueError, SyntaxError):
+            if n == len(chunks) - 1:
+                print('[resume] last record in %s looks truncated (an interrupted '
+                      'write); re-running that case rather than counting it done.'
+                      % out_path)
+            else:
+                print('[resume] WARNING: could not parse record %d/%d from %s -- '
+                      'skipping it. The file may be corrupted; check it if this is '
+                      'unexpected.' % (n + 1, len(chunks), out_path))
+    return recs
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--adapter', default='', help='"" evaluates the untrained student')
@@ -88,6 +123,16 @@ def main():
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--device', default=config.Defaults.device)
     p.add_argument('--seed', type=int, default=config.Defaults.seed)
+    p.add_argument('--resume', action='store_true',
+                   help='Continue an interrupted evaluation of this exact --tag/'
+                        '--split instead of restarting it: skip cases already '
+                        'scored in Record-<tag>-<split>.txt (matched by case uid, '
+                        'not position -- safe even if --limit changed), append '
+                        'rather than overwrite that file and the matching EvalLog '
+                        'run under logs/eval/<tag>-<split>/, and fold the earlier '
+                        "episodes' metrics back into this run's summary/headline so "
+                        'they cover the whole evaluation, not just what this '
+                        'process itself runs. A no-op if nothing to resume from.')
     cli = p.parse_args()
 
     cfg = config.Defaults
@@ -104,10 +149,43 @@ def main():
     student.eval()
 
     out_path = os.path.join(paths.LOGS, 'Record-%s-%s.txt' % (cli.tag, cli.split))
-    recs, t0 = [], time.time()
-    conv = runlog.EvalLog(paths.LOGS, '%s-%s' % (cli.tag, cli.split), tag=cli.tag)
-    with open(out_path, 'w', encoding='utf-8') as f:
+    cases_by_uid = {c['uid']: c for c in cases}
+
+    recs = []
+    done_uids = set()
+    resuming = False
+    if cli.resume:
+        existing = _load_existing_records(out_path)
+        if existing:
+            for r in existing:
+                if r.get('uid') in cases_by_uid:
+                    recs.append(r)
+                    done_uids.add(r['uid'])
+                else:
+                    # Only happens if --split/--limit changed since the interrupted
+                    # run, so this uid isn't in the current `cases` at all -- keep it
+                    # out of the resumed pass's summary rather than guessing.
+                    print('[resume] WARNING: record uid=%s from %s has no matching '
+                          'case in this --split/--limit; excluding it from this '
+                          "run's summary." % (r.get('uid'), out_path))
+            resuming = True
+            print('[resume] %d case(s) already scored in %s; skipping those, '
+                  'appending the rest.' % (len(done_uids), out_path))
+
+    t0 = time.time()
+    conv = runlog.EvalLog(paths.LOGS, '%s-%s' % (cli.tag, cli.split), tag=cli.tag,
+                          append=resuming)
+    for r in recs:
+        # Fold the earlier records' metrics into this process's in-memory summary
+        # without re-writing them -- episodes.jsonl/conversations.log/turns.csv/
+        # scenarios.csv already have them, kept (not truncated) by append=True above.
+        conv.add_prior(cases_by_uid[r['uid']], r)
+
+    file_mode = 'a' if resuming else 'w'
+    with open(out_path, file_mode, encoding='utf-8') as f:
         for i, case in enumerate(cases):
+            if case['uid'] in done_uids:
+                continue
             chair = next(a['name'] for a in case['agents']
                          if a['agent_id'] == case['decision_maker'])
             env = OmegaEnv(cfg, StudentExpert(student, chair))
@@ -125,6 +203,7 @@ def main():
             rec['tag'], rec['eval_mode'] = cli.tag, cli.eval_mode
             recs.append(rec)
             f.write('%s\n\n' % str(rec))
+            f.flush()  # a crash mid-run then loses at most the case in flight
             conv.add(case, rec)
             if (i + 1) % 10 == 0:
                 print('  %d/%d  %.1f min' % (i + 1, len(cases),

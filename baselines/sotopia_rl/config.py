@@ -9,7 +9,7 @@ deliberately different. See sotopia-rl-vs-vanilla.pdf for the full argument.
 class Defaults:
     # --- the meeting agents. Frozen throughout: only the chair policy is trained, and
     # advisors trained on the same reward collapse the hidden profile.
-    agent_model = 'Qwen/Qwen3.5-9B'
+    agent_model = '/scratch/rohank__iitp/Qwen3-8B'
     agent_dtype = 'bfloat16'
     agent_device = 'cuda:0'
     agent_max_new_tokens = 96

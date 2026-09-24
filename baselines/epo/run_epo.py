@@ -149,7 +149,7 @@ def main():
     p.add_argument('--episodes_per_update', type=int,
                    default=config.Defaults.episodes_per_update)
     p.add_argument('--eval_every', type=int, default=175)
-    p.add_argument('--eval_split', default='test', choices=['test', 'valid'])
+    p.add_argument('--eval_split', default='test', choices=['test', 'test_seen', 'test_unseen', 'valid'])
     p.add_argument('--agent_device', default=config.Defaults.agent_device)
     p.add_argument('--strategist_device', default=config.Defaults.strategist_device)
     p.add_argument('--grad_checkpointing', action='store_true',

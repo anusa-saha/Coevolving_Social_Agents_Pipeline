@@ -181,8 +181,13 @@ class EvalLog(_Log):
     KIND, RECORDS, ROWS = 'eval', 'episodes.jsonl', 'scenarios.csv'
     COLS = ('tag',) + H.METRIC_COLS
 
-    def __init__(self, root, run, tag=None):
-        _Log.__init__(self, root, run, append=False)
+    def __init__(self, root, run, tag=None, append=False):
+        """append=True re-opens an existing eval run's logs (episodes.jsonl,
+        conversations.log, scenarios.csv, turns.csv) instead of overwriting them --
+        for resuming an interrupted evaluation pass, same idea as RolloutLog's
+        default. False (the default) keeps every other caller's behavior unchanged:
+        a fresh evaluation pass always starts these files clean."""
+        _Log.__init__(self, root, run, append=append)
         self.tag = tag or self.run
         self._turns = self._csv('turns.csv', TURN_COLS)
 
@@ -196,6 +201,17 @@ class EvalLog(_Log):
                                       'role': _cell(t.get('role')),
                                       'content': _cell(t.get('content'))})
         self.flush()
+        return m
+
+    def add_prior(self, case, rec):
+        """Fold an already-logged episode's metrics into this run's in-memory
+        summary/headline, WITHOUT re-writing it to episodes.jsonl/conversations.log/
+        turns.csv/scenarios.csv -- those already hold it, written by the interrupted
+        run this one is resuming (append=True above keeps them rather than
+        truncating). Without this, close()'s summary would only cover the episodes
+        this particular process ran, not the whole evaluation pass."""
+        m = H.episode_metrics(case, rec)
+        self.rows.append(m)
         return m
 
     def _summary_extra(self):

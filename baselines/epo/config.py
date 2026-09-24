@@ -87,7 +87,10 @@ def load_csa(split=None):
     """
     if split:
         return data_csa.load(split)
-    return {k: data_csa.load(k) for k in ('train', 'valid', 'test')}
+    # Every split the loader has, not a hardcoded three: with the explicit split files
+    # that includes the test_seen / test_unseen views, and case_index() below needs
+    # them or the unseen-domain scenarios go missing from the index.
+    return dict(data_csa.load())
 
 
 def case_index():
@@ -108,7 +111,7 @@ class Defaults:
     """
     # --- dialogue agent (frozen). EPO uses Llama3-8B / GPT-4o; we hold this fixed to
     # the same backend the PPDPP runs used, so LLM_d is constant across the comparison.
-    agent_model = 'Qwen/Qwen3.5-9B'
+    agent_model = '/scratch/rohank__iitp/Qwen3-8B'
     agent_dtype = 'bfloat16'
     agent_device = 'cuda:0'
     agent_max_new_tokens = 96
@@ -116,7 +119,7 @@ class Defaults:
     agent_temperature = 0.7              # train; eval forces greedy
 
     # --- strategist (trained)
-    strategist_model = 'Qwen/Qwen3.5-9B'
+    strategist_model = '/scratch/rohank__iitp/Qwen3-8B'
     strategist_device = 'cuda:1'         # set to cuda:0 to co-reside; see README
     lora_r = 16                          # EPO full-FTs; 99 scenarios would memorise
     lora_alpha = 32

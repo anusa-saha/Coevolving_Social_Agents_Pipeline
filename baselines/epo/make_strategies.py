@@ -80,7 +80,7 @@ def load_labelled(split):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--split', default='train', choices=['train', 'valid', 'test'])
+    p.add_argument('--split', default='train', choices=['train', 'valid', 'test', 'test_seen', 'test_unseen'])
     p.add_argument('--out', default='')
     p.add_argument('--log', default='')
     p.add_argument('--model', default=config.Defaults.or_model)

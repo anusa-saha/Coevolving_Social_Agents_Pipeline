@@ -11,6 +11,7 @@ import traceback
 
 import paths  # noqa: F401  -- puts the repo root on sys.path for csa_core
 from csa_core import compat
+from csa_core import data_csa
 import config
 import prm
 import prompt_epo as pe
@@ -35,18 +36,10 @@ def t_splits():
     if paths.is_published_config():
         assert got == {'train': 99, 'valid': 9, 'test': 42}, got
     else:
-        # A reconfigured benchmark has no published shape to match, so check the
-        # properties that must hold under ANY configuration instead: every scenario
-        # lands in exactly one split, and none is lost.
-        total = len(paths.DOMAINS) * paths.SCENARIOS_PER_DOMAIN
-        assert sum(got.values()) == total, (got, total)
-        uids = [r['uid'] for v in d.values() for r in v]
-        assert len(set(uids)) == total, 'split overlaps or drops scenarios'
-        print('        %d domains x %d = %d -> %d/%d/%d'
-              % (len(paths.DOMAINS), paths.SCENARIOS_PER_DOMAIN, total,
-                 got['train'], got['valid'], got['test']))
-    uids = [r['uid'] for rows in d.values() for r in rows]
-    assert len(uids) == len(set(uids)), 'uid collision across splits'
+        # A reconfigured benchmark has no published shape to match, and the explicit
+        # split files have their own (documented) shape, so delegate to the loader's
+        # own audit: it checks whatever must hold for the configuration in play.
+        print('        ' + data_csa.audit_splits(d))
     for name, rows in d.items():
         for r in rows:
             dm = r['decision_maker']
@@ -59,7 +52,7 @@ def t_splits():
 def t_strategist_prompt_is_filtered():
     """The assertion that matters most: a strategist that can see a private fact would
     score perfectly while measuring nothing."""
-    n = 0
+    seen = set()
     for rows in config.load_csa().values():
         for case in rows:
             conv = [{'role': 'Meeting', 'content': 'x'}]
@@ -69,8 +62,10 @@ def t_strategist_prompt_is_filtered():
                 assert fact['text'] not in blob, '%s leaked %s' % (case['uid'], fid)
             for f in pe.CSA_ORACLE_ONLY:
                 assert f not in blob, '%s leaked oracle field %s' % (case['uid'], f)
-            n += 1
-    assert n == len(config.case_index()), n
+            seen.add(case['uid'])
+    # Distinct scenarios, not rows: test_seen/test_unseen are views on test, so the
+    # same scenario legitimately appears under more than one split name.
+    assert seen == set(config.case_index()), len(seen)
 
 
 def t_chair_injection():

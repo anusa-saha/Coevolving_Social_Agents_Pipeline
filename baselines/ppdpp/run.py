@@ -76,6 +76,223 @@ def _csa_record(env, epi_reward, done, turns):
     }
 
 
+def _csa_record_ep(ep, epi_reward, done, turns):
+    """Same shape as _csa_record, reading a batched-rollout episode object (env.py's
+    _new_csa_episode) instead of the single-episode Env instance. Kept as a separate
+    function rather than a branch inside _csa_record so neither path has to guess which
+    kind of object it was handed."""
+    return {
+        'dialog': list(ep.conversation), 'reward': epi_reward,
+        'uid': ep.case.get('uid'),
+        'domain': ep.case.get('domain'),
+        'num_agents': ep.case.get('num_agents'),
+        'scenario_type': ep.case.get('scenario_type'),
+        'settlement': ep.settlement,
+        'settle_turn': ep.settle_turn,
+        'settled_by': ep.settled_by,
+        'score': ep.last_score,
+        'score_norm': ep.last_score_norm,
+        'floor': floor_score(ep.case),
+        'revealed': sorted(ep.revealed),
+        'reveal_elicited': dict(ep.reveal_elicited),
+        'addressed': sorted(ep.addressed),
+        'leaks': list(ep.leaks),
+        'done': done,
+        'turns': turns,
+        'max_turn': ep.max_turn,
+        'n_calls': getattr(ep, 'n_calls', 0),
+        'calls_by_role': dict(getattr(ep, 'calls_by_role', {})),
+        'prompt_chars': getattr(ep, 'prompt_chars', 0),
+        'act_history': list(getattr(ep, 'act_history', [])),
+        'reveal_turn': dict(getattr(ep, 'reveal_turn', {})),
+    }
+
+
+def _run_batched_rollout(args, env, policy, rollouts, train_step, i_episode_start):
+    """One args.max_steps iteration's worth of sampling (args.sample_times episodes),
+    run in parallel batches of args.rollout_batch instead of one episode at a time.
+
+    Only the environment simulation and the policy's ROLLOUT forward pass (action
+    selection, no_grad) are batched -- see PPDPP.select_action_batch's docstring.
+    Learning happens afterward, per episode: each episode's trajectory of
+    (state, action_idx) pairs is replayed through PPDPP.logprob_of_action -- a fresh,
+    single-episode forward pass -- immediately before that episode's own independent
+    backward()/optimizer.step(). That replay is what makes each episode's REINFORCE
+    update genuinely independent, with the same math as the sequential loop in
+    train(): a batched forward call shares one computation graph across every episode
+    active in that tick, and splitting that graph's log_probs apart for separate
+    per-episode backward() calls corrupts on the second one -- PyTorch frees a
+    graph's buffers after its first backward(), so whichever episode shared a tick
+    with the one that just backpropped hits already-freed buffers.
+    """
+    SR, AvgT, total_reward = 0., 0., 0.
+    loss = torch.tensor(0, dtype=torch.float, device=args.device)
+    remaining = args.sample_times
+    i_episode = i_episode_start
+    while remaining > 0:
+        b = min(args.rollout_batch, remaining)
+        remaining -= b
+        print('\n================new batch of {} tuples===================='.format(b))
+        states = env.reset_batch(b)
+        trajectories = [[] for _ in range(b)]  # per episode: [(state, action_idx), ...]
+        rewards = [[] for _ in range(b)]
+        epi_reward = [0.0] * b
+        done_flags = [0] * b
+        turns = [0] * b
+        active = list(range(b))
+        t = 0
+        while active:
+            sub_states = [states[i] for i in active]
+            actions, actions_idx = policy.select_action_batch(sub_states, is_test=False)
+            action_for_env = [None] * b
+            idx_for_i = {}
+            state_for_i = {}
+            for k, i in enumerate(active):
+                action_for_env[i] = actions[k]
+                idx_for_i[i] = actions_idx[k]
+                state_for_i[i] = sub_states[k]
+
+            results = env.step_batch(action_for_env)
+            just_finished = []
+            for i in active:
+                state_i, reward_i, done_i = results[i]
+                # The state BEFORE this turn's action, not after -- what select_action
+                # was actually conditioned on -- so logprob_of_action's replay scores
+                # the same (state, action) pair the rollout sampled.
+                trajectories[i].append((state_for_i[i], idx_for_i[i]))
+                states[i] = state_i
+                rewards[i].append(reward_i)
+                epi_reward[i] += reward_i
+                turns[i] = t + 1
+                if done_i:
+                    done_flags[i] = done_i
+                    just_finished.append(i)
+            for i in just_finished:
+                active.remove(i)
+            t += 1
+
+        for i in range(b):
+            log_probs_i = [policy.logprob_of_action(s, a) for s, a in trajectories[i]]
+            newloss = policy.optimize_from_buffer(log_probs_i, rewards[i])
+            if newloss is not None:
+                loss = loss + newloss
+            if done_flags[i] == 1:
+                SR += 1
+            AvgT += turns[i]
+            total_reward += epi_reward[i]
+            if rollouts is not None:
+                ep = env.batch[i]
+                rollouts.add(ep.case, _csa_record_ep(ep, epi_reward[i], done_flags[i], turns[i]),
+                             step=train_step, candidate=i_episode, reward=epi_reward[i],
+                             step_rewards=list(rewards[i]),
+                             loss=None if newloss is None else float(newloss))
+            i_episode += 1
+        # Each batch's KV cache and padded activations are freed once the batch's
+        # episodes are all done, but the allocator caches those blocks rather than
+        # returning them to the driver. Freed-but-cached blocks are still fine to reuse
+        # within one run, but a training step that follows can want a different padded
+        # shape than what's cached and end up fragmenting instead of reusing it --
+        # emptying the cache here trades a small amount of time for headroom on a card
+        # this close to the model's footprint.
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    return SR, AvgT, total_reward, loss
+
+
+def _run_batched_eval(args, test_env, policy, elog, rec_file, i_episode):
+    """Batched sibling of evaluate()'s per-episode loop -- same eval semantics (greedy
+    policy, is_test=True, every test case scored exactly once, same record/elog output)
+    but scoring `eval_batch` test cases per padded Qwen generate() call instead of one
+    case at a time. No optimizer step anywhere here; this only speeds up the rollout,
+    identically to _run_batched_rollout on the training side.
+
+    Returns (SR, AvgT, total_reward, SR_turn) with the same meaning as the caller's
+    locals in the sequential evaluate() loop, so evaluate() can finish exactly as before
+    (mean/turn-success computation, save_rl_mtric, printing) whichever path produced them.
+    """
+    cases = list(test_env.dataset)
+    test_size = len(cases)
+    eval_batch = max(1, getattr(args, 'eval_batch', 0) or args.rollout_batch)
+    SR, AvgT, total_reward = 0, 0, 0
+    SR_turn = [0] * args.max_turn
+    for start in tqdm(range(0, test_size, eval_batch), desc='batched eval'):
+        chunk = cases[start:start + eval_batch]
+        b = len(chunk)
+        states = test_env.reset_batch_fixed(chunk)
+        rewards = [[] for _ in range(b)]
+        epi_reward = [0.0] * b
+        done_flags = [0] * b
+        turns = [0] * b
+        active = list(range(b))
+        t = 0
+        while active:
+            sub_states = [states[i] for i in active]
+            actions = policy.select_action_batch(sub_states, is_test=True)
+            action_for_env = [None] * b
+            for k, i in enumerate(active):
+                action_for_env[i] = actions[k]
+
+            results = test_env.step_batch(action_for_env)
+            just_finished = []
+            for i in active:
+                state_i, reward_i, done_i = results[i]
+                states[i] = state_i
+                rewards[i].append(reward_i)
+                epi_reward[i] += reward_i
+                turns[i] = t + 1
+                if done_i:
+                    done_flags[i] = done_i
+                    just_finished.append(i)
+            for i in just_finished:
+                active.remove(i)
+            t += 1
+
+        for i in range(b):
+            if done_flags[i] == 1:
+                SR_turn = [v + 1 if k > turns[i] - 1 else v for k, v in enumerate(SR_turn)]
+                SR += 1
+            AvgT += turns[i]
+            total_reward += epi_reward[i]
+            ep = test_env.batch[i]
+            record = {'dialog': list(ep.conversation), 'reward': epi_reward[i]}
+            record.update(_csa_record_ep(ep, epi_reward[i], done_flags[i], turns[i]))
+            elog.add(ep.case, record)
+            rec_file.write('%s\n\n' % str(record))
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    return SR, AvgT, total_reward, SR_turn
+
+
+def _latest_checkpoint_epoch(args, filename):
+    """Highest RL-agent checkpoint epoch already saved for this run's filename, or 0
+    if none. Checkpoints are named '<filename>-epoch-<N>' (see PPDPP.save_model and
+    the pruning logic in train()) -- deterministic given (data_name, sft_dir, system,
+    user, critic, csa_reward, seed), so a rerun with the same args finds the same
+    checkpoints a previous, interrupted run of this exact config left behind."""
+    ck_root = os.path.join(TMP_DIR[args.data_name], 'RL-agent')
+    if not os.path.isdir(ck_root):
+        return 0
+    prefix = filename + '-epoch-'
+    best = 0
+    for d in os.listdir(ck_root):
+        if not (d.startswith(prefix) and os.path.isdir(os.path.join(ck_root, d))):
+            continue
+        try:
+            best = max(best, int(d[len(prefix):]))
+        except ValueError:
+            continue
+    return best
+
+
+def _eval_output_exists(args, filename, i_episode):
+    """Whether evaluate()'s output file for this i_episode is already on disk -- same
+    filename it writes at the end of evaluate() (both the batched and sequential
+    paths write here identically)."""
+    test_filename = 'Evaluate-epoch-{}-'.format(i_episode) + filename
+    path = os.path.join(TMP_DIR[args.data_name], 'eval_result', test_filename + '.txt')
+    return os.path.isfile(path)
+
+
 def train(args, config, dataset, filename, tokenizer):
     env = Env(args, dataset, mode='train') # env init
     set_random_seed(args.seed)
@@ -85,23 +302,93 @@ def train(args, config, dataset, filename, tokenizer):
     if args.sft_dir is not None:
         print('Staring loading policy model from {}'.format(args.sft_dir))
         policy.load_model(data_name=args.data_name, filename=args.sft_dir)
-    
+
+    # --resume: same (data_name, sft_dir, system, user, critic, csa_reward, seed) as a
+    # previous, interrupted run of this script produces the same `filename`, so its
+    # checkpoints and eval output are found here rather than redone. Only kicks in
+    # when --load_rl_epoch wasn't already given explicitly, so an explicit request to
+    # load a *specific* epoch is never second-guessed.
+    if args.resume and args.load_rl_epoch == 0:
+        detected = _latest_checkpoint_epoch(args, filename)
+        if detected > 0:
+            print('[resume] found a checkpoint at epoch {} for this config; resuming '
+                  'from there instead of epoch 0'.format(detected))
+            args.load_rl_epoch = detected
+
     if args.load_rl_epoch > 0:
         print('Staring loading rl model in epoch {}'.format(args.load_rl_epoch))
         policy.load_model(data_name=args.data_name, filename=filename, epoch_user=args.load_rl_epoch)
-    
 
     test_performance = []
     if args.do_eval:
-        SR15_mean = evaluate(args, dataset, policy, filename, 0, env)
-        test_performance = [SR15_mean]
+        if args.resume and _eval_output_exists(args, filename, 0):
+            print('[resume] epoch-0 evaluation output already exists for this config; '
+                  'skipping the pre-training eval pass rather than redoing it.')
+        else:
+            SR15_mean = evaluate(args, dataset, policy, filename, 0, env)
+            test_performance = [SR15_mean]
     if not args.do_train:
         return
     rollouts = None
     if args.data_name == 'csa':
         rollouts = runlog.RolloutLog(LOGS, filename,
                                      algo='ppdpp-reinforce-%s' % args.csa_reward)
-    for train_step in range(1, args.max_steps+1):
+
+    # Batched rollout needs a single shared model doing every role's generation, so
+    # unrelated episodes' turns can share one padded generate() call. Both reward arms
+    # are batched in step_batch -- the critic arm's per-episode LLM-judge draw is
+    # batched across episodes too (_qwen_critic_reward_batch). Outside data_name/model
+    # combination this falls back to the untouched sequential loop below, so nothing
+    # else changes behavior.
+    use_batched_rollout = (
+        args.data_name == 'csa' and args.rollout_batch > 1 and
+        args.system == 'qwen' and args.user == 'qwen' and args.critic == 'qwen'
+    )
+
+    # Whenever a checkpoint's weights were loaded -- whether --resume auto-detected it
+    # above or --load_rl_epoch named it explicitly -- continue step numbering from
+    # there instead of restarting at 1. Restarting at 1 after loading epoch N's weights
+    # would re-run and overwrite epoch 1..N's checkpoint/eval files with a run that
+    # actually started from epoch N, silently discarding what they recorded.
+    # --max_steps stays the absolute target step count either way, not "how many more
+    # steps to run".
+    start_step = args.load_rl_epoch + 1 if args.load_rl_epoch > 0 else 1
+    if start_step > 1:
+        print('[resume] training steps 1..{} already done; continuing from step {}'
+              .format(start_step - 1, start_step))
+    for train_step in range(start_step, args.max_steps+1):
+        if use_batched_rollout:
+            SR, AvgT, total_reward, loss = _run_batched_rollout(
+                args, env, policy, rollouts, train_step, i_episode_start=0)
+            enablePrint()
+            print('loss : {} in epoch_uesr {}'.format(loss.item()/args.sample_times, args.sample_times))
+            print('SR:{}, AvgT:{}, rewards:{} Total epoch_uesr:{}'.format(SR / args.sample_times,
+                        AvgT / args.sample_times, total_reward / args.sample_times, args.sample_times))
+            frac = policy.degenerate_fraction()
+            print('zero-gradient updates: {:.1%} ({}/{})'.format(
+                frac, getattr(policy, 'degenerate_updates', 0),
+                getattr(policy, 'total_updates', 0)))
+            if frac > 0.5:
+                print('  ^ over half of all updates had zero advantage. This run is not '
+                      'training. Fix the reward before reading anything into the curve.')
+            if train_step % args.eval_num == 0:
+                SR_all = evaluate(args, dataset, policy, filename, train_step, env)
+                test_performance.append(SR_all)
+            if train_step % args.save_num == 0:
+                policy.save_model(data_name=args.data_name, filename=filename, epoch_user=train_step)
+                try:
+                    ck_root = os.path.join(TMP_DIR[args.data_name], 'RL-agent')
+                    dirs = [os.path.join(ck_root, d) for d in os.listdir(ck_root)
+                            if d.startswith(filename + '-epoch-')]
+                    dirs = sorted([d for d in dirs if os.path.isdir(d)],
+                                  key=os.path.getmtime, reverse=True)
+                    for old in dirs[max(1, args.keep_ckpt):]:
+                        shutil.rmtree(old, ignore_errors=True)
+                        print('[janitor] removed old checkpoint %s' % os.path.basename(old))
+                except Exception as e:
+                    print('[janitor] skipped: %s' % e)
+            continue
+
         SR, AvgT, total_reward = 0., 0., 0.
         loss = torch.tensor(0, dtype=torch.float, device=args.device)
         for i_episode in tqdm(range(args.sample_times),desc='sampling'):
@@ -201,6 +488,38 @@ def evaluate(args, dataset, policy, filename, i_episode, train_env):
     # mojibake, which then makes the record file undecodable when scoring it.
     rec_file = open(REC_PATH, 'w', encoding='utf-8')
     elog = runlog.EvalLog(LOGS, 'eval-' + record_filename) if args.data_name == 'csa' else None
+
+    # Same precondition as the batched training rollout: one shared Qwen model doing
+    # every role's generation. Both reward arms are batched (see step_batch).
+    use_batched_eval = (
+        args.data_name == 'csa' and args.rollout_batch > 1 and
+        args.system == 'qwen' and args.user == 'qwen' and args.critic == 'qwen'
+    )
+    if use_batched_eval:
+        SR, AvgT, total_reward, SR_turn = _run_batched_eval(
+            args, test_env, policy, elog, rec_file, i_episode)
+        enablePrint()
+        if elog is not None:
+            elog.close()
+        SR_mean = float(SR) / test_size
+        AvgT_mean = float(AvgT) / test_size
+        reward_mean = total_reward / test_size
+        SR_all = [SR_mean, AvgT_mean, reward_mean]
+        save_rl_mtric(dataset=args.data_name, filename=test_filename, epoch=test_size - 1,
+                      SR=SR_all, mode='test')
+        print('save test evaluate successfully!')
+        SRturn_all = [float(v) / test_size for v in SR_turn]
+        print('success turn:{}'.format(SRturn_all))
+        print('SR:{}, AvgT:{}, reward:{}'.format(SR_mean, AvgT_mean, reward_mean))
+        PATH = TMP_DIR[args.data_name] + '/eval_result/' + test_filename + '.txt'
+        with open(PATH, 'a') as f:
+            f.write('Training epocch:{}\n'.format(i_episode))
+            f.write('================================\n')
+        with open(PATH, 'a') as f:
+            f.write('{}\t{}\t{}\t{}\n'.format(i_episode, SR_mean, AvgT_mean, reward_mean))
+        rec_file.close()
+        return SR_all
+
     for test_num in tqdm(range(test_size)):  #test_size
         #blockPrint()
         print('\n================test tuple:{}===================='.format(test_num))
@@ -280,6 +599,17 @@ def main():
     parser.add_argument('--max_turn', type=int, default=8, help='max conversation turn')
     parser.add_argument('--mode', type=str, default='train', help='the mode in [train, test]')
     parser.add_argument('--load_rl_epoch', type=int, default=0, help='load agent from epoch')
+    parser.add_argument('--resume', action='store_true',
+                        help='Continue an interrupted run of this exact config instead '
+                             'of restarting it. Auto-detects the highest RL-agent '
+                             'checkpoint already saved under this run\'s filename '
+                             '(same data_name/sft_dir/system/user/critic/csa_reward/'
+                             'seed as before) and loads it as if --load_rl_epoch had '
+                             'named it, unless --load_rl_epoch was already given '
+                             'explicitly. Training step numbering continues from '
+                             'there rather than restarting at 1. The pre-training '
+                             '(epoch-0) evaluation pass is skipped if its output file '
+                             'is already on disk. A no-op if nothing to resume from.')
 
 
     parser.add_argument("--cache_dir", default='/storage_fast/ydeng/plm', type=str, help="The cache directory.")
@@ -290,12 +620,34 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--model_path", type=str, default="/storage_fast/ydeng/llm/vicuna_hf/7B")
     parser.add_argument("--model_name", type=str, default="roberta")
-    parser.add_argument("--model_name_or_path", default='roberta-large', type=str, help="model name or path")
+    parser.add_argument("--model_name_or_path", default='/scratch/rohank__iitp/roberta-large', type=str, help="model name or path")
 
     parser.add_argument("--do_lower_case", action='store_false', help="Set this flag if you are using an uncased model.")
 
     parser.add_argument('--max_steps', type=int, default=10, help='max training steps')
     parser.add_argument('--sample_times', type=int, default=100, help='the epoch of sampling')
+    parser.add_argument('--rollout_batch', type=int, default=1,
+                        help='Episodes to roll out in parallel per training step, '
+                             'sharing one padded generate() call per turn across the '
+                             'batch instead of one call per episode. Only implemented '
+                             'for --data_name csa with --system/--user/--critic all '
+                             'qwen (either --csa_reward arm); falls back to the '
+                             'sequential one-episode-at-a-time loop otherwise. Each '
+                             'episode still gets its own independent policy-gradient '
+                             'update with unchanged math -- this only parallelizes the '
+                             'rollout, not the learning. --csa_reward critic additionally '
+                             'batches its ten-sample LLM-judge draw across episodes '
+                             '(_qwen_critic_reward_batch), on top of the per-turn '
+                             'batching. Bounded by GPU memory: the KV cache scales with '
+                             'rollout_batch x sequence length.')
+    parser.add_argument('--eval_batch', type=int, default=0,
+                        help='Test cases to score in parallel per evaluate() call, same '
+                             'mechanism as --rollout_batch but for the test set. 0 (the '
+                             'default) reuses --rollout_batch. Only takes effect under '
+                             'the same conditions as batched training rollout: '
+                             '--data_name csa, --system/--user/--critic all qwen, and '
+                             '--rollout_batch > 1 -- otherwise evaluate() falls back to '
+                             'the sequential one-case-at-a-time loop.')
     parser.add_argument('--eval_num', type=int, default=1, help='the number of steps to evaluate RL model and metric')
     parser.add_argument('--save_num', type=int, default=1, help='the number of steps to save RL model and metric')
     parser.add_argument('--keep_ckpt', type=int, default=1,
@@ -308,10 +660,18 @@ def main():
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval.")
 
     # local qwen backend
-    parser.add_argument('--qwen_path', default='Qwen/Qwen3.5-9B')
+    parser.add_argument('--qwen_path', default='/scratch/rohank__iitp/Qwen3-8B')
     parser.add_argument('--qwen_dtype', default='bfloat16',
                         choices=['bfloat16', 'float16', 'float32'])
     parser.add_argument('--qwen_device_map', default='cuda:0')
+    parser.add_argument('--qwen_max_input_tokens', type=int, default=3072,
+                        help='Left-truncate the Qwen chat prompt (system/user/critic '
+                             'generation calls) to this many tokens before generate(). '
+                             'Conversations grow every turn, so without a cap the '
+                             'prefill cost grows with rollout_batch x turn number at '
+                             'once, which is what runs a 40GB card out of memory well '
+                             'before rollout_batch itself looks large. 0 disables '
+                             'truncation and restores the old unbounded behaviour.')
     # API backend. The key is read from OPENAI_API_KEY, never from source.
     parser.add_argument('--openai_model', default='gpt-3.5-turbo-0613',
                         help="Model id for the chatgpt backend. The paper pins "

@@ -55,31 +55,77 @@ def load_records(path):
     return out
 
 
+
 def run_arm(env, cases, strategy, split, limit=0):
     out_path = record_path(strategy, split)
-    recs, t0 = [], time.time()
+    existing_recs = load_records(out_path)
+    done_uids = {
+        rec['uid'] for rec in existing_recs
+        if 'uid' in rec
+    }
+
+    if done_uids:
+        print(
+            '[%s] resuming: %d scenarios already completed'
+            % (strategy, len(done_uids)),
+            flush=True
+        )
+
     todo = cases[:limit] if limit else cases
-    conv = runlog.EvalLog(paths.LOGS, 'tom-%s-%s' % (strategy, split), tag=strategy)
-    with open(out_path, 'w', encoding='utf-8') as f:
+    todo = [
+        case for case in todo
+        if case['uid'] not in done_uids
+    ]
+
+    print(
+        '[%s] remaining scenarios: %d'
+        % (strategy, len(todo)),
+        flush=True
+    )
+
+    recs = list(existing_recs)
+    t0 = time.time()
+
+    conv = runlog.EvalLog(
+        paths.LOGS,
+        'tom-%s-%s' % (strategy, split),
+        tag=strategy
+    )
+    mode = 'a' if existing_recs else 'w'
+    with open(out_path, mode, encoding='utf-8') as f:
         for i, case in enumerate(todo):
             env.reset(case, strategy=strategy)
+
             done, t = 0, 0
             while not done:
                 _c, done = env.step()
                 t += 1
+
             rec = env.record(t)
+            rec['uid'] = case['uid']
             recs.append(rec)
             f.write('%s\n\n' % str(rec))
             f.flush()
             conv.add(case, rec)
             if (i + 1) % 5 == 0:
                 s = M.summarise(recs)
-                print('  [%s] %d/%d  DA %.3f IA %.3f EFF %.3f InfoMgmt3 %.3f  %.1f min'
-                      % (strategy, i + 1, len(todo), s['DA'], s['IA'], s['EFF'],
-                         s['InfoMgmt3'], (time.time() - t0) / 60), flush=True)
-    conv.close(log=None)                 # report() prints every arm's summary together
+                print(
+                    '  [%s] %d/%d  DA %.3f IA %.3f EFF %.3f '
+                    'InfoMgmt3 %.3f  %.1f min'
+                    % (
+                        strategy,
+                        i + 1,
+                        len(todo),
+                        s['DA'],
+                        s['IA'],
+                        s['EFF'],
+                        s['InfoMgmt3'],
+                        (time.time() - t0) / 60
+                    ),
+                    flush=True
+                )
+    conv.close(log=None)
     return recs, out_path
-
 
 def report(by_arm, cases):
     order = [s for s in P.STRATEGIES if s in by_arm]
@@ -129,7 +175,7 @@ def main():
     p.add_argument('--strategies', nargs='+', default=['stripped', 'basic'],
                    choices=list(P.STRATEGIES))
     p.add_argument('--split', default=config.Defaults.eval_split,
-                   choices=['test', 'valid', 'train'])
+                   choices=['test', 'test_seen', 'test_unseen', 'valid', 'train'])
     p.add_argument('--limit', type=int, default=0)
     p.add_argument('--device', default=None)
     p.add_argument('--compare', action='store_true',

@@ -51,7 +51,7 @@ def rank_key(s):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--split', default='train', choices=['train', 'valid', 'test'])
+    p.add_argument('--split', default='train', choices=['train', 'valid', 'test', 'test_seen', 'test_unseen'])
     p.add_argument('--k', type=int, default=config.Defaults.rollout_k)
     p.add_argument('--keep', type=int, default=config.Defaults.rollout_keep)
     p.add_argument('--out', default='')
